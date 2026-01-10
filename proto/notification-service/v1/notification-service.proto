@@ -1,0 +1,267 @@
+syntax = "proto3";
+
+package notification_service .v1;
+
+option go_package = "github.com/makoto-developer/go_microservice_example/proto/notification_service /v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+enum NotificationType {
+	NOTIFICATION_TYPE_UNSPECIFIED = 0;
+	USER_REGISTERED = 1;
+	EMAIL_VERIFIED = 2;
+	ORDER_CONFIRMED = 3;
+	ORDER_SHIPPED = 4;
+	ORDER_DELIVERED = 5;
+	ORDER_CANCELLED = 6;
+	PAYMENT_COMPLETED = 7;
+	PAYMENT_FAILED = 8;
+	REFUND_COMPLETED = 9;
+	SHOP_APPROVED = 10;
+	SHOP_REJECTED = 11;
+	STOCK_LOW_ALERT = 12;
+	STOCK_OUT_ALERT = 13;
+	STOCK_RESTORED = 14;
+	CHAT_MESSAGE_RECEIVED = 15;
+	PASSWORD_RESET = 16;
+	CAMPAIGN_STARTED = 17;
+}
+
+enum NotificationChannel {
+	NOTIFICATION_CHANNEL_UNSPECIFIED = 0;
+	EMAIL = 1;
+	PUSH = 2;
+	SMS = 3;
+}
+
+enum NotificationStatus {
+	NOTIFICATION_STATUS_UNSPECIFIED = 0;
+	PENDING = 1;
+	SENT = 2;
+	FAILED = 3;
+	CANCELLED = 4;
+}
+
+enum Platform {
+	PLATFORM_UNSPECIFIED = 0;
+	IOS = 1;
+	ANDROID = 2;
+	WEB = 3;
+}
+
+enum NotificationFrequency {
+	NOTIFICATION_FREQUENCY_UNSPECIFIED = 0;
+	IMMEDIATE = 1;
+	DAILY_DIGEST = 2;
+	DISABLED = 3;
+}
+
+message Notification {
+	string id = 1;
+	string user_id = 2;
+	NotificationType notification_type = 3;
+	NotificationChannel channel = 4;
+	string title = 5;
+	text content = 6;
+	NotificationStatus status = 7;
+	google.protobuf.Timestamp sent_at = 8;
+	text error_message = 9;
+	int32 retry_count = 10;
+	json metadata = 11;
+	google.protobuf.Timestamp created_at = 12;
+	google.protobuf.Timestamp updated_at = 13;
+}
+
+message EmailTemplate {
+	string id = 1;
+	string template_key = 2;
+	string subject_template = 3;
+	text html_template = 4;
+	text text_template = 5;
+	repeated string variables = 6;
+	int32 version = 7;
+	bool is_active = 8;
+	google.protobuf.Timestamp created_at = 9;
+	google.protobuf.Timestamp updated_at = 10;
+}
+
+message PushTemplate {
+	string id = 1;
+	string template_key = 2;
+	string title_template = 3;
+	string body_template = 4;
+	repeated string variables = 5;
+	int32 version = 6;
+	bool is_active = 7;
+	google.protobuf.Timestamp created_at = 8;
+	google.protobuf.Timestamp updated_at = 9;
+}
+
+message DeviceToken {
+	string id = 1;
+	string user_id = 2;
+	string device_id = 3;
+	Platform platform = 4;
+	string token = 5;
+	bool is_active = 6;
+	google.protobuf.Timestamp last_used_at = 7;
+	google.protobuf.Timestamp created_at = 8;
+	google.protobuf.Timestamp updated_at = 9;
+}
+
+message NotificationPreference {
+	string id = 1;
+	string user_id = 2;
+	bool email_enabled = 3;
+	bool push_enabled = 4;
+	bool email_order_updates = 5;
+	bool email_shop_updates = 6;
+	bool email_chat_messages = 7;
+	bool push_order_updates = 8;
+	bool push_stock_restored = 9;
+	bool push_campaigns = 10;
+	bool push_chat_messages = 11;
+	NotificationFrequency frequency = 12;
+	time quiet_hours_start = 13;
+	time quiet_hours_end = 14;
+	google.protobuf.Timestamp created_at = 15;
+	google.protobuf.Timestamp updated_at = 16;
+}
+
+message SendEmailRequest {
+	string user_id = 1;
+	string email = 2;
+	string template_key = 3;
+	map<string, variables = 4;
+	NotificationType notification_type = 5;
+}
+
+message SendBulkEmailRequest {
+	repeated string user_ids = 1;
+	string template_key = 2;
+	map<string, variables = 3;
+}
+
+message SendPushNotificationRequest {
+	string user_id = 1;
+	string template_key = 2;
+	map<string, variables = 3;
+	NotificationType notification_type = 4;
+	map<string, data = 5;
+}
+
+message RegisterDeviceTokenRequest {
+	string user_id = 1;
+	string device_id = 2;
+	Platform platform = 3;
+	string token = 4;
+}
+
+message UnregisterDeviceTokenRequest {
+	string device_id = 1;
+}
+
+message RefreshDeviceTokenRequest {
+	string device_id = 1;
+	string new_token = 2;
+}
+
+message CreateEmailTemplateRequest {
+	string template_key = 1;
+	string subject_template = 2;
+	string html_template = 3;
+	string text_template = 4;
+	repeated string variables = 5;
+}
+
+message UpdateEmailTemplateRequest {
+	string template_id = 1;
+	string subject_template = 2;
+	string html_template = 3;
+	string text_template = 4;
+	repeated string variables = 5;
+}
+
+message PreviewEmailTemplateRequest {
+	string template_key = 1;
+	map<string, variables = 2;
+}
+
+message GetNotificationPreferenceRequest {
+	string user_id = 1;
+}
+
+message UpdateNotificationPreferenceRequest {
+	string user_id = 1;
+	bool email_enabled = 2;
+	bool push_enabled = 3;
+	bool email_order_updates = 4;
+	bool email_shop_updates = 5;
+	bool email_chat_messages = 6;
+	bool push_order_updates = 7;
+	bool push_stock_restored = 8;
+	bool push_campaigns = 9;
+	bool push_chat_messages = 10;
+	NotificationFrequency frequency = 11;
+	time quiet_hours_start = 12;
+	time quiet_hours_end = 13;
+}
+
+message GetNotificationHistoryRequest {
+	string user_id = 1;
+	NotificationChannel channel = 2;
+	NotificationStatus status = 3;
+	date date_from = 4;
+	date date_to = 5;
+	int32 page = 6;
+	int32 page_size = 7;
+}
+
+message ResendNotificationRequest {
+	string notification_id = 1;
+}
+
+message HandleUserRegisteredRequest {
+	string user_id = 1;
+	string email = 2;
+	string verification_link = 3;
+}
+
+message HandleOrderConfirmedRequest {
+	string order_id = 1;
+	string order_number = 2;
+	string customer_id = 3;
+	string customer_email = 4;
+	string total_amount = 5;
+}
+
+message HandleShipmentDispatchedRequest {
+	string order_id = 1;
+	string customer_id = 2;
+	string tracking_number = 3;
+	string carrier = 4;
+	string tracking_url = 5;
+}
+
+message HandleStockRestoredRequest {
+	string product_id = 1;
+	string product_name = 2;
+	repeated string user_ids = 3;
+}
+
+service NotificationService  {
+	rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
+	rpc SendBulkEmail(SendBulkEmailRequest) returns (SendBulkEmailResponse);
+	rpc SendPushNotification(SendPushNotificationRequest) returns (SendPushNotificationResponse);
+	rpc RegisterDeviceToken(RegisterDeviceTokenRequest) returns (RegisterDeviceTokenResponse);
+	rpc UnregisterDeviceToken(UnregisterDeviceTokenRequest) returns (UnregisterDeviceTokenResponse);
+	rpc RefreshDeviceToken(RefreshDeviceTokenRequest) returns (RefreshDeviceTokenResponse);
+	rpc CreateEmailTemplate(CreateEmailTemplateRequest) returns (CreateEmailTemplateResponse);
+	rpc UpdateEmailTemplate(UpdateEmailTemplateRequest) returns (UpdateEmailTemplateResponse);
+	rpc PreviewEmailTemplate(PreviewEmailTemplateRequest) returns (PreviewEmailTemplateResponse);
+	rpc GetNotificationPreference(GetNotificationPreferenceRequest) returns (GetNotificationPreferenceResponse);
+	rpc UpdateNotificationPreference(UpdateNotificationPreferenceRequest) returns (UpdateNotificationPreferenceResponse);
+	rpc GetNotificationHistory(GetNotificationHistoryRequest) returns (GetNotificationHistoryResponse);
+	rpc ResendNotification(ResendNotificationRequest) returns (ResendNotificationResponse);
+}

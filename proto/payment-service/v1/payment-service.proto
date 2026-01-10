@@ -1,0 +1,174 @@
+syntax = "proto3";
+
+package payment_service .v1;
+
+option go_package = "github.com/makoto-developer/go_microservice_example/proto/payment_service /v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+enum PaymentMethodType {
+	PAYMENT_METHOD_TYPE_UNSPECIFIED = 0;
+	CREDIT_CARD = 1;
+	CASH_ON_DELIVERY = 2;
+}
+
+enum PaymentStatus {
+	PAYMENT_STATUS_UNSPECIFIED = 0;
+	PENDING = 1;
+	PROCESSING = 2;
+	REQUIRES_AUTHENTICATION = 3;
+	SUCCEEDED = 4;
+	FAILED = 5;
+	REFUNDING = 6;
+	REFUNDED = 7;
+}
+
+enum RefundStatus {
+	REFUND_STATUS_UNSPECIFIED = 0;
+	PENDING = 1;
+	PROCESSING = 2;
+	SUCCEEDED = 3;
+	FAILED = 4;
+}
+
+message Payment {
+	string id = 1;
+	string order_id = 2;
+	PaymentMethodType payment_method = 3;
+	string amount = 4;
+	string currency = 5;
+	PaymentStatus status = 6;
+	string stripe_payment_intent_id = 7;
+	string stripe_client_secret = 8;
+	bool requires_authentication = 9;
+	string authentication_url = 10;
+	string error_code = 11;
+	text error_message = 12;
+	string cod_fee = 13;
+	google.protobuf.Timestamp created_at = 14;
+	google.protobuf.Timestamp updated_at = 15;
+}
+
+message Refund {
+	string id = 1;
+	string payment_id = 2;
+	string order_id = 3;
+	string amount = 4;
+	string reason = 5;
+	RefundStatus status = 6;
+	string stripe_refund_id = 7;
+	text error_message = 8;
+	google.protobuf.Timestamp refunded_at = 9;
+	google.protobuf.Timestamp created_at = 10;
+	google.protobuf.Timestamp updated_at = 11;
+}
+
+message WebhookEvent {
+	string id = 1;
+	string stripe_event_id = 2;
+	string event_type = 3;
+	json payload = 4;
+	bool processed = 5;
+	google.protobuf.Timestamp processed_at = 6;
+	google.protobuf.Timestamp created_at = 7;
+}
+
+message PaymentHistory {
+	string id = 1;
+	string payment_id = 2;
+	PaymentStatus old_status = 3;
+	PaymentStatus new_status = 4;
+	string changed_by = 5;
+	string change_reason = 6;
+	google.protobuf.Timestamp created_at = 7;
+}
+
+message CreatePaymentIntentRequest {
+	string order_id = 1;
+	string amount = 2;
+	string currency = 3;
+	string payment_method_id = 4;
+	string customer_id = 5;
+}
+
+message ConfirmPaymentRequest {
+	string payment_id = 1;
+	string payment_intent_id = 2;
+}
+
+message GetPaymentStatusRequest {
+	string payment_id = 1;
+}
+
+message CreateCODPaymentRequest {
+	string order_id = 1;
+	string amount = 2;
+}
+
+message ConfirmCODPaymentRequest {
+	string payment_id = 1;
+	string order_id = 2;
+}
+
+message CreateRefundRequest {
+	string payment_id = 1;
+	string order_id = 2;
+	string amount = 3;
+	string reason = 4;
+}
+
+message GetRefundStatusRequest {
+	string refund_id = 1;
+}
+
+message ListPaymentsRequest {
+	string order_id = 1;
+	string customer_id = 2;
+	string shop_id = 3;
+	repeated PaymentStatus status_filter = 4;
+	date date_from = 5;
+	date date_to = 6;
+	PaymentMethodType payment_method = 7;
+	int32 page = 8;
+	int32 page_size = 9;
+}
+
+message GetPaymentDetailRequest {
+	string payment_id = 1;
+	string requester_id = 2;
+	string requester_role = 3;
+}
+
+message HandleStripeWebhookRequest {
+	string stripe_signature = 1;
+	string payload = 2;
+}
+
+message ProcessPaymentIntentSucceededRequest {
+	string payment_intent_id = 1;
+	string amount = 2;
+}
+
+message ProcessPaymentIntentFailedRequest {
+	string payment_intent_id = 1;
+	string error_code = 2;
+	string error_message = 3;
+}
+
+message ProcessRefundCompletedRequest {
+	string refund_id = 1;
+	string amount = 2;
+}
+
+service PaymentService  {
+	rpc CreatePaymentIntent(CreatePaymentIntentRequest) returns (CreatePaymentIntentResponse);
+	rpc ConfirmPayment(ConfirmPaymentRequest) returns (ConfirmPaymentResponse);
+	rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+	rpc CreateCODPayment(CreateCODPaymentRequest) returns (CreateCODPaymentResponse);
+	rpc ConfirmCODPayment(ConfirmCODPaymentRequest) returns (ConfirmCODPaymentResponse);
+	rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse);
+	rpc GetRefundStatus(GetRefundStatusRequest) returns (GetRefundStatusResponse);
+	rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+	rpc GetPaymentDetail(GetPaymentDetailRequest) returns (GetPaymentDetailResponse);
+}

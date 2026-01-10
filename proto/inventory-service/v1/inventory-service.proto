@@ -1,0 +1,186 @@
+syntax = "proto3";
+
+package inventory_service .v1;
+
+option go_package = "github.com/makoto-developer/go_microservice_example/proto/inventory_service /v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+enum ReservationStatus {
+	RESERVATION_STATUS_UNSPECIFIED = 0;
+	RESERVED = 1;
+	CONFIRMED = 2;
+	RELEASED = 3;
+	EXPIRED = 4;
+}
+
+enum ChangeType {
+	CHANGE_TYPE_UNSPECIFIED = 0;
+	INITIAL = 1;
+	RESTOCK = 2;
+	RETURN = 3;
+	RESERVATION = 4;
+	RELEASE = 5;
+	CONFIRMATION = 6;
+	DAMAGE = 7;
+	STOCK_TAKING = 8;
+	MANUAL_ADJUSTMENT = 9;
+}
+
+enum InventoryStatus {
+	INVENTORY_STATUS_UNSPECIFIED = 0;
+	IN_STOCK = 1;
+	LOW_STOCK = 2;
+	OUT_OF_STOCK = 3;
+	RESERVED = 4;
+}
+
+message Inventory {
+	string id = 1;
+	string product_id = 2;
+	string variation_id = 3;
+	string shop_id = 4;
+	int32 quantity = 5;
+	int32 reserved_quantity = 6;
+	int32 available_quantity = 7;
+	int32 alert_threshold = 8;
+	google.protobuf.Timestamp last_alerted_at = 9;
+	google.protobuf.Timestamp created_at = 10;
+	google.protobuf.Timestamp updated_at = 11;
+}
+
+message Reservation {
+	string id = 1;
+	string inventory_id = 2;
+	string order_id = 3;
+	int32 quantity = 4;
+	ReservationStatus status = 5;
+	google.protobuf.Timestamp expires_at = 6;
+	google.protobuf.Timestamp confirmed_at = 7;
+	google.protobuf.Timestamp created_at = 8;
+	google.protobuf.Timestamp updated_at = 9;
+}
+
+message InventoryHistory {
+	string id = 1;
+	string inventory_id = 2;
+	ChangeType change_type = 3;
+	int32 change_quantity = 4;
+	int32 quantity_before = 5;
+	int32 quantity_after = 6;
+	string reason = 7;
+	string operator = 8;
+	string order_id = 9;
+	google.protobuf.Timestamp created_at = 10;
+}
+
+message StockTaking {
+	string id = 1;
+	string inventory_id = 2;
+	string shop_id = 3;
+	int32 system_quantity = 4;
+	int32 actual_quantity = 5;
+	int32 difference = 6;
+	string difference_reason = 7;
+	string operator = 8;
+	google.protobuf.Timestamp created_at = 9;
+}
+
+message RegisterInventoryRequest {
+	string product_id = 1;
+	string variation_id = 2;
+	string shop_id = 3;
+	int32 initial_quantity = 4;
+	int32 alert_threshold = 5;
+}
+
+message UpdateInventoryQuantityRequest {
+	string inventory_id = 1;
+	string shop_id = 2;
+	int32 change_quantity = 3;
+	ChangeType change_type = 4;
+	string reason = 5;
+	string operator = 6;
+}
+
+message GetInventoryRequest {
+	string inventory_id = 1;
+}
+
+message GetInventoryByProductRequest {
+	string product_id = 1;
+	string variation_id = 2;
+}
+
+message BulkGetInventoryRequest {
+	repeated string product_ids = 1;
+}
+
+message ReserveStockRequest {
+	string inventory_id = 1;
+	string order_id = 2;
+	int32 quantity = 3;
+}
+
+message BulkReserveStockRequest {
+	repeated ReservationRequest reservations = 1;
+	string order_id = 2;
+}
+
+message ReleaseStockRequest {
+	string reservation_id = 1;
+	string order_id = 2;
+}
+
+message ConfirmStockRequest {
+	string reservation_id = 1;
+	string order_id = 2;
+}
+
+message ReleaseExpiredReservationsRequest {
+	{ output = 1;
+	int32 released_count = 2;
+}
+
+message CheckStockAlertRequest {
+	string inventory_id = 1;
+}
+
+message GetInventoryHistoryRequest {
+	string inventory_id = 1;
+	date date_from = 2;
+	date date_to = 3;
+	repeated ChangeType change_types = 4;
+	int32 page = 5;
+	int32 page_size = 6;
+}
+
+message RecordStockTakingRequest {
+	string inventory_id = 1;
+	string shop_id = 2;
+	int32 actual_quantity = 3;
+	string difference_reason = 4;
+	string operator = 5;
+}
+
+message GetStockTakingHistoryRequest {
+	string shop_id = 1;
+	date date_from = 2;
+	date date_to = 3;
+}
+
+service InventoryService  {
+	rpc RegisterInventory(RegisterInventoryRequest) returns (RegisterInventoryResponse);
+	rpc UpdateInventoryQuantity(UpdateInventoryQuantityRequest) returns (UpdateInventoryQuantityResponse);
+	rpc GetInventory(GetInventoryRequest) returns (GetInventoryResponse);
+	rpc GetInventoryByProduct(GetInventoryByProductRequest) returns (GetInventoryByProductResponse);
+	rpc BulkGetInventory(BulkGetInventoryRequest) returns (BulkGetInventoryResponse);
+	rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+	rpc BulkReserveStock(BulkReserveStockRequest) returns (BulkReserveStockResponse);
+	rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+	rpc ConfirmStock(ConfirmStockRequest) returns (ConfirmStockResponse);
+	rpc GetInventoryHistory(GetInventoryHistoryRequest) returns (GetInventoryHistoryResponse);
+	rpc RecordStockTaking(RecordStockTakingRequest) returns (RecordStockTakingResponse);
+	rpc GetStockTakingHistory(GetStockTakingHistoryRequest) returns (GetStockTakingHistoryResponse);
+}

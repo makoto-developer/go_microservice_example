@@ -1,0 +1,266 @@
+syntax = "proto3";
+
+package shop_service .v1;
+
+option go_package = "github.com/makoto-developer/go_microservice_example/proto/shop_service /v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+enum ShopStatus {
+	SHOP_STATUS_UNSPECIFIED = 0;
+	PENDING_APPROVAL = 1;
+	APPROVED = 2;
+	REJECTED = 3;
+	SUSPENDED = 4;
+}
+
+enum OrderStatus {
+	ORDER_STATUS_UNSPECIFIED = 0;
+	RECEIVED = 1;
+	PREPARING = 2;
+	SHIPPED = 3;
+	DELIVERED = 4;
+	CANCELLED = 5;
+}
+
+enum Carrier {
+	CARRIER_UNSPECIFIED = 0;
+	YAMATO = 1;
+	SAGAWA = 2;
+	JAPAN_POST = 3;
+}
+
+message Shop {
+	string id = 1;
+	string owner_id = 2;
+	string name = 3;
+	text description = 4;
+	string logo_url = 5;
+	string owner_name = 6;
+	string phone_number = 7;
+	string business_hours = 8;
+	text return_policy = 9;
+	ShopStatus status = 10;
+	bool published = 11;
+	google.protobuf.Timestamp created_at = 12;
+	google.protobuf.Timestamp updated_at = 13;
+}
+
+message ShopCategory {
+	string id = 1;
+	string shop_id = 2;
+	string category_name = 3;
+	google.protobuf.Timestamp created_at = 4;
+}
+
+message Product {
+	string id = 1;
+	string shop_id = 2;
+	string name = 3;
+	text description = 4;
+	string price = 5;
+	string category = 6;
+	int32 stock_quantity = 7;
+	string weight = 8;
+	string size = 9;
+	string jan_code = 10;
+	bool published = 11;
+	bool deleted = 12;
+	google.protobuf.Timestamp created_at = 13;
+	google.protobuf.Timestamp updated_at = 14;
+}
+
+message ProductImage {
+	string id = 1;
+	string product_id = 2;
+	string url = 3;
+	int32 display_order = 4;
+	string thumbnail_200_url = 5;
+	string thumbnail_400_url = 6;
+	string thumbnail_800_url = 7;
+	google.protobuf.Timestamp created_at = 8;
+}
+
+message ProductTag {
+	string id = 1;
+	string product_id = 2;
+	string tag_name = 3;
+	google.protobuf.Timestamp created_at = 4;
+}
+
+message ProductVariation {
+	string id = 1;
+	string product_id = 2;
+	string sku = 3;
+	string attribute_name = 4;
+	string attribute_value = 5;
+	string price = 6;
+	int32 stock_quantity = 7;
+	google.protobuf.Timestamp created_at = 8;
+	google.protobuf.Timestamp updated_at = 9;
+}
+
+message Order {
+	string id = 1;
+	string shop_id = 2;
+	string customer_id = 3;
+	string order_number = 4;
+	OrderStatus status = 5;
+	string total_amount = 6;
+	string shipping_address = 7;
+	string payment_method = 8;
+	string tracking_number = 9;
+	Carrier carrier = 10;
+	google.protobuf.Timestamp created_at = 11;
+	google.protobuf.Timestamp updated_at = 12;
+}
+
+message OrderItem {
+	string id = 1;
+	string order_id = 2;
+	string product_id = 3;
+	string product_name = 4;
+	int32 quantity = 5;
+	string unit_price = 6;
+	string subtotal = 7;
+	google.protobuf.Timestamp created_at = 8;
+}
+
+message SalesReport {
+	string id = 1;
+	string shop_id = 2;
+	date date = 3;
+	string total_sales = 4;
+	int32 order_count = 5;
+	string average_order_value = 6;
+	google.protobuf.Timestamp created_at = 7;
+}
+
+message RegisterShopRequest {
+	string owner_id = 1;
+	string name = 2;
+	string description = 3;
+	string logo_url = 4;
+	string owner_name = 5;
+	string phone_number = 6;
+	string business_hours = 7;
+	string return_policy = 8;
+	repeated string categories = 9;
+}
+
+message UpdateShopInfoRequest {
+	string shop_id = 1;
+	string name = 2;
+	string description = 3;
+	string logo_url = 4;
+	string business_hours = 5;
+	string return_policy = 6;
+}
+
+message ToggleShopPublishRequest {
+	string shop_id = 1;
+	bool published = 2;
+}
+
+message RegisterProductRequest {
+	string shop_id = 1;
+	string name = 2;
+	string description = 3;
+	string price = 4;
+	string category = 5;
+	int32 stock_quantity = 6;
+	string weight = 7;
+	string size = 8;
+	string jan_code = 9;
+	repeated string tags = 10;
+}
+
+message UpdateProductRequest {
+	string product_id = 1;
+	string name = 2;
+	string description = 3;
+	string price = 4;
+	string category = 5;
+	int32 stock_quantity = 6;
+	string weight = 7;
+	string size = 8;
+	string jan_code = 9;
+}
+
+message DeleteProductRequest {
+	string product_id = 1;
+}
+
+message ToggleProductPublishRequest {
+	string product_id = 1;
+	bool published = 2;
+}
+
+message UploadProductImageRequest {
+	string product_id = 1;
+	bytes image_data = 2;
+	int32 display_order = 3;
+}
+
+message ManageProductVariationRequest {
+	string product_id = 1;
+	repeated ProductVariationInput variations = 2;
+}
+
+message ListOrdersRequest {
+	string shop_id = 1;
+	OrderStatus status = 2;
+	date date_from = 3;
+	date date_to = 4;
+	string customer_name = 5;
+	string product_name = 6;
+	string sort_by = 7;
+	string sort_order = 8;
+}
+
+message GetOrderDetailRequest {
+	string order_id = 1;
+	string shop_id = 2;
+}
+
+message UpdateOrderStatusRequest {
+	string order_id = 1;
+	string shop_id = 2;
+	OrderStatus new_status = 3;
+	string tracking_number = 4;
+	Carrier carrier = 5;
+}
+
+message GetSalesReportRequest {
+	string shop_id = 1;
+	string report_type = 2;
+	date date_from = 3;
+	date date_to = 4;
+}
+
+message ExportSalesDataRequest {
+	string shop_id = 1;
+	date date_from = 2;
+	date date_to = 3;
+}
+
+service ShopService  {
+	rpc RegisterShop(RegisterShopRequest) returns (RegisterShopResponse);
+	rpc UpdateShop(UpdateShopRequest) returns (UpdateShopResponse);
+	rpc ToggleShopPublish(ToggleShopPublishRequest) returns (ToggleShopPublishResponse);
+	rpc GetShop(GetShopRequest) returns (GetShopResponse);
+	rpc RegisterProduct(RegisterProductRequest) returns (RegisterProductResponse);
+	rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+	rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+	rpc ToggleProductPublish(ToggleProductPublishRequest) returns (ToggleProductPublishResponse);
+	rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+	rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+	rpc UploadProductImage(UploadProductImageRequest) returns (UploadProductImageResponse);
+	rpc ManageVariation(ManageVariationRequest) returns (ManageVariationResponse);
+	rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+	rpc GetOrderDetail(GetOrderDetailRequest) returns (GetOrderDetailResponse);
+	rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+	rpc GetSalesReport(GetSalesReportRequest) returns (GetSalesReportResponse);
+	rpc ExportSalesData(ExportSalesDataRequest) returns (ExportSalesDataResponse);
+}

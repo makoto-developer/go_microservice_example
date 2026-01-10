@@ -38,17 +38,18 @@ NOTES:
 EOF
 }
 
-# MPSインストール確認
-check_mps_installation() {
-  if [ ! -d "/Applications/MPS.app" ] && [ ! -f "/usr/local/bin/mps" ]; then
-    echo -e "${RED}Error: JetBrains MPS が見つかりません${NC}"
+# DSLジェネレーター確認
+check_generator() {
+  local generator="$PROJECT_ROOT/bin/dsl-generator"
+  if [ ! -f "$generator" ]; then
+    echo -e "${YELLOW}DSL generator が見つかりません。ビルドします...${NC}"
+    cd "$PROJECT_ROOT/tools/dsl-generator" && go build -o ../../bin/dsl-generator ./cmd/main.go
+    if [ $? -ne 0 ]; then
+      echo -e "${RED}Error: ジェネレーターのビルドに失敗しました${NC}"
+      exit 1
+    fi
+    echo -e "${GREEN}✓ ジェネレーターをビルドしました${NC}"
     echo ""
-    echo "MPSをインストールしてください:"
-    echo "  https://www.jetbrains.com/mps/download/"
-    echo ""
-    echo "または、Homebrewでインストール:"
-    echo "  brew install --cask mps"
-    exit 1
   fi
 }
 
@@ -78,45 +79,42 @@ generate_service() {
   mkdir -p "$output_dir"
 
   # ========================================
-  # MPS Generator 実行
+  # DSL Generator 実行
   # ========================================
-  # 注意: 以下は仮実装です
-  # 実際のMPS Generatorの実行方法はMPSプロジェクト設定に依存します
+  local dsl_file="$service_dir/service.model"
+  local generator="$PROJECT_ROOT/bin/dsl-generator"
 
-  # TODO: 実際のMPS Generator呼び出しに置き換える
-  # 例:
-  # mps --generate "$MPS_WORKSPACE" --model "$service_name" --output "$output_dir"
-
-  echo -e "${YELLOW}Warning: MPS Generator の実装が必要です${NC}"
-  echo "このスクリプトは現在モックです。"
-  echo ""
-  echo "生成先: $output_dir"
-  echo "DSL定義: $service_dir/service.model"
-  echo ""
-
-  # モック: ディレクトリ構成のみ作成
-  mkdir -p "$output_dir/domain"
-  mkdir -p "$output_dir/usecase"
-  mkdir -p "$output_dir/handler"
-  mkdir -p "$output_dir/infrastructure"
-  mkdir -p "$output_dir/tests"
-
-  # モック: go.modファイル作成
-  if [ ! -f "$output_dir/go.mod" ]; then
-    cat > "$output_dir/go.mod" << EOL
-module github.com/makoto-developer/go_microservice_example/generated/$service_name
-
-go 1.25
-
-require (
-	github.com/google/uuid v1.6.0
-	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.35.1
-)
-EOL
+  if [ ! -f "$generator" ]; then
+    echo -e "${RED}Error: DSL generator が見つかりません${NC}"
+    echo "ジェネレーターをビルドしてください:"
+    echo "  cd tools/dsl-generator && go build -o ../../bin/dsl-generator ./cmd/main.go"
+    exit 1
   fi
 
-  echo -e "${GREEN}✓ $service_name の構造を作成しました（モック）${NC}"
+  if [ ! -f "$dsl_file" ]; then
+    echo -e "${RED}Error: DSL定義ファイルが見つかりません: $dsl_file${NC}"
+    exit 1
+  fi
+
+  echo "DSL定義: $dsl_file"
+  echo "生成先: $output_dir"
+  echo ""
+
+  # DSLジェネレーター実行
+  "$generator" \
+    -input "$dsl_file" \
+    -output "$GENERATED_DIR" \
+    -service "$service_name"
+
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo -e "${GREEN}✓ $service_name のコード生成が完了しました${NC}"
+  else
+    echo ""
+    echo -e "${RED}✗ $service_name のコード生成に失敗しました${NC}"
+    exit 1
+  fi
+
   echo ""
 }
 
@@ -153,11 +151,11 @@ main() {
       exit 0
       ;;
     --all)
-      check_mps_installation
+      check_generator
       generate_all
       ;;
     *)
-      check_mps_installation
+      check_generator
       generate_service "$1"
       ;;
   esac

@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package auth_service .v1;
+
+option go_package = "github.com/makoto-developer/go_microservice_example/proto/auth_service /v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+enum Role {
+	ROLE_UNSPECIFIED = 0;
+	CUSTOMER = 1;
+	SHOP_OWNER = 2;
+	ADMIN = 3;
+}
+
+message User {
+	string id = 1;
+	string email = 2;
+	string password_hash = 3;
+	Role role = 4;
+	bool email_verified = 5;
+	string email_verification_token = 6;
+	google.protobuf.Timestamp email_verification_expires_at = 7;
+	string password_reset_token = 8;
+	google.protobuf.Timestamp password_reset_expires_at = 9;
+	google.protobuf.Timestamp created_at = 10;
+	google.protobuf.Timestamp updated_at = 11;
+}
+
+message RefreshToken {
+	string id = 1;
+	string user_id = 2;
+	string token = 3;
+	google.protobuf.Timestamp expires_at = 4;
+	bool revoked = 5;
+	google.protobuf.Timestamp created_at = 6;
+}
+
+message UserRegistrationRequest {
+	string email = 1;
+	string password = 2;
+	Role role = 3;
+}
+
+message EmailVerificationRequest {
+	string token = 1;
+}
+
+message UserLoginRequest {
+	string email = 1;
+	string password = 2;
+	bool keep_logged_in = 3;
+}
+
+message UserLogoutRequest {
+	string refresh_token = 1;
+}
+
+message TokenRefreshRequest {
+	string refresh_token = 1;
+}
+
+message TokenVerificationRequest {
+	string access_token = 1;
+}
+
+message PasswordResetRequestRequest {
+	string email = 1;
+}
+
+message PasswordResetRequest {
+	string token = 1;
+	string new_password = 2;
+}
+
+message PasswordChangeRequest {
+	string user_id = 1;
+	string current_password = 2;
+	string new_password = 3;
+}
+
+service AuthService  {
+	rpc Register(RegisterRequest) returns (RegisterResponse);
+	rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+	rpc Login(LoginRequest) returns (LoginResponse);
+	rpc Logout(LogoutRequest) returns (LogoutResponse);
+	rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+	rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
+	rpc RequestPasswordReset(PasswordResetRequest) returns (PasswordResetResponse);
+	rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+	rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+}
