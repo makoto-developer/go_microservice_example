@@ -314,3 +314,435 @@ manual/                  # 手動実装
 - イベントソーシングによる整合性担保
 - Saga パターンによる分散トランザクション管理
 
+## Docker環境での起動
+
+### 前提条件
+
+- Docker Desktop for Mac がインストールされていること
+- Docker Compose V2 がインストールされていること
+
+### 環境設定
+
+#### 1. 環境変数ファイルの作成
+
+プロジェクトルートに `.env` ファイルを作成します。
+
+```bash
+# .env.exampleをコピー
+cp .env.example .env
+
+# 必要に応じて値を編集
+vim .env
+```
+
+#### 2. 環境変数の説明
+
+`.env` ファイルには以下の設定が含まれています：
+
+```env
+# 環境指定 (dev, test, staging, prod)
+ENV=dev
+
+# プロジェクト名（コンテナ名のプレフィックスになります）
+COMPOSE_PROJECT_NAME=go_microservice
+
+# データベース設定
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=dev_password_123  # 本番環境では変更必須
+POSTGRES_DB=microservice
+POSTGRES_PORT=20000
+
+# セキュリティ設定
+JWT_SECRET=dev_jwt_secret_key_not_for_production  # 本番環境では変更必須
+
+# 外部サービスAPI設定（開発環境はモック）
+STRIPE_API_KEY=mock_stripe_key_dev
+SENDGRID_API_KEY=mock_sendgrid_key_dev
+```
+
+#### 3. 環境別の設定
+
+**開発環境 (dev)**:
+```bash
+ENV=dev
+DEBUG=true
+HOT_RELOAD=true
+```
+
+**テスト環境 (test)**:
+```bash
+ENV=test
+DEBUG=false
+HOT_RELOAD=false
+```
+
+**本番環境 (prod)**:
+```bash
+ENV=prod
+DEBUG=false
+HOT_RELOAD=false
+
+# 本番環境では以下を必ず変更してください
+POSTGRES_PASSWORD=<強固なパスワード>
+JWT_SECRET=<ランダムな256bit以上の秘密鍵>
+STRIPE_API_KEY=<実際のStripeキー>
+SENDGRID_API_KEY=<実際のSendGridキー>
+```
+
+#### 4. セキュリティに関する注意
+
+**重要**: `.env` ファイルには機密情報が含まれるため、以下を遵守してください：
+
+- ✅ `.env.example` のみバージョン管理にコミット
+- ❌ `.env` は絶対にGitにコミットしない（.gitignoreに含まれています）
+- ✅ 本番環境では強固なパスワード・秘密鍵を使用
+- ✅ 本番環境では実際の外部サービスAPIキーを設定
+- ✅ 環境ごとに異なる `.env` ファイルを使用
+
+### クイックスタート
+
+```bash
+# 1. 環境変数ファイル作成
+cp .env.example .env
+
+# 2. DSLからコード生成
+./scripts/mps-generate.sh --all
+
+# 3. Docker Composeで全サービス起動
+docker-compose up -d
+
+# 4. ログ確認
+docker-compose logs -f
+
+# 5. サービス停止
+docker-compose down
+
+# 6. ボリューム含めて完全削除
+docker-compose down -v
+```
+
+### アーキテクチャ構成
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    Docker Compose Environment                  │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  Infrastructure Services                                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │ PostgreSQL   │  │ Redis        │  │ RabbitMQ     │        │
+│  │ :20000       │  │ :20001       │  │ :20002       │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+│                                                                │
+│  ┌──────────────┐                                             │
+│  │ MailHog      │  メール確認: http://localhost:20005        │
+│  │ SMTP :20004  │                                             │
+│  │ UI   :20005  │                                             │
+│  └──────────────┘                                             │
+│                                                                │
+│  Mock External Services (本番環境では実際のサービスに接続)       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │ Stripe Mock  │  │ FCM Mock     │  │ Elasticsearch│        │
+│  │ :20010       │  │ :20012       │  │ Mock :20013  │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+│                                                                │
+│  ┌──────────────┐                                             │
+│  │ Carriers     │                                             │
+│  │ Mock :20014  │                                             │
+│  └──────────────┘                                             │
+│                                                                │
+│  Microservices (12 services)                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │ Auth         │  │ Shop         │  │ Customer     │        │
+│  │ :20100       │  │ :20101       │  │ :20102       │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+│                                                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │ Inventory    │  │ Order        │  │ Payment      │        │
+│  │ :20103       │  │ :20104       │  │ :20105       │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+│                                                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │ Shipping     │  │ Notification │  │ Review       │        │
+│  │ :20106       │  │ :20107       │  │ :20108       │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+│                                                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │ Chat         │  │ Search       │  │ Admin        │        │
+│  │ :20109       │  │ :20111       │  │ :20112       │        │
+│  │ WebSocket    │  │              │  │              │        │
+│  │ :20110       │  │              │  │              │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### ポート番号一覧
+
+| サービス | ポート | 用途 |
+|---------|-------|------|
+| **Infrastructure** | | |
+| PostgreSQL | 20000 | データベース |
+| Redis | 20001 | キャッシュ/セッション |
+| RabbitMQ | 20002 | メッセージング |
+| RabbitMQ Management | 20003 | RabbitMQ管理UI |
+| MailHog SMTP | 20004 | メール送信テスト |
+| MailHog Web UI | 20005 | メール確認画面 |
+| **Mock Services** | | |
+| Stripe Mock | 20010 | 決済API |
+| FCM Mock | 20012 | プッシュ通知API |
+| Elasticsearch Mock | 20013 | 検索API |
+| Carriers Mock | 20014 | 配送業者API |
+| **Microservices** | | |
+| Auth Service | 20100 | 認証・認可 |
+| Shop Service | 20101 | ショップ管理 |
+| Customer Service | 20102 | 顧客管理 |
+| Inventory Service | 20103 | 在庫管理 |
+| Order Service | 20104 | 注文管理 |
+| Payment Service | 20105 | 決済処理 |
+| Shipping Service | 20106 | 配送管理 |
+| Notification Service | 20107 | 通知送信 |
+| Review Service | 20108 | レビュー管理 |
+| Chat Service | 20109 | チャット（gRPC） |
+| Chat Service (WS) | 20110 | チャット（WebSocket） |
+| Search Service | 20111 | 検索機能 |
+| Admin Service | 20112 | 管理機能 |
+
+### コンテナ命名規則
+
+各コンテナは環境変数に基づいて命名されます：
+
+**命名パターン**: `${COMPOSE_PROJECT_NAME}_<service>_${ENV}`
+
+**例**（ENV=dev の場合）:
+- `go_microservice_postgres_dev` - PostgreSQLコンテナ
+- `go_microservice_auth_service_dev` - Auth Serviceコンテナ
+- `go_microservice_redis_dev` - Redisコンテナ
+
+**ホスト名**: `<service>_${ENV}` (例: `postgres_dev`, `auth-service_dev`)
+
+**ネットワーク**: `${COMPOSE_PROJECT_NAME}_network_${ENV}` (例: `go_microservice_network_dev`)
+
+この命名規則により、同じホストで複数の環境（dev, test, staging）を同時実行できます。
+
+### サービス間通信
+
+Docker内部では、サービスは以下のホスト名で相互通信します：
+
+```env
+# Database（環境変数から自動設定）
+DB_HOST=postgres_${ENV}
+DB_PORT=5432
+DB_USER=${POSTGRES_USER}
+DB_PASSWORD=${POSTGRES_PASSWORD}
+DB_NAME=<service>_db
+
+# Redis
+REDIS_HOST=redis_${ENV}
+REDIS_PORT=6379
+
+# RabbitMQ
+RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq_${ENV}:5672/
+
+# External Services (Mock)
+STRIPE_API_URL=http://mock-stripe_${ENV}:8080
+SENDGRID_API_URL=http://mock-sendgrid_${ENV}:8081
+FCM_API_URL=http://mock-fcm_${ENV}:8082
+ELASTICSEARCH_URL=http://mock-elasticsearch_${ENV}:9200
+CARRIER_API_URL=http://mock-carriers_${ENV}:8083
+```
+
+`.env` ファイルで `ENV` 変数を変更するだけで、環境を切り替えることができます。
+
+### モックサーバーについて
+
+開発環境では外部サービスをモックサーバーで代替しています。
+
+#### MailHog - メールテストツール
+
+開発環境でのメール送信をテストするため、MailHogを使用しています。
+
+**特徴**:
+- 送信されたメールをすべてキャプチャ
+- Web UIでメール内容を確認可能
+- 実際にメールが送信されない（安全）
+- SMTP互換
+
+**使用方法**:
+```bash
+# 1. Docker起動後、ブラウザでアクセス
+open http://localhost:20005
+
+# 2. サービスからメール送信
+# Notification Serviceが自動的にMailHogを使用
+# SMTP_HOST: mailhog
+# SMTP_PORT: 1025
+```
+
+**確認できる内容**:
+- メールの件名・本文
+- 送信元・送信先
+- HTMLメール・テキストメール
+- 添付ファイル
+
+#### その他のモックサービス
+
+| サービス | 用途 | 特徴 |
+|---------|------|------|
+| Stripe Mock | 決済API | 実際のStripe APIと同じインターフェース |
+| FCM Mock | プッシュ通知 | Firebase Cloud Messaging互換 |
+| Elasticsearch Mock | 検索API | 基本的な検索機能を提供 |
+| Carriers Mock | 配送業者API | ヤマト・佐川・日本郵便の追跡API |
+
+**本番環境への切り替え**:
+環境変数を実際のサービスURLに変更するだけで切り替え可能です。
+
+```bash
+# 開発環境（モック）
+STRIPE_API_URL=http://mock-stripe:8080
+SMTP_HOST=mailhog
+
+# 本番環境
+STRIPE_API_URL=https://api.stripe.com
+STRIPE_API_KEY=<actual_key>
+SMTP_HOST=smtp.sendgrid.net
+SENDGRID_API_KEY=<actual_key>
+```
+
+### Docker環境の改善点
+
+最新版では以下の改善が施されています：
+
+#### 1. 最新バージョンの使用
+- **PostgreSQL 17-alpine** (最新安定版)
+- **Redis 7.4-alpine** (最新安定版)
+- **RabbitMQ 4-management-alpine** (最新安定版)
+
+#### 2. リソース制限
+全サービスにCPU・メモリ制限を設定：
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '1'
+      memory: 512M
+    reservations:
+      cpus: '0.25'
+      memory: 128M
+```
+
+#### 3. 自動再起動
+`restart: unless-stopped` を全サービスに適用：
+- コンテナクラッシュ時の自動再起動
+- 開発中の安定性向上
+
+#### 4. ログローテーション
+ログファイルの肥大化を防止：
+```yaml
+logging:
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+```
+
+#### 5. ヘルスチェック強化
+- `start_period` の追加（初回起動の猶予期間）
+- Redis認証対応のヘルスチェック
+- RabbitMQ起動時間の考慮（30秒）
+
+#### 6. データ永続化
+Named volumeによるデータ永続化：
+- `postgres_data` - データベース
+- `redis_data` - Redisデータ
+- `rabbitmq_data` - RabbitMQデータ
+- `rabbitmq_log` - RabbitMQログ
+
+**データのバックアップ**:
+```bash
+# volumeの一覧確認
+docker volume ls
+
+# volumeのバックアップ
+docker run --rm -v go_microservice_postgres_data_dev:/data -v $(pwd):/backup \
+  alpine tar czf /backup/postgres_backup.tar.gz -C /data .
+
+# リストア
+docker run --rm -v go_microservice_postgres_data_dev:/data -v $(pwd):/backup \
+  alpine tar xzf /backup/postgres_backup.tar.gz -C /data
+```
+
+### トラブルシューティング
+
+#### ポートが既に使用されている
+
+```bash
+# ポート使用状況確認
+lsof -i :20000  # PostgreSQL
+lsof -i :20100 # Auth Service
+
+# プロセス終了
+kill -9 <PID>
+```
+
+#### コンテナログ確認
+
+```bash
+# 全サービスのログ
+docker-compose logs -f
+
+# 特定サービスのログ
+docker-compose logs -f auth-service
+
+# エラーログのみ
+docker-compose logs -f | grep -i error
+```
+
+#### コンテナ再起動
+
+```bash
+# 全サービス再起動
+docker-compose restart
+
+# 特定サービスのみ再起動
+docker-compose restart auth-service
+```
+
+#### データベースリセット
+
+```bash
+# ボリューム削除（全データ削除）
+docker-compose down -v
+
+# 再起動
+docker-compose up -d
+```
+
+### 開発ワークフロー
+
+1. **DSL定義変更**
+   ```bash
+   # DSL編集
+   vim mps-workspace/solutions/auth-service/service.model
+   
+   # コード再生成
+   ./scripts/mps-generate.sh auth-service
+   ```
+
+2. **サービス再ビルド**
+   ```bash
+   # イメージ再ビルド
+   docker-compose build auth-service
+   
+   # 再起動
+   docker-compose up -d auth-service
+   ```
+
+3. **動作確認**
+   ```bash
+   # ログ確認
+   docker-compose logs -f auth-service
+   
+   # gRPCリクエスト送信（grpcurlを使用）
+   grpcurl -plaintext localhost:20100 list
+   ```
+

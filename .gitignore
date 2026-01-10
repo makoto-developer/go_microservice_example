@@ -58,3 +58,12 @@ temp/
 # Build artifacts
 dist/
 build/
+
+# Docker volumes (local data)
+# Note: Named volumes managed by Docker are not in the repository
+# but if you mount local directories, add them here
+docker-volumes/
+
+# Docker logs
+*.log
+docker-compose.override.yml
