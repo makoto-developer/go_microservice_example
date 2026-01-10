@@ -297,8 +297,8 @@ services:
 
   auth-service:
     build:
-      context: .
-      dockerfile: generated/auth-service/Dockerfile
+      context: ./generated/auth-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_auth_service_${ENV}
     hostname: ${AUTH_SERVICE_HOST}_${ENV}
     env_file:
@@ -343,8 +343,8 @@ services:
 
   shop-service:
     build:
-      context: .
-      dockerfile: generated/shop/Dockerfile
+      context: ./generated/shop-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_shop_service_${ENV}
     hostname: ${SHOP_SERVICE_HOST}_${ENV}
     env_file:
@@ -388,8 +388,8 @@ services:
 
   customer-service:
     build:
-      context: .
-      dockerfile: generated/customer/Dockerfile
+      context: ./generated/customer-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_customer_service_${ENV}
     hostname: ${CUSTOMER_SERVICE_HOST}_${ENV}
     env_file:
@@ -433,8 +433,8 @@ services:
 
   inventory-service:
     build:
-      context: .
-      dockerfile: generated/inventory/Dockerfile
+      context: ./generated/inventory-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_inventory_service_${ENV}
     hostname: ${INVENTORY_SERVICE_HOST}_${ENV}
     env_file:
@@ -479,8 +479,8 @@ services:
 
   order-service:
     build:
-      context: .
-      dockerfile: generated/order/Dockerfile
+      context: ./generated/order-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_order_service_${ENV}
     hostname: ${ORDER_SERVICE_HOST}_${ENV}
     env_file:
@@ -527,8 +527,8 @@ services:
 
   payment-service:
     build:
-      context: .
-      dockerfile: generated/payment/Dockerfile
+      context: ./generated/payment-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_payment_service_${ENV}
     hostname: ${PAYMENT_SERVICE_HOST}_${ENV}
     env_file:
@@ -575,8 +575,8 @@ services:
 
   shipping-service:
     build:
-      context: .
-      dockerfile: generated/shipping/Dockerfile
+      context: ./generated/shipping-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_shipping_service_${ENV}
     hostname: ${SHIPPING_SERVICE_HOST}_${ENV}
     env_file:
@@ -618,8 +618,8 @@ services:
 
   notification-service:
     build:
-      context: .
-      dockerfile: generated/notification/Dockerfile
+      context: ./generated/notification-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_notification_service_${ENV}
     hostname: ${NOTIFICATION_SERVICE_HOST}_${ENV}
     env_file:
@@ -670,8 +670,8 @@ services:
 
   review-service:
     build:
-      context: .
-      dockerfile: generated/review/Dockerfile
+      context: ./generated/review-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_review_service_${ENV}
     hostname: ${REVIEW_SERVICE_HOST}_${ENV}
     env_file:
@@ -711,8 +711,8 @@ services:
 
   chat-service:
     build:
-      context: .
-      dockerfile: generated/chat/Dockerfile
+      context: ./generated/chat-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_chat_service_${ENV}
     hostname: ${CHAT_SERVICE_HOST}_${ENV}
     env_file:
@@ -757,8 +757,8 @@ services:
 
   search-service:
     build:
-      context: .
-      dockerfile: generated/search/Dockerfile
+      context: ./generated/search-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_search_service_${ENV}
     hostname: ${SEARCH_SERVICE_HOST}_${ENV}
     env_file:
@@ -802,8 +802,8 @@ services:
 
   admin-service:
     build:
-      context: .
-      dockerfile: generated/admin/Dockerfile
+      context: ./generated/admin-service
+      dockerfile: Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_admin_service_${ENV}
     hostname: ${ADMIN_SERVICE_HOST}_${ENV}
     env_file:

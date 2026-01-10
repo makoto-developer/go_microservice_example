@@ -401,6 +401,27 @@ SENDGRID_API_KEY=<実際のSendGridキー>
 
 ### クイックスタート
 
+> **✅ 現在の状態**: 全20サービスが稼働中
+> - 4インフラ（PostgreSQL, Redis, RabbitMQ, MailHog）
+> - 4モック（Stripe, FCM, Elasticsearch, Carriers）
+> - 12マイクロサービス（Auth, Shop, Customer, Inventory, Order, Payment, Shipping, Notification, Review, Chat, Search, Admin）
+> - カスタムロジック実装済み（Payment: Stripe連携、Notification: Email送信）
+
+#### 方法1: Makefileを使用（推奨）
+
+```bash
+# 初回セットアップ（.env作成、ビルド、起動まで自動）
+make init
+
+# または
+make quickstart
+
+# ヘルプを表示
+make help
+```
+
+#### 方法2: docker-composeを直接使用
+
 ```bash
 # 1. 環境変数ファイル作成
 cp .env.example .env
@@ -420,6 +441,62 @@ docker-compose down
 # 6. ボリューム含めて完全削除
 docker-compose down -v
 ```
+
+### Makefileコマンド一覧
+
+便利なMakefileコマンドを用意しています：
+
+#### 起動・停止
+```bash
+make up              # 全サービス起動
+make up-infra        # インフラのみ起動
+make up-mocks        # モックサービスのみ起動
+make down            # 全サービス停止
+make restart         # 全サービス再起動
+make dev             # 開発環境起動（インフラ+モック）
+```
+
+#### ビルド
+```bash
+make build           # 全サービスビルド
+make build-mocks     # モックサービスビルド
+make build-services  # マイクロサービスビルド
+```
+
+#### ログ・モニタリング
+```bash
+make logs            # 全ログ表示
+make logs-infra      # インフラログのみ
+make ps              # 稼働状況確認
+make health          # ヘルスチェック
+make stats           # リソース使用状況
+```
+
+#### データベース
+```bash
+make db-init         # データベース初期化
+make db-connect      # PostgreSQL接続
+make db-list         # データベース一覧
+make db-reset        # データベースリセット（要注意）
+make backup-db       # バックアップ作成
+```
+
+#### ユーティリティ
+```bash
+make open-mailhog    # MailHog UI をブラウザで開く
+make open-rabbitmq   # RabbitMQ UI をブラウザで開く
+make shell-postgres  # PostgreSQLシェル
+make shell-redis     # Redisシェル
+make go-tidy         # 全サービスで go mod tidy 実行
+```
+
+#### クリーンアップ
+```bash
+make clean           # コンテナ・ボリューム削除
+make nuke            # 完全削除（要注意）
+```
+
+詳細は `make help` で確認できます。
 
 ### アーキテクチャ構成
 
