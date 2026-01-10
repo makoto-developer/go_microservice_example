@@ -1,0 +1,723 @@
+// Admin Service DSL Definition
+// Based on: docs/requirements/12_admin_service.md
+
+microservice AdminService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity SystemSettings {
+    id: UUID primary_key
+    setting_key: string unique not_null
+    setting_value: string not_null
+    setting_type: SettingType not_null
+    description: text nullable
+    updated_by: UUID not_null
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity Category {
+    id: UUID primary_key
+    name: string not_null
+    parent_id: UUID nullable
+    level: int not_null
+    display_order: int not_null
+    is_active: boolean default(true)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity ForbiddenWord {
+    id: UUID primary_key
+    word: string not_null
+    context: WordContext not_null
+    severity: Severity not_null
+    created_at: timestamp not_null
+  }
+
+  entity AuditLog {
+    id: UUID primary_key
+    operation_type: OperationType not_null
+    operator_id: UUID not_null
+    operator_name: string not_null
+    target_type: string not_null
+    target_id: UUID not_null
+    operation_detail: json not_null
+    ip_address: string not_null
+    user_agent: string nullable
+    created_at: timestamp not_null
+  }
+
+  entity DashboardMetrics {
+    id: UUID primary_key
+    metric_type: MetricType not_null
+    metric_value: decimal not_null
+    metric_date: date not_null
+    metadata: json nullable
+    created_at: timestamp not_null
+  }
+
+  entity ServiceHealthCheck {
+    id: UUID primary_key
+    service_name: string not_null
+    status: HealthStatus not_null
+    response_time_ms: int not_null
+    error_message: text nullable
+    checked_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum SettingType {
+    STRING,
+    NUMBER,
+    BOOLEAN,
+    JSON
+  }
+
+  enum WordContext {
+    REVIEW,
+    CHAT,
+    ALL
+  }
+
+  enum Severity {
+    LOW,
+    MEDIUM,
+    HIGH,
+    CRITICAL
+  }
+
+  enum OperationType {
+    USER_CREATED,
+    USER_UPDATED,
+    USER_ROLE_CHANGED,
+    USER_SUSPENDED,
+    USER_ACTIVATED,
+    SHOP_APPROVED,
+    SHOP_REJECTED,
+    SHOP_SUSPENDED,
+    SHOP_ACTIVATED,
+    SETTING_UPDATED,
+    CATEGORY_CREATED,
+    CATEGORY_UPDATED,
+    CATEGORY_DELETED,
+    REVIEW_APPROVED,
+    REVIEW_REJECTED,
+    REVIEW_DELETED
+  }
+
+  enum MetricType {
+    TOTAL_USERS,
+    ACTIVE_USERS,
+    TOTAL_SHOPS,
+    ACTIVE_SHOPS,
+    TOTAL_ORDERS,
+    TOTAL_REVENUE,
+    DAILY_ORDERS,
+    DAILY_REVENUE,
+    NEW_USERS,
+    NEW_SHOPS
+  }
+
+  enum HealthStatus {
+    HEALTHY,
+    DEGRADED,
+    UNHEALTHY
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // User Management
+  usecase GetAllUsers {
+    input: {
+      role_filter: string
+      status_filter: string
+      email_verified: boolean
+      date_from: date
+      date_to: date
+      sort_by: string
+      page: int
+      page_size: int
+    }
+    output: {
+      users: list<UserSummary>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  usecase GetUserDetail {
+    input: {
+      user_id: UUID
+    }
+    output: {
+      user: UserDetail
+      statistics: UserStatistics
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  usecase ChangeUserRole {
+    input: {
+      user_id: UUID
+      admin_id: UUID
+      new_role: string
+      reason: string
+    }
+    output: {
+      user_id: UUID
+      new_role: string
+    }
+    errors: {
+      UserNotFound,
+      InvalidRoleTransition
+    }
+    events: {
+      publish UserRoleChanged
+    }
+  }
+
+  usecase SuspendUser {
+    input: {
+      user_id: UUID
+      admin_id: UUID
+      reason: string
+    }
+    output: {
+      user_id: UUID
+      suspended: boolean
+    }
+    errors: {
+      UserNotFound,
+      UserAlreadySuspended
+    }
+    events: {
+      publish UserSuspended
+    }
+  }
+
+  usecase ActivateUser {
+    input: {
+      user_id: UUID
+      admin_id: UUID
+      reason: string
+    }
+    output: {
+      user_id: UUID
+      activated: boolean
+    }
+    errors: {
+      UserNotFound,
+      UserNotSuspended
+    }
+    events: {
+      publish UserActivated
+    }
+  }
+
+  // Shop Management
+  usecase GetPendingShops {
+    input: {
+      page: int
+      page_size: int
+    }
+    output: {
+      shops: list<ShopSummary>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  usecase ApproveShop {
+    input: {
+      shop_id: UUID
+      admin_id: UUID
+    }
+    output: {
+      shop_id: UUID
+      approved: boolean
+    }
+    errors: {
+      ShopNotFound,
+      ShopAlreadyProcessed
+    }
+    events: {
+      publish ShopApproved
+    }
+  }
+
+  usecase RejectShop {
+    input: {
+      shop_id: UUID
+      admin_id: UUID
+      reason: string
+    }
+    output: {
+      shop_id: UUID
+      rejected: boolean
+    }
+    errors: {
+      ShopNotFound,
+      ShopAlreadyProcessed
+    }
+    events: {
+      publish ShopRejected
+    }
+  }
+
+  usecase GetAllShops {
+    input: {
+      approval_status: string
+      status_filter: string
+      category: string
+      date_from: date
+      date_to: date
+      sort_by: string
+      page: int
+      page_size: int
+    }
+    output: {
+      shops: list<ShopSummary>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  usecase SuspendShop {
+    input: {
+      shop_id: UUID
+      admin_id: UUID
+      reason: string
+    }
+    output: {
+      shop_id: UUID
+      suspended: boolean
+    }
+    errors: {
+      ShopNotFound,
+      ShopAlreadySuspended
+    }
+    events: {
+      publish ShopSuspended
+    }
+  }
+
+  usecase ActivateShop {
+    input: {
+      shop_id: UUID
+      admin_id: UUID
+      reason: string
+    }
+    output: {
+      shop_id: UUID
+      activated: boolean
+    }
+    errors: {
+      ShopNotFound,
+      ShopNotSuspended
+    }
+  }
+
+  // System Settings
+  usecase GetSystemSettings {
+    input: {}
+    output: {
+      settings: list<SystemSettings>
+    }
+    errors: {}
+  }
+
+  usecase UpdateSystemSetting {
+    input: {
+      admin_id: UUID
+      setting_key: string
+      setting_value: string
+    }
+    output: {
+      setting: SystemSettings
+    }
+    errors: {
+      SettingNotFound,
+      InvalidValue
+    }
+  }
+
+  // Category Management
+  usecase GetCategories {
+    input: {}
+    output: {
+      categories: list<Category>
+    }
+    errors: {}
+  }
+
+  usecase CreateCategory {
+    input: {
+      admin_id: UUID
+      name: string
+      parent_id: UUID
+      display_order: int
+    }
+    output: {
+      category_id: UUID
+    }
+    errors: {
+      CategoryAlreadyExists,
+      ParentNotFound
+    }
+  }
+
+  usecase UpdateCategory {
+    input: {
+      admin_id: UUID
+      category_id: UUID
+      name: string
+      display_order: int
+    }
+    output: {
+      category_id: UUID
+    }
+    errors: {
+      CategoryNotFound
+    }
+  }
+
+  usecase DeleteCategory {
+    input: {
+      admin_id: UUID
+      category_id: UUID
+    }
+    output: {
+      deleted: boolean
+    }
+    errors: {
+      CategoryNotFound,
+      CategoryHasChildren
+    }
+  }
+
+  // Forbidden Words
+  usecase GetForbiddenWords {
+    input: {
+      context: WordContext
+    }
+    output: {
+      words: list<ForbiddenWord>
+    }
+    errors: {}
+  }
+
+  usecase AddForbiddenWord {
+    input: {
+      admin_id: UUID
+      word: string
+      context: WordContext
+      severity: Severity
+    }
+    output: {
+      word_id: UUID
+    }
+    errors: {
+      WordAlreadyExists
+    }
+  }
+
+  usecase DeleteForbiddenWord {
+    input: {
+      admin_id: UUID
+      word_id: UUID
+    }
+    output: {
+      deleted: boolean
+    }
+    errors: {
+      WordNotFound
+    }
+  }
+
+  // Dashboard & Monitoring
+  usecase GetDashboardMetrics {
+    input: {
+      date: date
+    }
+    output: {
+      metrics: DashboardSummary
+    }
+    errors: {}
+  }
+
+  usecase GetSalesChart {
+    input: {
+      date_from: date
+      date_to: date
+      group_by: string
+    }
+    output: {
+      chart_data: list<ChartDataPoint>
+    }
+    errors: {}
+  }
+
+  usecase GetServiceHealth {
+    input: {}
+    output: {
+      services: list<ServiceHealthCheck>
+    }
+    errors: {}
+  }
+
+  usecase PerformHealthCheck {
+    input: {}
+    output: {
+      results: list<ServiceHealthCheck>
+    }
+    errors: {}
+    scheduled: "*/5 * * * *"  // Every 5 minutes
+  }
+
+  // Audit Log
+  usecase RecordAuditLog {
+    input: {
+      operation_type: OperationType
+      operator_id: UUID
+      operator_name: string
+      target_type: string
+      target_id: UUID
+      operation_detail: map<string, string>
+      ip_address: string
+      user_agent: string
+    }
+    output: {
+      log_id: UUID
+    }
+    errors: {}
+  }
+
+  usecase GetAuditLogs {
+    input: {
+      operation_type: OperationType
+      operator_id: UUID
+      target_type: string
+      date_from: date
+      date_to: date
+      page: int
+      page_size: int
+    }
+    output: {
+      logs: list<AuditLog>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  usecase ExportAuditLogs {
+    input: {
+      date_from: date
+      date_to: date
+    }
+    output: {
+      csv_url: string
+      expires_at: timestamp
+    }
+    errors: {}
+  }
+
+  // Reports
+  usecase GenerateSalesReport {
+    input: {
+      date_from: date
+      date_to: date
+      report_type: string
+    }
+    output: {
+      report_data: SalesReportData
+    }
+    errors: {}
+  }
+
+  usecase GenerateUserReport {
+    input: {
+      date_from: date
+      date_to: date
+    }
+    output: {
+      report_data: UserReportData
+    }
+    errors: {}
+  }
+
+  usecase ExportReport {
+    input: {
+      report_type: string
+      date_from: date
+      date_to: date
+      format: string
+    }
+    output: {
+      file_url: string
+      expires_at: timestamp
+    }
+    errors: {}
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // User Management
+    rpc GetAllUsers(GetAllUsersRequest) returns (GetAllUsersResponse)
+    rpc GetUserDetail(GetUserDetailRequest) returns (GetUserDetailResponse)
+    rpc ChangeUserRole(ChangeUserRoleRequest) returns (ChangeUserRoleResponse)
+    rpc SuspendUser(SuspendUserRequest) returns (SuspendUserResponse)
+    rpc ActivateUser(ActivateUserRequest) returns (ActivateUserResponse)
+
+    // Shop Management
+    rpc GetPendingShops(GetPendingShopsRequest) returns (GetPendingShopsResponse)
+    rpc ApproveShop(ApproveShopRequest) returns (ApproveShopResponse)
+    rpc RejectShop(RejectShopRequest) returns (RejectShopResponse)
+    rpc GetAllShops(GetAllShopsRequest) returns (GetAllShopsResponse)
+    rpc SuspendShop(SuspendShopRequest) returns (SuspendShopResponse)
+    rpc ActivateShop(ActivateShopRequest) returns (ActivateShopResponse)
+
+    // System Settings
+    rpc GetSystemSettings(GetSystemSettingsRequest) returns (GetSystemSettingsResponse)
+    rpc UpdateSystemSetting(UpdateSystemSettingRequest) returns (UpdateSystemSettingResponse)
+
+    // Category
+    rpc GetCategories(GetCategoriesRequest) returns (GetCategoriesResponse)
+    rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse)
+    rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse)
+    rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse)
+
+    // Forbidden Words
+    rpc GetForbiddenWords(GetForbiddenWordsRequest) returns (GetForbiddenWordsResponse)
+    rpc AddForbiddenWord(AddForbiddenWordRequest) returns (AddForbiddenWordResponse)
+    rpc DeleteForbiddenWord(DeleteForbiddenWordRequest) returns (DeleteForbiddenWordResponse)
+
+    // Dashboard
+    rpc GetDashboardMetrics(GetDashboardMetricsRequest) returns (GetDashboardMetricsResponse)
+    rpc GetSalesChart(GetSalesChartRequest) returns (GetSalesChartResponse)
+    rpc GetServiceHealth(GetServiceHealthRequest) returns (GetServiceHealthResponse)
+
+    // Audit Log
+    rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse)
+    rpc ExportAuditLogs(ExportAuditLogsRequest) returns (ExportAuditLogsResponse)
+
+    // Reports
+    rpc GenerateSalesReport(GenerateSalesReportRequest) returns (GenerateSalesReportResponse)
+    rpc GenerateUserReport(GenerateUserReportRequest) returns (GenerateUserReportResponse)
+    rpc ExportReport(ExportReportRequest) returns (ExportReportResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    messaging: RabbitMQ
+    storage: MinIO  // For report exports
+    services: {
+      auth: AuthService
+      shop: ShopService
+      order: OrderService
+      customer: CustomerService
+      inventory: InventoryService
+      payment: PaymentService
+      shipping: ShippingService
+      notification: NotificationService
+      review: ReviewService
+      search: SearchService
+      chat: ChatService
+    }
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    publish UserRoleChanged {
+      user_id: UUID
+      old_role: string
+      new_role: string
+      changed_by: UUID
+      changed_at: timestamp
+    }
+
+    publish UserSuspended {
+      user_id: UUID
+      reason: string
+      suspended_by: UUID
+      suspended_at: timestamp
+    }
+
+    publish UserActivated {
+      user_id: UUID
+      activated_by: UUID
+      activated_at: timestamp
+    }
+
+    publish ShopApproved {
+      shop_id: UUID
+      approved_by: UUID
+      approved_at: timestamp
+    }
+
+    publish ShopRejected {
+      shop_id: UUID
+      reason: string
+      rejected_by: UUID
+      rejected_at: timestamp
+    }
+
+    publish ShopSuspended {
+      shop_id: UUID
+      reason: string
+      suspended_by: UUID
+      suspended_at: timestamp
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    default_page_size: 50
+    max_page_size: 100
+    health_check_interval_minutes: 5
+    health_check_timeout_seconds: 10
+    report_expiry_hours: 24
+    audit_log_retention_days: 365
+    metrics_aggregation_interval_minutes: 60
+  }
+
+  // =========================================
+  // Custom Logic Required
+  // =========================================
+
+  custom_implementations {
+    // manual/admin/health_checker.go
+    service_health_check_logic
+    database_health_check
+    elasticsearch_health_check
+    rabbitmq_health_check
+
+    // manual/admin/report_generator.go
+    pdf_report_generation
+    csv_export_logic
+  }
+}

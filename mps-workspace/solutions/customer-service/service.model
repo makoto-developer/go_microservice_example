@@ -1,0 +1,584 @@
+// Customer Service DSL Definition
+// Based on: docs/requirements/03_customer_service.md
+
+microservice CustomerService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity Customer {
+    id: UUID primary_key
+    user_id: UUID not_null  // Reference to Auth Service User
+    first_name: string not_null
+    last_name: string not_null
+    phone: string not_null
+    birth_date: date nullable
+    gender: Gender nullable
+    profile_image_url: string nullable
+    profile_thumbnail_100_url: string nullable
+    profile_thumbnail_200_url: string nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity Address {
+    id: UUID primary_key
+    customer_id: UUID foreign_key(Customer.id) not_null
+    address_name: string not_null
+    postal_code: string not_null
+    prefecture: string not_null
+    city: string not_null
+    address_line1: string not_null
+    address_line2: string nullable
+    recipient_name: string not_null
+    recipient_phone: string not_null
+    is_default: boolean default(false)
+    deleted: boolean default(false)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity CartItem {
+    id: UUID primary_key
+    customer_id: UUID foreign_key(Customer.id) not_null
+    product_id: UUID not_null
+    variation_id: UUID nullable
+    quantity: int not_null
+    expires_at: timestamp not_null
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity GuestCartItem {
+    id: UUID primary_key
+    session_id: string not_null
+    product_id: UUID not_null
+    variation_id: UUID nullable
+    quantity: int not_null
+    expires_at: timestamp not_null
+    created_at: timestamp not_null
+  }
+
+  entity Favorite {
+    id: UUID primary_key
+    customer_id: UUID foreign_key(Customer.id) not_null
+    product_id: UUID not_null
+    notify_on_restock: boolean default(true)
+    created_at: timestamp not_null
+  }
+
+  entity PaymentMethod {
+    id: UUID primary_key
+    customer_id: UUID foreign_key(Customer.id) not_null
+    stripe_payment_method_id: string not_null
+    card_last4: string not_null
+    card_brand: string not_null
+    card_exp_month: int not_null
+    card_exp_year: int not_null
+    cardholder_name: string not_null
+    is_default: boolean default(false)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity Review {
+    id: UUID primary_key
+    customer_id: UUID foreign_key(Customer.id) not_null
+    product_id: UUID not_null
+    order_id: UUID not_null
+    rating: int not_null
+    review_text: text not_null
+    image_urls: list<string>
+    editable_until: timestamp not_null
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum Gender {
+    MALE,
+    FEMALE,
+    OTHER,
+    PREFER_NOT_TO_SAY
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Profile Management
+  usecase GetCustomerProfile {
+    input: {
+      customer_id: UUID
+    }
+    output: {
+      customer: Customer
+    }
+    errors: {
+      CustomerNotFound
+    }
+  }
+
+  usecase UpdateCustomerProfile {
+    input: {
+      customer_id: UUID
+      first_name: string
+      last_name: string
+      phone: string
+      birth_date: date
+      gender: Gender
+    }
+    output: {
+      customer: Customer
+    }
+    errors: {
+      CustomerNotFound,
+      InvalidInput
+    }
+  }
+
+  usecase UploadProfileImage {
+    input: {
+      customer_id: UUID
+      image_data: bytes
+    }
+    output: {
+      image_url: string
+      thumbnail_100_url: string
+      thumbnail_200_url: string
+    }
+    errors: {
+      CustomerNotFound,
+      ImageTooLarge,
+      InvalidImageFormat
+    }
+  }
+
+  // Address Management
+  usecase RegisterAddress {
+    input: {
+      customer_id: UUID
+      address_name: string
+      postal_code: string
+      prefecture: string
+      city: string
+      address_line1: string
+      address_line2: string
+      recipient_name: string
+      recipient_phone: string
+      is_default: boolean
+    }
+    output: {
+      address_id: UUID
+    }
+    errors: {
+      CustomerNotFound,
+      InvalidPostalCode
+    }
+  }
+
+  usecase UpdateAddress {
+    input: {
+      address_id: UUID
+      customer_id: UUID
+      address_name: string
+      postal_code: string
+      prefecture: string
+      city: string
+      address_line1: string
+      address_line2: string
+      recipient_name: string
+      recipient_phone: string
+      is_default: boolean
+    }
+    output: {
+      address_id: UUID
+    }
+    errors: {
+      AddressNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase DeleteAddress {
+    input: {
+      address_id: UUID
+      customer_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      AddressNotFound,
+      CannotDeleteDefaultAddress
+    }
+  }
+
+  usecase SearchPostalCode {
+    input: {
+      postal_code: string
+    }
+    output: {
+      prefecture: string
+      city: string
+      address_line1: string
+    }
+    errors: {
+      PostalCodeNotFound,
+      ExternalAPIError
+    }
+  }
+
+  // Cart Management
+  usecase AddToCart {
+    input: {
+      customer_id: UUID
+      product_id: UUID
+      variation_id: UUID
+      quantity: int
+    }
+    output: {
+      cart_item_id: UUID
+      total_quantity: int
+    }
+    errors: {
+      ProductNotFound,
+      InsufficientStock,
+      InvalidQuantity
+    }
+  }
+
+  usecase GetCart {
+    input: {
+      customer_id: UUID
+    }
+    output: {
+      cart_items: list<CartItemDetail>
+      total_amount: decimal
+    }
+    errors: {
+      CustomerNotFound
+    }
+  }
+
+  usecase UpdateCartItemQuantity {
+    input: {
+      cart_item_id: UUID
+      customer_id: UUID
+      quantity: int
+    }
+    output: {
+      cart_item_id: UUID
+      new_quantity: int
+    }
+    errors: {
+      CartItemNotFound,
+      InsufficientStock
+    }
+  }
+
+  usecase RemoveFromCart {
+    input: {
+      cart_item_id: UUID
+      customer_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      CartItemNotFound
+    }
+  }
+
+  usecase MergeGuestCart {
+    input: {
+      customer_id: UUID
+      session_id: string
+    }
+    output: {
+      merged_count: int
+    }
+    errors: {
+      CustomerNotFound
+    }
+  }
+
+  // Favorite Management
+  usecase AddToFavorite {
+    input: {
+      customer_id: UUID
+      product_id: UUID
+      notify_on_restock: boolean
+    }
+    output: {
+      favorite_id: UUID
+    }
+    errors: {
+      ProductNotFound,
+      AlreadyFavorited
+    }
+  }
+
+  usecase GetFavorites {
+    input: {
+      customer_id: UUID
+      sort_by: string
+      sort_order: string
+    }
+    output: {
+      favorites: list<FavoriteDetail>
+    }
+    errors: {
+      CustomerNotFound
+    }
+  }
+
+  usecase RemoveFromFavorite {
+    input: {
+      favorite_id: UUID
+      customer_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      FavoriteNotFound
+    }
+  }
+
+  // Order History
+  usecase GetOrderHistory {
+    input: {
+      customer_id: UUID
+      status_filter: string
+      date_from: date
+      date_to: date
+      page: int
+      page_size: int
+    }
+    output: {
+      orders: list<OrderSummary>
+      total_count: int
+    }
+    errors: {
+      CustomerNotFound
+    }
+  }
+
+  usecase GetOrderDetail {
+    input: {
+      order_id: UUID
+      customer_id: UUID
+    }
+    output: {
+      order: OrderDetail
+    }
+    errors: {
+      OrderNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase RequestOrderCancel {
+    input: {
+      order_id: UUID
+      customer_id: UUID
+      cancel_reason: string
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      OrderNotFound,
+      OrderAlreadyShipped,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase ReorderFromHistory {
+    input: {
+      order_id: UUID
+      customer_id: UUID
+    }
+    output: {
+      cart_item_ids: list<UUID>
+      unavailable_items: list<string>
+    }
+    errors: {
+      OrderNotFound
+    }
+  }
+
+  // Payment Method Management
+  usecase RegisterPaymentMethod {
+    input: {
+      customer_id: UUID
+      stripe_payment_method_id: string
+      is_default: boolean
+    }
+    output: {
+      payment_method_id: UUID
+    }
+    errors: {
+      CustomerNotFound,
+      InvalidPaymentMethod
+    }
+  }
+
+  usecase DeletePaymentMethod {
+    input: {
+      payment_method_id: UUID
+      customer_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      PaymentMethodNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  // Review Management
+  usecase PostReview {
+    input: {
+      customer_id: UUID
+      product_id: UUID
+      order_id: UUID
+      rating: int
+      review_text: string
+      image_urls: list<string>
+    }
+    output: {
+      review_id: UUID
+    }
+    errors: {
+      ProductNotPurchased,
+      AlreadyReviewed,
+      InvalidRating
+    }
+    validation: {
+      rating: min(1) && max(5)
+      review_text: min_length(10)
+      image_urls: max_count(3)
+    }
+  }
+
+  usecase UpdateReview {
+    input: {
+      review_id: UUID
+      customer_id: UUID
+      rating: int
+      review_text: string
+      image_urls: list<string>
+    }
+    output: {
+      review_id: UUID
+    }
+    errors: {
+      ReviewNotFound,
+      EditPeriodExpired,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase GetMyReviews {
+    input: {
+      customer_id: UUID
+    }
+    output: {
+      reviews: list<Review>
+    }
+    errors: {
+      CustomerNotFound
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Profile
+    rpc GetProfile(GetProfileRequest) returns (GetProfileResponse)
+    rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse)
+    rpc UploadProfileImage(UploadProfileImageRequest) returns (UploadProfileImageResponse)
+
+    // Address
+    rpc RegisterAddress(RegisterAddressRequest) returns (RegisterAddressResponse)
+    rpc UpdateAddress(UpdateAddressRequest) returns (UpdateAddressResponse)
+    rpc DeleteAddress(DeleteAddressRequest) returns (DeleteAddressResponse)
+    rpc SearchPostalCode(SearchPostalCodeRequest) returns (SearchPostalCodeResponse)
+
+    // Cart
+    rpc AddToCart(AddToCartRequest) returns (AddToCartResponse)
+    rpc GetCart(GetCartRequest) returns (GetCartResponse)
+    rpc UpdateCartItemQuantity(UpdateCartItemQuantityRequest) returns (UpdateCartItemQuantityResponse)
+    rpc RemoveFromCart(RemoveFromCartRequest) returns (RemoveFromCartResponse)
+    rpc MergeGuestCart(MergeGuestCartRequest) returns (MergeGuestCartResponse)
+
+    // Favorite
+    rpc AddToFavorite(AddToFavoriteRequest) returns (AddToFavoriteResponse)
+    rpc GetFavorites(GetFavoritesRequest) returns (GetFavoritesResponse)
+    rpc RemoveFromFavorite(RemoveFromFavoriteRequest) returns (RemoveFromFavoriteResponse)
+
+    // Order History
+    rpc GetOrderHistory(GetOrderHistoryRequest) returns (GetOrderHistoryResponse)
+    rpc GetOrderDetail(GetOrderDetailRequest) returns (GetOrderDetailResponse)
+    rpc RequestOrderCancel(RequestOrderCancelRequest) returns (RequestOrderCancelResponse)
+    rpc ReorderFromHistory(ReorderFromHistoryRequest) returns (ReorderFromHistoryResponse)
+
+    // Payment Method
+    rpc RegisterPaymentMethod(RegisterPaymentMethodRequest) returns (RegisterPaymentMethodResponse)
+    rpc DeletePaymentMethod(DeletePaymentMethodRequest) returns (DeletePaymentMethodResponse)
+
+    // Review
+    rpc PostReview(PostReviewRequest) returns (PostReviewResponse)
+    rpc UpdateReview(UpdateReviewRequest) returns (UpdateReviewResponse)
+    rpc GetMyReviews(GetMyReviewsRequest) returns (GetMyReviewsResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis  // For guest cart
+    storage: MinIO  // For profile images and review images
+    messaging: RabbitMQ
+    external_api: PostalCodeAPI  // For address search
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    subscribe StockRestored {
+      product_id: UUID
+      shop_id: UUID
+      new_quantity: int
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    cart_expiry_days: 30
+    guest_cart_session_hours: 24
+    review_edit_period_days: 30
+    max_review_images: 3
+    max_profile_image_size_mb: 2
+    profile_thumbnail_sizes: [100, 200]
+    postal_code_api_endpoint: env("POSTAL_CODE_API_ENDPOINT")
+    postal_code_api_key: env("POSTAL_CODE_API_KEY")
+  }
+}

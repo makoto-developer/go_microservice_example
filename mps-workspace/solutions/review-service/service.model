@@ -1,0 +1,571 @@
+// Review Service DSL Definition
+// Based on: docs/requirements/10_review_service.md
+
+microservice ReviewService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity Review {
+    id: UUID primary_key
+    product_id: UUID not_null
+    order_id: UUID not_null
+    customer_id: UUID not_null
+    nickname: string nullable
+    rating: int not_null
+    title: string not_null
+    content: text not_null
+    image_urls: list<string>
+    status: ReviewStatus not_null default(PENDING)
+    rejection_reason: string nullable
+    editable_until: timestamp not_null
+    edited: boolean default(false)
+    deleted: boolean default(false)
+    helpful_count: int default(0)
+    reported_count: int default(0)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity ReviewImage {
+    id: UUID primary_key
+    review_id: UUID foreign_key(Review.id) not_null
+    url: string not_null
+    thumbnail_200_url: string not_null
+    thumbnail_400_url: string not_null
+    display_order: int not_null
+    created_at: timestamp not_null
+  }
+
+  entity ReviewEditHistory {
+    id: UUID primary_key
+    review_id: UUID foreign_key(Review.id) not_null
+    old_rating: int not_null
+    new_rating: int not_null
+    old_title: string not_null
+    new_title: string not_null
+    old_content: text not_null
+    new_content: text not_null
+    edited_at: timestamp not_null
+  }
+
+  entity ShopReply {
+    id: UUID primary_key
+    review_id: UUID foreign_key(Review.id) unique not_null
+    shop_id: UUID not_null
+    content: text not_null
+    edited: boolean default(false)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity ReviewHelpful {
+    id: UUID primary_key
+    review_id: UUID foreign_key(Review.id) not_null
+    user_id: UUID not_null
+    created_at: timestamp not_null
+    unique_constraint: (review_id, user_id)
+  }
+
+  entity ReviewReport {
+    id: UUID primary_key
+    review_id: UUID foreign_key(Review.id) not_null
+    reporter_id: UUID not_null
+    reason: ReportReason not_null
+    description: text nullable
+    status: ReportStatus not_null default(PENDING)
+    resolved_by: UUID nullable
+    resolved_at: timestamp nullable
+    created_at: timestamp not_null
+  }
+
+  entity ProductRating {
+    id: UUID primary_key
+    product_id: UUID unique not_null
+    total_reviews: int default(0)
+    average_rating: decimal default(0)
+    rating_1_count: int default(0)
+    rating_2_count: int default(0)
+    rating_3_count: int default(0)
+    rating_4_count: int default(0)
+    rating_5_count: int default(0)
+    reviews_with_images: int default(0)
+    updated_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum ReviewStatus {
+    PENDING,
+    APPROVED,
+    REJECTED,
+    DELETED
+  }
+
+  enum ReportReason {
+    INAPPROPRIATE_CONTENT,
+    SPAM,
+    OFF_TOPIC,
+    FALSE_INFORMATION,
+    PERSONAL_INFORMATION,
+    OTHER
+  }
+
+  enum ReportStatus {
+    PENDING,
+    REVIEWED,
+    ACTION_TAKEN,
+    DISMISSED
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Review Management
+  usecase PostReview {
+    input: {
+      product_id: UUID
+      order_id: UUID
+      customer_id: UUID
+      nickname: string
+      rating: int
+      title: string
+      content: string
+      image_urls: list<string>
+    }
+    output: {
+      review_id: UUID
+      status: ReviewStatus
+      auto_approved: boolean
+    }
+    errors: {
+      ProductNotPurchased,
+      AlreadyReviewed,
+      ReviewPeriodExpired,
+      InvalidRating,
+      ContentTooLong
+    }
+    validation: {
+      rating: min(1) && max(5)
+      title: max_length(50)
+      content: min_length(10) && max_length(2000)
+      image_urls: max_count(3)
+    }
+  }
+
+  usecase UpdateReview {
+    input: {
+      review_id: UUID
+      customer_id: UUID
+      rating: int
+      title: string
+      content: string
+      image_urls: list<string>
+    }
+    output: {
+      review_id: UUID
+      status: ReviewStatus
+      requires_reapproval: boolean
+    }
+    errors: {
+      ReviewNotFound,
+      EditPeriodExpired,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase DeleteReview {
+    input: {
+      review_id: UUID
+      customer_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      ReviewNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase DeleteReviewByAdmin {
+    input: {
+      review_id: UUID
+      admin_id: UUID
+      reason: string
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      ReviewNotFound
+    }
+    events: {
+      publish ReviewDeletedByAdmin
+    }
+  }
+
+  // Review Display
+  usecase GetReviewsByProduct {
+    input: {
+      product_id: UUID
+      sort_by: string
+      page: int
+      page_size: int
+    }
+    output: {
+      reviews: list<ReviewDetail>
+      total_count: int
+    }
+    errors: {
+      ProductNotFound
+    }
+  }
+
+  usecase GetReviewDetail {
+    input: {
+      review_id: UUID
+    }
+    output: {
+      review: ReviewDetail
+      shop_reply: ShopReply
+      edit_history: list<ReviewEditHistory>
+    }
+    errors: {
+      ReviewNotFound
+    }
+  }
+
+  usecase GetMyReviews {
+    input: {
+      customer_id: UUID
+    }
+    output: {
+      reviews: list<ReviewDetail>
+    }
+    errors: {
+      CustomerNotFound
+    }
+  }
+
+  // Rating Aggregation
+  usecase GetProductRating {
+    input: {
+      product_id: UUID
+    }
+    output: {
+      rating: ProductRating
+      distribution: map<int, int>
+    }
+    errors: {
+      ProductNotFound
+    }
+  }
+
+  usecase RecalculateProductRating {
+    input: {
+      product_id: UUID
+    }
+    output: {
+      rating: ProductRating
+    }
+    errors: {
+      ProductNotFound
+    }
+  }
+
+  // Review Approval
+  usecase ApprovePendingReviews {
+    input: {
+      admin_id: UUID
+      page: int
+      page_size: int
+    }
+    output: {
+      pending_reviews: list<ReviewDetail>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  usecase ApproveReview {
+    input: {
+      review_id: UUID
+      admin_id: UUID
+    }
+    output: {
+      review_id: UUID
+    }
+    errors: {
+      ReviewNotFound,
+      ReviewAlreadyProcessed
+    }
+    events: {
+      publish ReviewApproved
+    }
+  }
+
+  usecase RejectReview {
+    input: {
+      review_id: UUID
+      admin_id: UUID
+      reason: string
+    }
+    output: {
+      review_id: UUID
+    }
+    errors: {
+      ReviewNotFound,
+      ReviewAlreadyProcessed
+    }
+    events: {
+      publish ReviewRejected
+    }
+  }
+
+  // Helpful Feature
+  usecase MarkReviewHelpful {
+    input: {
+      review_id: UUID
+      user_id: UUID
+    }
+    output: {
+      helpful_count: int
+    }
+    errors: {
+      ReviewNotFound,
+      AlreadyMarkedHelpful
+    }
+  }
+
+  usecase UnmarkReviewHelpful {
+    input: {
+      review_id: UUID
+      user_id: UUID
+    }
+    output: {
+      helpful_count: int
+    }
+    errors: {
+      ReviewNotFound,
+      NotMarkedHelpful
+    }
+  }
+
+  // Shop Reply
+  usecase PostShopReply {
+    input: {
+      review_id: UUID
+      shop_id: UUID
+      content: string
+    }
+    output: {
+      reply_id: UUID
+    }
+    errors: {
+      ReviewNotFound,
+      UnauthorizedAccess,
+      ReplyAlreadyExists,
+      ContentTooLong
+    }
+    validation: {
+      content: max_length(1000)
+    }
+  }
+
+  usecase UpdateShopReply {
+    input: {
+      reply_id: UUID
+      shop_id: UUID
+      content: string
+    }
+    output: {
+      reply_id: UUID
+    }
+    errors: {
+      ReplyNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase DeleteShopReply {
+    input: {
+      reply_id: UUID
+      shop_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      ReplyNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  // Review Report
+  usecase ReportReview {
+    input: {
+      review_id: UUID
+      reporter_id: UUID
+      reason: ReportReason
+      description: string
+    }
+    output: {
+      report_id: UUID
+    }
+    errors: {
+      ReviewNotFound,
+      AlreadyReported
+    }
+  }
+
+  usecase GetReviewReports {
+    input: {
+      admin_id: UUID
+      status: ReportStatus
+      page: int
+      page_size: int
+    }
+    output: {
+      reports: list<ReviewReportDetail>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  usecase ResolveReviewReport {
+    input: {
+      report_id: UUID
+      admin_id: UUID
+      action: string
+      note: string
+    }
+    output: {
+      report_id: UUID
+      action_taken: boolean
+    }
+    errors: {
+      ReportNotFound
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Review Management
+    rpc PostReview(PostReviewRequest) returns (PostReviewResponse)
+    rpc UpdateReview(UpdateReviewRequest) returns (UpdateReviewResponse)
+    rpc DeleteReview(DeleteReviewRequest) returns (DeleteReviewResponse)
+    rpc DeleteReviewByAdmin(DeleteReviewByAdminRequest) returns (DeleteReviewByAdminResponse)
+
+    // Review Display
+    rpc GetReviewsByProduct(GetReviewsByProductRequest) returns (GetReviewsByProductResponse)
+    rpc GetReviewDetail(GetReviewDetailRequest) returns (GetReviewDetailResponse)
+    rpc GetMyReviews(GetMyReviewsRequest) returns (GetMyReviewsResponse)
+
+    // Rating Aggregation
+    rpc GetProductRating(GetProductRatingRequest) returns (GetProductRatingResponse)
+
+    // Review Approval
+    rpc GetPendingReviews(GetPendingReviewsRequest) returns (GetPendingReviewsResponse)
+    rpc ApproveReview(ApproveReviewRequest) returns (ApproveReviewResponse)
+    rpc RejectReview(RejectReviewRequest) returns (RejectReviewResponse)
+
+    // Helpful Feature
+    rpc MarkReviewHelpful(MarkReviewHelpfulRequest) returns (MarkReviewHelpfulResponse)
+    rpc UnmarkReviewHelpful(UnmarkReviewHelpfulRequest) returns (UnmarkReviewHelpfulResponse)
+
+    // Shop Reply
+    rpc PostShopReply(PostShopReplyRequest) returns (PostShopReplyResponse)
+    rpc UpdateShopReply(UpdateShopReplyRequest) returns (UpdateShopReplyResponse)
+    rpc DeleteShopReply(DeleteShopReplyRequest) returns (DeleteShopReplyResponse)
+
+    // Review Report
+    rpc ReportReview(ReportReviewRequest) returns (ReportReviewResponse)
+    rpc GetReviewReports(GetReviewReportsRequest) returns (GetReviewReportsResponse)
+    rpc ResolveReviewReport(ResolveReviewReportRequest) returns (ResolveReviewReportResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    storage: MinIO  // For review images
+    messaging: RabbitMQ
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    publish ReviewApproved {
+      review_id: UUID
+      product_id: UUID
+      customer_id: UUID
+      rating: int
+      approved_at: timestamp
+    }
+
+    publish ReviewRejected {
+      review_id: UUID
+      customer_id: UUID
+      reason: string
+      rejected_at: timestamp
+    }
+
+    publish ReviewDeletedByAdmin {
+      review_id: UUID
+      customer_id: UUID
+      reason: string
+      deleted_at: timestamp
+    }
+
+    subscribe OrderDelivered {
+      order_id: UUID
+      customer_id: UUID
+      product_ids: list<UUID>
+      delivered_at: timestamp
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    review_period_days: 180
+    edit_period_days: 30
+    max_review_images: 3
+    max_image_size_mb: 3
+    max_title_length: 50
+    min_content_length: 10
+    max_content_length: 2000
+    max_shop_reply_length: 1000
+    auto_approve_threshold: 0.8
+    auto_hide_report_threshold: 5
+    forbidden_words: env("REVIEW_FORBIDDEN_WORDS")
+    default_page_size: 20
+  }
+
+  // =========================================
+  // Custom Logic Required
+  // =========================================
+
+  custom_implementations {
+    // manual/review/content_filter.go
+    forbidden_word_checker
+    url_detector
+    spam_detector
+  }
+}

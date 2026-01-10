@@ -1,0 +1,472 @@
+// Chat Service DSL Definition
+// Based on: docs/requirements/08_chat_service.md
+
+microservice ChatService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity ChatRoom {
+    id: UUID primary_key
+    customer_id: UUID not_null
+    shop_id: UUID not_null
+    product_id: UUID nullable
+    status: RoomStatus not_null default(ACTIVE)
+    last_message_at: timestamp nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity Message {
+    id: UUID primary_key
+    room_id: UUID foreign_key(ChatRoom.id) not_null
+    sender_id: UUID not_null
+    receiver_id: UUID not_null
+    message_type: MessageType not_null
+    content: text nullable
+    file_url: string nullable
+    file_name: string nullable
+    file_size: int nullable
+    is_read: boolean default(false)
+    read_at: timestamp nullable
+    created_at: timestamp not_null
+  }
+
+  entity UserPresence {
+    id: UUID primary_key
+    user_id: UUID unique not_null
+    status: PresenceStatus not_null default(OFFLINE)
+    last_active_at: timestamp not_null
+    device_info: string nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity TypingIndicator {
+    id: UUID primary_key
+    room_id: UUID not_null
+    user_id: UUID not_null
+    expires_at: timestamp not_null
+    created_at: timestamp not_null
+  }
+
+  entity MessageArchive {
+    id: UUID primary_key
+    room_id: UUID not_null
+    message_count: int not_null
+    archive_url: string not_null
+    archived_from: timestamp not_null
+    archived_to: timestamp not_null
+    created_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum RoomStatus {
+    ACTIVE,
+    RESOLVED,
+    CLOSED
+  }
+
+  enum MessageType {
+    TEXT,
+    IMAGE,
+    FILE
+  }
+
+  enum PresenceStatus {
+    ONLINE,
+    OFFLINE,
+    AWAY
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Chat Room Management
+  usecase CreateChatRoom {
+    input: {
+      customer_id: UUID
+      shop_id: UUID
+      product_id: UUID
+    }
+    output: {
+      room_id: UUID
+    }
+    errors: {
+      CustomerNotFound,
+      ShopNotFound,
+      RoomAlreadyExists
+    }
+    events: {
+      publish ChatRoomCreated
+    }
+  }
+
+  usecase GetChatRooms {
+    input: {
+      user_id: UUID
+      user_role: string
+      status_filter: RoomStatus
+    }
+    output: {
+      rooms: list<ChatRoomSummary>
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  usecase GetChatRoomDetail {
+    input: {
+      room_id: UUID
+      user_id: UUID
+    }
+    output: {
+      room: ChatRoom
+      participant_presence: UserPresence
+      unread_count: int
+    }
+    errors: {
+      RoomNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase UpdateRoomStatus {
+    input: {
+      room_id: UUID
+      user_id: UUID
+      new_status: RoomStatus
+    }
+    output: {
+      room_id: UUID
+      status: RoomStatus
+    }
+    errors: {
+      RoomNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  // Message Management
+  usecase SendMessage {
+    input: {
+      room_id: UUID
+      sender_id: UUID
+      receiver_id: UUID
+      message_type: MessageType
+      content: string
+      file_url: string
+      file_name: string
+      file_size: int
+    }
+    output: {
+      message_id: UUID
+      sent_at: timestamp
+    }
+    errors: {
+      RoomNotFound,
+      UnauthorizedAccess,
+      MessageTooLong,
+      FileTooLarge
+    }
+    validation: {
+      content: max_length(2000)
+      file_size: max(10485760)  // 10MB
+    }
+    realtime: {
+      channel: phoenix_channel
+      event: "new_message"
+    }
+    events: {
+      publish MessageSent
+    }
+  }
+
+  usecase GetMessages {
+    input: {
+      room_id: UUID
+      user_id: UUID
+      page: int
+      page_size: int
+    }
+    output: {
+      messages: list<Message>
+      total_count: int
+    }
+    errors: {
+      RoomNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase MarkMessagesAsRead {
+    input: {
+      room_id: UUID
+      user_id: UUID
+      message_ids: list<UUID>
+    }
+    output: {
+      read_count: int
+    }
+    errors: {
+      RoomNotFound,
+      UnauthorizedAccess
+    }
+    realtime: {
+      channel: phoenix_channel
+      event: "messages_read"
+    }
+  }
+
+  usecase SearchMessages {
+    input: {
+      room_id: UUID
+      user_id: UUID
+      keyword: string
+      date_from: date
+      date_to: date
+    }
+    output: {
+      messages: list<Message>
+    }
+    errors: {
+      RoomNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  // File/Image Upload
+  usecase UploadChatImage {
+    input: {
+      room_id: UUID
+      user_id: UUID
+      image_data: bytes
+    }
+    output: {
+      image_url: string
+      thumbnail_url: string
+    }
+    errors: {
+      RoomNotFound,
+      ImageTooLarge,
+      InvalidImageFormat
+    }
+  }
+
+  usecase UploadChatFile {
+    input: {
+      room_id: UUID
+      user_id: UUID
+      file_data: bytes
+      file_name: string
+    }
+    output: {
+      file_url: string
+      signed_url: string
+      expires_at: timestamp
+    }
+    errors: {
+      RoomNotFound,
+      FileTooLarge,
+      InvalidFileType
+    }
+  }
+
+  // User Presence
+  usecase UpdatePresence {
+    input: {
+      user_id: UUID
+      status: PresenceStatus
+      device_info: string
+    }
+    output: {
+      user_id: UUID
+      status: PresenceStatus
+    }
+    errors: {
+      UserNotFound
+    }
+    realtime: {
+      channel: phoenix_channel
+      event: "presence_update"
+    }
+  }
+
+  usecase GetUserPresence {
+    input: {
+      user_id: UUID
+    }
+    output: {
+      presence: UserPresence
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  // Typing Indicator
+  usecase StartTyping {
+    input: {
+      room_id: UUID
+      user_id: UUID
+    }
+    output: {
+      expires_at: timestamp
+    }
+    errors: {
+      RoomNotFound
+    }
+    realtime: {
+      channel: phoenix_channel
+      event: "typing_start"
+    }
+  }
+
+  usecase StopTyping {
+    input: {
+      room_id: UUID
+      user_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      RoomNotFound
+    }
+    realtime: {
+      channel: phoenix_channel
+      event: "typing_stop"
+    }
+  }
+
+  // Message Archive
+  usecase ArchiveOldMessages {
+    input: {
+      days_threshold: int
+    }
+    output: {
+      archived_count: int
+    }
+    errors: {}
+    scheduled: "0 2 * * 0"  // Every Sunday at 2 AM
+  }
+
+  usecase GetArchivedMessages {
+    input: {
+      room_id: UUID
+      user_id: UUID
+      date_from: date
+      date_to: date
+    }
+    output: {
+      messages: list<Message>
+    }
+    errors: {
+      RoomNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Chat Room
+    rpc CreateChatRoom(CreateChatRoomRequest) returns (CreateChatRoomResponse)
+    rpc GetChatRooms(GetChatRoomsRequest) returns (GetChatRoomsResponse)
+    rpc GetChatRoomDetail(GetChatRoomDetailRequest) returns (GetChatRoomDetailResponse)
+    rpc UpdateRoomStatus(UpdateRoomStatusRequest) returns (UpdateRoomStatusResponse)
+
+    // Message
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse)
+    rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse)
+    rpc MarkMessagesAsRead(MarkMessagesAsReadRequest) returns (MarkMessagesAsReadResponse)
+    rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse)
+
+    // File Upload
+    rpc UploadChatImage(UploadChatImageRequest) returns (UploadChatImageResponse)
+    rpc UploadChatFile(UploadChatFileRequest) returns (UploadChatFileResponse)
+
+    // Presence
+    rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse)
+    rpc GetUserPresence(GetUserPresenceRequest) returns (GetUserPresenceResponse)
+
+    // Archive
+    rpc GetArchivedMessages(GetArchivedMessagesRequest) returns (GetArchivedMessagesResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis  // For presence and typing indicators
+    storage: MinIO  // For chat images and files
+    messaging: RabbitMQ
+    realtime: PhoenixChannels  // For WebSocket
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    publish ChatRoomCreated {
+      room_id: UUID
+      customer_id: UUID
+      shop_id: UUID
+      product_id: UUID
+      created_at: timestamp
+    }
+
+    publish MessageSent {
+      message_id: UUID
+      room_id: UUID
+      sender_id: UUID
+      receiver_id: UUID
+      message_type: MessageType
+      content_preview: string
+      sent_at: timestamp
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    max_message_length: 2000
+    max_image_size_mb: 5
+    max_file_size_mb: 10
+    supported_image_formats: ["jpg", "jpeg", "png", "gif", "webp"]
+    supported_file_formats: ["pdf"]
+    typing_indicator_ttl_seconds: 3
+    presence_ttl_seconds: 300
+    message_archive_days: 90
+    signed_url_expiry_hours: 1
+    default_page_size: 50
+  }
+
+  // =========================================
+  // Custom Logic Required
+  // =========================================
+
+  custom_implementations {
+    // manual/chat/phoenix_channels.go
+    phoenix_channel_setup
+    websocket_authentication
+
+    // manual/chat/file_validator.go
+    virus_scan_integration
+    file_type_validation
+  }
+}

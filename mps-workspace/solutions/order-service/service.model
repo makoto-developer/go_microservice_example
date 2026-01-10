@@ -1,0 +1,468 @@
+// Order Service DSL Definition
+// Based on: docs/requirements/05_order_service.md
+
+microservice OrderService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity Order {
+    id: UUID primary_key
+    order_number: string unique not_null
+    customer_id: UUID not_null
+    customer_email: string not_null
+    status: OrderStatus not_null default(PENDING)
+    total_amount: decimal not_null
+    subtotal: decimal not_null
+    shipping_fee: decimal not_null
+    payment_method: PaymentMethod not_null
+    payment_id: UUID nullable
+    shipping_method: string not_null
+    shipping_address: string not_null
+    recipient_name: string not_null
+    recipient_phone: string not_null
+    tracking_number: string nullable
+    carrier: string nullable
+    notes: text nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity OrderItem {
+    id: UUID primary_key
+    order_id: UUID foreign_key(Order.id) not_null
+    shop_id: UUID not_null
+    product_id: UUID not_null
+    variation_id: UUID nullable
+    product_name: string not_null
+    product_snapshot: json not_null
+    unit_price: decimal not_null
+    quantity: int not_null
+    subtotal: decimal not_null
+    created_at: timestamp not_null
+  }
+
+  entity OrderStatusHistory {
+    id: UUID primary_key
+    order_id: UUID foreign_key(Order.id) not_null
+    old_status: OrderStatus nullable
+    new_status: OrderStatus not_null
+    changed_by: string not_null
+    change_reason: string nullable
+    created_at: timestamp not_null
+  }
+
+  entity OrderCancellation {
+    id: UUID primary_key
+    order_id: UUID foreign_key(Order.id) not_null
+    cancelled_by: string not_null
+    cancel_reason: CancelReason not_null
+    cancel_note: text nullable
+    refund_id: UUID nullable
+    created_at: timestamp not_null
+  }
+
+  entity SagaState {
+    id: UUID primary_key
+    order_id: UUID foreign_key(Order.id) not_null
+    saga_type: SagaType not_null
+    current_step: string not_null
+    status: SagaStatus not_null
+    compensation_data: json nullable
+    error_message: text nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum OrderStatus {
+    PENDING,
+    PAYMENT_PROCESSING,
+    PAYMENT_FAILED,
+    CONFIRMED,
+    PREPARING,
+    SHIPPED,
+    DELIVERED,
+    CANCELLED
+  }
+
+  enum PaymentMethod {
+    CREDIT_CARD,
+    CASH_ON_DELIVERY
+  }
+
+  enum CancelReason {
+    CUSTOMER_NO_LONGER_NEEDED,
+    CUSTOMER_ORDERED_BY_MISTAKE,
+    CUSTOMER_DELIVERY_TIME_ISSUE,
+    CUSTOMER_OTHER,
+    SHOP_OUT_OF_STOCK,
+    SHOP_DEFECTIVE_PRODUCT,
+    SHOP_OTHER
+  }
+
+  enum SagaType {
+    CREATE_ORDER,
+    CANCEL_ORDER
+  }
+
+  enum SagaStatus {
+    STARTED,
+    COMPENSATING,
+    COMPLETED,
+    FAILED
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Order Creation (Saga Pattern)
+  usecase CreateOrder {
+    input: {
+      customer_id: UUID
+      customer_email: string
+      cart_items: list<CartItemInput>
+      shipping_address_id: UUID
+      payment_method: PaymentMethod
+      payment_method_id: UUID
+      shipping_method: string
+      notes: string
+    }
+    output: {
+      order_id: UUID
+      order_number: string
+      total_amount: decimal
+    }
+    errors: {
+      CustomerNotFound,
+      InvalidCartItems,
+      InsufficientStock,
+      PaymentProcessingFailed,
+      SagaExecutionFailed
+    }
+    saga: {
+      step1: ReserveInventory  // Inventory Service
+      step2: CreateOrderRecord
+      step3: ProcessPayment     // Payment Service
+      step4: ConfirmInventory   // Inventory Service
+      step5: ClearCart          // Customer Service
+      step6: SendConfirmationEmail  // Notification Service
+
+      compensate_step1: ReleaseInventory
+      compensate_step3: RefundPayment
+    }
+  }
+
+  usecase GetOrderDetail {
+    input: {
+      order_id: UUID
+      requester_id: UUID
+      requester_role: string
+    }
+    output: {
+      order: OrderDetail
+      status_history: list<OrderStatusHistory>
+    }
+    errors: {
+      OrderNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase ListOrders {
+    input: {
+      customer_id: UUID
+      shop_id: UUID
+      status_filter: list<OrderStatus>
+      date_from: date
+      date_to: date
+      search_query: string
+      sort_by: string
+      sort_order: string
+      page: int
+      page_size: int
+    }
+    output: {
+      orders: list<OrderSummary>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  // Order Status Management
+  usecase UpdateOrderStatus {
+    input: {
+      order_id: UUID
+      new_status: OrderStatus
+      changed_by: string
+      change_reason: string
+      tracking_number: string
+      carrier: string
+    }
+    output: {
+      order_id: UUID
+      old_status: OrderStatus
+      new_status: OrderStatus
+    }
+    errors: {
+      OrderNotFound,
+      InvalidStatusTransition,
+      UnauthorizedAccess
+    }
+    events: {
+      publish OrderStatusUpdated
+    }
+  }
+
+  usecase GetOrderStatusHistory {
+    input: {
+      order_id: UUID
+    }
+    output: {
+      status_history: list<OrderStatusHistory>
+    }
+    errors: {
+      OrderNotFound
+    }
+  }
+
+  // Order Cancellation (Saga Pattern)
+  usecase CancelOrder {
+    input: {
+      order_id: UUID
+      cancelled_by: string
+      cancel_reason: CancelReason
+      cancel_note: string
+    }
+    output: {
+      order_id: UUID
+      refund_id: UUID
+    }
+    errors: {
+      OrderNotFound,
+      OrderNotCancellable,
+      SagaExecutionFailed
+    }
+    saga: {
+      step1: CheckCancellable
+      step2: UpdateOrderStatus
+      step3: ReleaseInventory   // Inventory Service
+      step4: ProcessRefund      // Payment Service
+      step5: SendCancellationEmail  // Notification Service
+
+      compensate_step2: RevertOrderStatus
+    }
+  }
+
+  // Order Search
+  usecase SearchOrders {
+    input: {
+      shop_id: UUID
+      order_number: string
+      customer_name: string
+      customer_email: string
+      product_name: string
+      date_from: date
+      date_to: date
+      status_filter: list<OrderStatus>
+      min_amount: decimal
+      max_amount: decimal
+      page: int
+      page_size: int
+    }
+    output: {
+      orders: list<OrderSummary>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  // Order Statistics
+  usecase GetOrderStatistics {
+    input: {
+      shop_id: UUID
+      date_from: date
+      date_to: date
+      group_by: string  // "day", "week", "month"
+    }
+    output: {
+      total_orders: int
+      total_revenue: decimal
+      average_order_value: decimal
+      status_breakdown: map<OrderStatus, int>
+      time_series: list<OrderStatPoint>
+    }
+    errors: {
+      ShopNotFound
+    }
+  }
+
+  usecase GetProductSalesRanking {
+    input: {
+      shop_id: UUID
+      date_from: date
+      date_to: date
+      limit: int
+    }
+    output: {
+      rankings: list<ProductSalesRank>
+    }
+    errors: {
+      ShopNotFound
+    }
+  }
+
+  usecase ExportOrdersToCSV {
+    input: {
+      shop_id: UUID
+      date_from: date
+      date_to: date
+      status_filter: list<OrderStatus>
+    }
+    output: {
+      csv_url: string
+      expires_at: timestamp
+    }
+    errors: {
+      ShopNotFound,
+      NoDataFound
+    }
+  }
+
+  // Reorder
+  usecase CreateReorder {
+    input: {
+      customer_id: UUID
+      original_order_id: UUID
+    }
+    output: {
+      cart_item_ids: list<UUID>
+      unavailable_items: list<string>
+    }
+    errors: {
+      OrderNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Order Creation
+    rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse)
+    rpc GetOrderDetail(GetOrderDetailRequest) returns (GetOrderDetailResponse)
+    rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse)
+
+    // Order Status
+    rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse)
+    rpc GetOrderStatusHistory(GetOrderStatusHistoryRequest) returns (GetOrderStatusHistoryResponse)
+
+    // Order Cancellation
+    rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse)
+
+    // Order Search
+    rpc SearchOrders(SearchOrdersRequest) returns (SearchOrdersResponse)
+
+    // Order Statistics
+    rpc GetOrderStatistics(GetOrderStatisticsRequest) returns (GetOrderStatisticsResponse)
+    rpc GetProductSalesRanking(GetProductSalesRankingRequest) returns (GetProductSalesRankingResponse)
+    rpc ExportOrdersToCSV(ExportOrdersToCSVRequest) returns (ExportOrdersToCSVResponse)
+
+    // Reorder
+    rpc CreateReorder(CreateReorderRequest) returns (CreateReorderResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    messaging: RabbitMQ
+    storage: MinIO  // For CSV exports
+    services: {
+      inventory: InventoryService
+      payment: PaymentService
+      customer: CustomerService
+      notification: NotificationService
+    }
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    publish OrderCreated {
+      order_id: UUID
+      order_number: string
+      customer_id: UUID
+      customer_email: string
+      total_amount: decimal
+      created_at: timestamp
+    }
+
+    publish OrderStatusUpdated {
+      order_id: UUID
+      order_number: string
+      customer_id: UUID
+      old_status: OrderStatus
+      new_status: OrderStatus
+      tracking_number: string
+      carrier: string
+      updated_at: timestamp
+    }
+
+    publish OrderCancelled {
+      order_id: UUID
+      order_number: string
+      customer_id: UUID
+      cancelled_by: string
+      cancel_reason: CancelReason
+      refund_id: UUID
+      cancelled_at: timestamp
+    }
+
+    subscribe PaymentCompleted {
+      payment_id: UUID
+      order_id: UUID
+      amount: decimal
+      status: string
+    }
+
+    subscribe PaymentFailed {
+      payment_id: UUID
+      order_id: UUID
+      error_message: string
+    }
+
+    subscribe RefundCompleted {
+      refund_id: UUID
+      order_id: UUID
+      amount: decimal
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    order_number_prefix: "ORD"
+    order_number_random_length: 8
+    max_cancellable_status: "PREPARING"
+    saga_timeout_minutes: 30
+    export_csv_expiry_hours: 24
+    default_page_size: 20
+    max_page_size: 100
+  }
+}

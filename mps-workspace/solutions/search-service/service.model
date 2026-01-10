@@ -1,0 +1,509 @@
+// Search Service DSL Definition
+// Based on: docs/requirements/11_search_service.md
+
+microservice SearchService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity ProductIndex {
+    id: UUID primary_key
+    product_id: UUID unique not_null
+    product_name: string not_null
+    description: text not_null
+    category: string not_null
+    tags: list<string>
+    shop_id: UUID not_null
+    shop_name: string not_null
+    price: decimal not_null
+    average_rating: decimal default(0)
+    review_count: int default(0)
+    stock_status: StockStatus not_null
+    image_url: string nullable
+    indexed_at: timestamp not_null
+  }
+
+  entity ShopIndex {
+    id: UUID primary_key
+    shop_id: UUID unique not_null
+    shop_name: string not_null
+    description: text not_null
+    categories: list<string>
+    average_rating: decimal default(0)
+    product_count: int default(0)
+    logo_url: string nullable
+    indexed_at: timestamp not_null
+  }
+
+  entity SearchHistory {
+    id: UUID primary_key
+    user_id: UUID not_null
+    keyword: string not_null
+    result_count: int not_null
+    clicked_product_id: UUID nullable
+    created_at: timestamp not_null
+  }
+
+  entity SearchSuggestion {
+    id: UUID primary_key
+    keyword: string unique not_null
+    search_count: int default(1)
+    category: string nullable
+    last_searched_at: timestamp not_null
+  }
+
+  entity PopularKeyword {
+    id: UUID primary_key
+    keyword: string unique not_null
+    search_count: int not_null
+    rank: int not_null
+    category: string nullable
+    period_type: PeriodType not_null
+    period_date: date not_null
+    created_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum StockStatus {
+    IN_STOCK,
+    LOW_STOCK,
+    OUT_OF_STOCK
+  }
+
+  enum SortBy {
+    RELEVANCE,
+    PRICE_ASC,
+    PRICE_DESC,
+    RATING_DESC,
+    NEWEST,
+    REVIEW_COUNT_DESC
+  }
+
+  enum PeriodType {
+    HOURLY,
+    DAILY,
+    WEEKLY,
+    MONTHLY
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Product Search
+  usecase SearchProducts {
+    input: {
+      keyword: string
+      category: string
+      min_price: decimal
+      max_price: decimal
+      min_rating: decimal
+      stock_status: StockStatus
+      shop_id: UUID
+      sort_by: SortBy
+      page: int
+      page_size: int
+    }
+    output: {
+      products: list<ProductSearchResult>
+      total_count: int
+      facets: SearchFacets
+      search_time_ms: int
+    }
+    errors: {
+      InvalidQuery,
+      ElasticsearchError
+    }
+    external_api: {
+      elasticsearch: ProductIndexSearch
+    }
+  }
+
+  usecase GetSearchSuggestions {
+    input: {
+      prefix: string
+      limit: int
+    }
+    output: {
+      suggestions: list<string>
+    }
+    errors: {}
+    external_api: {
+      elasticsearch: AutoComplete
+    }
+  }
+
+  // Shop Search
+  usecase SearchShops {
+    input: {
+      keyword: string
+      category: string
+      min_rating: decimal
+      sort_by: string
+      page: int
+      page_size: int
+    }
+    output: {
+      shops: list<ShopSearchResult>
+      total_count: int
+    }
+    errors: {
+      InvalidQuery,
+      ElasticsearchError
+    }
+    external_api: {
+      elasticsearch: ShopIndexSearch
+    }
+  }
+
+  // Search History
+  usecase RecordSearchHistory {
+    input: {
+      user_id: UUID
+      keyword: string
+      result_count: int
+      clicked_product_id: UUID
+    }
+    output: {
+      history_id: UUID
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  usecase GetSearchHistory {
+    input: {
+      user_id: UUID
+      limit: int
+    }
+    output: {
+      history: list<SearchHistory>
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  usecase DeleteSearchHistory {
+    input: {
+      user_id: UUID
+      history_id: UUID
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      HistoryNotFound
+    }
+  }
+
+  usecase ClearAllSearchHistory {
+    input: {
+      user_id: UUID
+    }
+    output: {
+      deleted_count: int
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  // Popular Keywords
+  usecase GetPopularKeywords {
+    input: {
+      period_type: PeriodType
+      category: string
+      limit: int
+    }
+    output: {
+      keywords: list<PopularKeyword>
+    }
+    errors: {}
+  }
+
+  usecase GetTrendingKeywords {
+    input: {
+      limit: int
+    }
+    output: {
+      keywords: list<TrendingKeyword>
+    }
+    errors: {}
+  }
+
+  usecase UpdatePopularKeywords {
+    input: {
+      period_type: PeriodType
+    }
+    output: {
+      updated_count: int
+    }
+    errors: {}
+    scheduled: "0 * * * *"  // Every hour
+  }
+
+  // Index Management
+  usecase IndexProduct {
+    input: {
+      product_id: UUID
+      product_name: string
+      description: string
+      category: string
+      tags: list<string>
+      shop_id: UUID
+      shop_name: string
+      price: decimal
+      average_rating: decimal
+      review_count: int
+      stock_status: StockStatus
+      image_url: string
+    }
+    output: {
+      index_id: UUID
+      indexed: boolean
+    }
+    errors: {
+      ElasticsearchError
+    }
+    external_api: {
+      elasticsearch: IndexDocument
+    }
+  }
+
+  usecase UpdateProductIndex {
+    input: {
+      product_id: UUID
+      product_name: string
+      description: string
+      price: decimal
+      average_rating: decimal
+      review_count: int
+      stock_status: StockStatus
+    }
+    output: {
+      updated: boolean
+    }
+    errors: {
+      ProductNotIndexed,
+      ElasticsearchError
+    }
+  }
+
+  usecase DeleteProductIndex {
+    input: {
+      product_id: UUID
+    }
+    output: {
+      deleted: boolean
+    }
+    errors: {
+      ProductNotIndexed,
+      ElasticsearchError
+    }
+  }
+
+  usecase ReindexAllProducts {
+    input: {}
+    output: {
+      total_indexed: int
+      errors: list<string>
+    }
+    errors: {
+      ElasticsearchError
+    }
+  }
+
+  usecase IndexShop {
+    input: {
+      shop_id: UUID
+      shop_name: string
+      description: string
+      categories: list<string>
+      average_rating: decimal
+      product_count: int
+      logo_url: string
+    }
+    output: {
+      index_id: UUID
+      indexed: boolean
+    }
+    errors: {
+      ElasticsearchError
+    }
+  }
+
+  usecase DeleteShopIndex {
+    input: {
+      shop_id: UUID
+    }
+    output: {
+      deleted: boolean
+    }
+    errors: {
+      ShopNotIndexed,
+      ElasticsearchError
+    }
+  }
+
+  // Search Analytics
+  usecase RecordSearchLog {
+    input: {
+      user_id: UUID
+      keyword: string
+      result_count: int
+      execution_time_ms: int
+      filters: map<string, string>
+    }
+    output: {
+      log_id: UUID
+    }
+    errors: {}
+  }
+
+  usecase GetSearchAnalytics {
+    input: {
+      date_from: date
+      date_to: date
+      report_type: string
+    }
+    output: {
+      analytics: SearchAnalyticsReport
+    }
+    errors: {}
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Product Search
+    rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse)
+    rpc GetSearchSuggestions(GetSearchSuggestionsRequest) returns (GetSearchSuggestionsResponse)
+
+    // Shop Search
+    rpc SearchShops(SearchShopsRequest) returns (SearchShopsResponse)
+
+    // Search History
+    rpc RecordSearchHistory(RecordSearchHistoryRequest) returns (RecordSearchHistoryResponse)
+    rpc GetSearchHistory(GetSearchHistoryRequest) returns (GetSearchHistoryResponse)
+    rpc DeleteSearchHistory(DeleteSearchHistoryRequest) returns (DeleteSearchHistoryResponse)
+    rpc ClearAllSearchHistory(ClearAllSearchHistoryRequest) returns (ClearAllSearchHistoryResponse)
+
+    // Popular Keywords
+    rpc GetPopularKeywords(GetPopularKeywordsRequest) returns (GetPopularKeywordsResponse)
+    rpc GetTrendingKeywords(GetTrendingKeywordsRequest) returns (GetTrendingKeywordsResponse)
+
+    // Index Management
+    rpc IndexProduct(IndexProductRequest) returns (IndexProductResponse)
+    rpc UpdateProductIndex(UpdateProductIndexRequest) returns (UpdateProductIndexResponse)
+    rpc DeleteProductIndex(DeleteProductIndexRequest) returns (DeleteProductIndexResponse)
+    rpc IndexShop(IndexShopRequest) returns (IndexShopResponse)
+    rpc DeleteShopIndex(DeleteShopIndexRequest) returns (DeleteShopIndexResponse)
+
+    // Analytics
+    rpc GetSearchAnalytics(GetSearchAnalyticsRequest) returns (GetSearchAnalyticsResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL  // For search history
+    cache: Redis
+    search_engine: Elasticsearch
+    messaging: RabbitMQ
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    subscribe ProductCreated {
+      product_id: UUID
+      product_name: string
+      description: string
+      category: string
+      shop_id: UUID
+      shop_name: string
+      price: decimal
+    }
+
+    subscribe ProductUpdated {
+      product_id: UUID
+      product_name: string
+      description: string
+      price: decimal
+      stock_status: StockStatus
+    }
+
+    subscribe ProductDeleted {
+      product_id: UUID
+    }
+
+    subscribe ReviewApproved {
+      product_id: UUID
+      average_rating: decimal
+      review_count: int
+    }
+
+    subscribe ShopCreated {
+      shop_id: UUID
+      shop_name: string
+      description: string
+      categories: list<string>
+    }
+
+    subscribe ShopUpdated {
+      shop_id: UUID
+      shop_name: string
+      description: string
+    }
+
+    subscribe ShopDeleted {
+      shop_id: UUID
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    elasticsearch_url: env("ELASTICSEARCH_URL")
+    elasticsearch_username: env("ELASTICSEARCH_USERNAME")
+    elasticsearch_password: env("ELASTICSEARCH_PASSWORD")
+    product_index_name: "products"
+    shop_index_name: "shops"
+    max_search_results: 1000
+    default_page_size: 20
+    suggestion_limit: 10
+    history_retention_days: 90
+    popular_keywords_limit: 20
+    trending_threshold: 1.5
+    japanese_analyzer: "kuromoji"
+  }
+
+  // =========================================
+  // Custom Logic Required
+  // =========================================
+
+  custom_implementations {
+    // manual/search/elasticsearch_client.go
+    elasticsearch_index_management
+    elasticsearch_query_builder
+    elasticsearch_analyzer_setup
+
+    // manual/search/facet_aggregator.go
+    facet_aggregation_logic
+  }
+}

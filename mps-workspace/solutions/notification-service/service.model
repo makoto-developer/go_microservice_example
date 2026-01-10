@@ -1,0 +1,583 @@
+// Notification Service DSL Definition
+// Based on: docs/requirements/09_notification_service.md
+
+microservice NotificationService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity Notification {
+    id: UUID primary_key
+    user_id: UUID not_null
+    notification_type: NotificationType not_null
+    channel: NotificationChannel not_null
+    title: string not_null
+    content: text not_null
+    status: NotificationStatus not_null default(PENDING)
+    sent_at: timestamp nullable
+    error_message: text nullable
+    retry_count: int default(0)
+    metadata: json nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity EmailTemplate {
+    id: UUID primary_key
+    template_key: string unique not_null
+    subject_template: string not_null
+    html_template: text not_null
+    text_template: text not_null
+    variables: list<string>
+    version: int default(1)
+    is_active: boolean default(true)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity PushTemplate {
+    id: UUID primary_key
+    template_key: string unique not_null
+    title_template: string not_null
+    body_template: string not_null
+    variables: list<string>
+    version: int default(1)
+    is_active: boolean default(true)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity DeviceToken {
+    id: UUID primary_key
+    user_id: UUID not_null
+    device_id: string unique not_null
+    platform: Platform not_null
+    token: string not_null
+    is_active: boolean default(true)
+    last_used_at: timestamp nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity NotificationPreference {
+    id: UUID primary_key
+    user_id: UUID unique not_null
+    email_enabled: boolean default(true)
+    push_enabled: boolean default(true)
+    email_order_updates: boolean default(true)
+    email_shop_updates: boolean default(true)
+    email_chat_messages: boolean default(false)
+    push_order_updates: boolean default(true)
+    push_stock_restored: boolean default(true)
+    push_campaigns: boolean default(true)
+    push_chat_messages: boolean default(true)
+    frequency: NotificationFrequency default(IMMEDIATE)
+    quiet_hours_start: time nullable
+    quiet_hours_end: time nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum NotificationType {
+    USER_REGISTERED,
+    EMAIL_VERIFIED,
+    ORDER_CONFIRMED,
+    ORDER_SHIPPED,
+    ORDER_DELIVERED,
+    ORDER_CANCELLED,
+    PAYMENT_COMPLETED,
+    PAYMENT_FAILED,
+    REFUND_COMPLETED,
+    SHOP_APPROVED,
+    SHOP_REJECTED,
+    STOCK_LOW_ALERT,
+    STOCK_OUT_ALERT,
+    STOCK_RESTORED,
+    CHAT_MESSAGE_RECEIVED,
+    PASSWORD_RESET,
+    CAMPAIGN_STARTED
+  }
+
+  enum NotificationChannel {
+    EMAIL,
+    PUSH,
+    SMS
+  }
+
+  enum NotificationStatus {
+    PENDING,
+    SENT,
+    FAILED,
+    CANCELLED
+  }
+
+  enum Platform {
+    IOS,
+    ANDROID,
+    WEB
+  }
+
+  enum NotificationFrequency {
+    IMMEDIATE,
+    DAILY_DIGEST,
+    DISABLED
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Email Notifications
+  usecase SendEmail {
+    input: {
+      user_id: UUID
+      email: string
+      template_key: string
+      variables: map<string, string>
+      notification_type: NotificationType
+    }
+    output: {
+      notification_id: UUID
+      sent: boolean
+    }
+    errors: {
+      TemplateNotFound,
+      InvalidEmail,
+      SMTPError,
+      UserOptedOut
+    }
+    external_api: {
+      smtp: SendGrid
+    }
+  }
+
+  usecase SendBulkEmail {
+    input: {
+      user_ids: list<UUID>
+      template_key: string
+      variables: map<string, map<string, string>>
+    }
+    output: {
+      notification_ids: list<UUID>
+      sent_count: int
+      failed_count: int
+    }
+    errors: {
+      TemplateNotFound
+    }
+  }
+
+  // Push Notifications
+  usecase SendPushNotification {
+    input: {
+      user_id: UUID
+      template_key: string
+      variables: map<string, string>
+      notification_type: NotificationType
+      data: map<string, string>
+    }
+    output: {
+      notification_id: UUID
+      sent_device_count: int
+    }
+    errors: {
+      TemplateNotFound,
+      NoActiveDevices,
+      FCMError,
+      UserOptedOut
+    }
+    external_api: {
+      fcm: FirebaseCloudMessaging
+      apns: ApplePushNotificationService
+    }
+  }
+
+  // Device Token Management
+  usecase RegisterDeviceToken {
+    input: {
+      user_id: UUID
+      device_id: string
+      platform: Platform
+      token: string
+    }
+    output: {
+      device_token_id: UUID
+    }
+    errors: {
+      UserNotFound,
+      InvalidToken
+    }
+  }
+
+  usecase UnregisterDeviceToken {
+    input: {
+      device_id: string
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      DeviceNotFound
+    }
+  }
+
+  usecase RefreshDeviceToken {
+    input: {
+      device_id: string
+      new_token: string
+    }
+    output: {
+      device_token_id: UUID
+    }
+    errors: {
+      DeviceNotFound
+    }
+  }
+
+  // Template Management
+  usecase CreateEmailTemplate {
+    input: {
+      template_key: string
+      subject_template: string
+      html_template: string
+      text_template: string
+      variables: list<string>
+    }
+    output: {
+      template_id: UUID
+    }
+    errors: {
+      TemplateAlreadyExists,
+      InvalidTemplate
+    }
+  }
+
+  usecase UpdateEmailTemplate {
+    input: {
+      template_id: UUID
+      subject_template: string
+      html_template: string
+      text_template: string
+      variables: list<string>
+    }
+    output: {
+      template_id: UUID
+      new_version: int
+    }
+    errors: {
+      TemplateNotFound
+    }
+  }
+
+  usecase PreviewEmailTemplate {
+    input: {
+      template_key: string
+      variables: map<string, string>
+    }
+    output: {
+      subject: string
+      html_content: string
+      text_content: string
+    }
+    errors: {
+      TemplateNotFound,
+      MissingVariables
+    }
+  }
+
+  // Notification Preferences
+  usecase GetNotificationPreference {
+    input: {
+      user_id: UUID
+    }
+    output: {
+      preference: NotificationPreference
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  usecase UpdateNotificationPreference {
+    input: {
+      user_id: UUID
+      email_enabled: boolean
+      push_enabled: boolean
+      email_order_updates: boolean
+      email_shop_updates: boolean
+      email_chat_messages: boolean
+      push_order_updates: boolean
+      push_stock_restored: boolean
+      push_campaigns: boolean
+      push_chat_messages: boolean
+      frequency: NotificationFrequency
+      quiet_hours_start: time
+      quiet_hours_end: time
+    }
+    output: {
+      preference_id: UUID
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  // Notification History
+  usecase GetNotificationHistory {
+    input: {
+      user_id: UUID
+      channel: NotificationChannel
+      status: NotificationStatus
+      date_from: date
+      date_to: date
+      page: int
+      page_size: int
+    }
+    output: {
+      notifications: list<Notification>
+      total_count: int
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  usecase ResendNotification {
+    input: {
+      notification_id: UUID
+    }
+    output: {
+      new_notification_id: UUID
+      sent: boolean
+    }
+    errors: {
+      NotificationNotFound,
+      MaxRetryExceeded
+    }
+  }
+
+  // Event Handlers
+  usecase HandleUserRegistered {
+    input: {
+      user_id: UUID
+      email: string
+      verification_link: string
+    }
+    output: {
+      notification_id: UUID
+    }
+    errors: {}
+  }
+
+  usecase HandleOrderConfirmed {
+    input: {
+      order_id: UUID
+      order_number: string
+      customer_id: UUID
+      customer_email: string
+      total_amount: decimal
+    }
+    output: {
+      notification_id: UUID
+    }
+    errors: {}
+  }
+
+  usecase HandleShipmentDispatched {
+    input: {
+      order_id: UUID
+      customer_id: UUID
+      tracking_number: string
+      carrier: string
+      tracking_url: string
+    }
+    output: {
+      notification_id: UUID
+    }
+    errors: {}
+  }
+
+  usecase HandleStockRestored {
+    input: {
+      product_id: UUID
+      product_name: string
+      user_ids: list<UUID>
+    }
+    output: {
+      notification_ids: list<UUID>
+    }
+    errors: {}
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Email
+    rpc SendEmail(SendEmailRequest) returns (SendEmailResponse)
+    rpc SendBulkEmail(SendBulkEmailRequest) returns (SendBulkEmailResponse)
+
+    // Push Notification
+    rpc SendPushNotification(SendPushNotificationRequest) returns (SendPushNotificationResponse)
+
+    // Device Token
+    rpc RegisterDeviceToken(RegisterDeviceTokenRequest) returns (RegisterDeviceTokenResponse)
+    rpc UnregisterDeviceToken(UnregisterDeviceTokenRequest) returns (UnregisterDeviceTokenResponse)
+    rpc RefreshDeviceToken(RefreshDeviceTokenRequest) returns (RefreshDeviceTokenResponse)
+
+    // Template
+    rpc CreateEmailTemplate(CreateEmailTemplateRequest) returns (CreateEmailTemplateResponse)
+    rpc UpdateEmailTemplate(UpdateEmailTemplateRequest) returns (UpdateEmailTemplateResponse)
+    rpc PreviewEmailTemplate(PreviewEmailTemplateRequest) returns (PreviewEmailTemplateResponse)
+
+    // Preferences
+    rpc GetNotificationPreference(GetNotificationPreferenceRequest) returns (GetNotificationPreferenceResponse)
+    rpc UpdateNotificationPreference(UpdateNotificationPreferenceRequest) returns (UpdateNotificationPreferenceResponse)
+
+    // History
+    rpc GetNotificationHistory(GetNotificationHistoryRequest) returns (GetNotificationHistoryResponse)
+    rpc ResendNotification(ResendNotificationRequest) returns (ResendNotificationResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    messaging: RabbitMQ
+    external_api: {
+      sendgrid: SendGrid
+      fcm: FirebaseCloudMessaging
+      apns: ApplePushNotificationService
+    }
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    subscribe UserRegistered {
+      user_id: UUID
+      email: string
+      verification_link: string
+    }
+
+    subscribe EmailVerified {
+      user_id: UUID
+      email: string
+    }
+
+    subscribe OrderConfirmed {
+      order_id: UUID
+      order_number: string
+      customer_id: UUID
+      customer_email: string
+      total_amount: decimal
+    }
+
+    subscribe ShipmentDispatched {
+      order_id: UUID
+      customer_id: UUID
+      tracking_number: string
+      carrier: string
+    }
+
+    subscribe OrderDelivered {
+      order_id: UUID
+      customer_id: UUID
+    }
+
+    subscribe OrderCancelled {
+      order_id: UUID
+      customer_id: UUID
+      cancel_reason: string
+    }
+
+    subscribe PaymentCompleted {
+      payment_id: UUID
+      order_id: UUID
+      customer_id: UUID
+      amount: decimal
+    }
+
+    subscribe PaymentFailed {
+      payment_id: UUID
+      order_id: UUID
+      customer_id: UUID
+      error_message: string
+    }
+
+    subscribe RefundCompleted {
+      refund_id: UUID
+      order_id: UUID
+      customer_id: UUID
+      amount: decimal
+    }
+
+    subscribe StockLowAlert {
+      product_id: UUID
+      shop_id: UUID
+      current_quantity: int
+    }
+
+    subscribe StockOutAlert {
+      product_id: UUID
+      shop_id: UUID
+    }
+
+    subscribe StockRestored {
+      product_id: UUID
+      product_name: string
+      shop_id: UUID
+    }
+
+    subscribe ChatMessageSent {
+      message_id: UUID
+      sender_id: UUID
+      receiver_id: UUID
+      message_preview: string
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    sendgrid_api_key: env("SENDGRID_API_KEY")
+    sendgrid_from_email: env("SENDGRID_FROM_EMAIL")
+    fcm_server_key: env("FCM_SERVER_KEY")
+    apns_key_id: env("APNS_KEY_ID")
+    apns_team_id: env("APNS_TEAM_ID")
+    max_retry_count: 3
+    retry_backoff_multiplier: 2
+    initial_retry_delay_seconds: 60
+    batch_size: 100
+    default_page_size: 50
+  }
+
+  // =========================================
+  // Custom Logic Required
+  // =========================================
+
+  custom_implementations {
+    // manual/notification/email_sender.go
+    sendgrid_email_client
+    email_template_renderer
+
+    // manual/notification/push_sender.go
+    fcm_push_client
+    apns_push_client
+    push_template_renderer
+  }
+}

@@ -1,0 +1,458 @@
+// Inventory Service DSL Definition
+// Based on: docs/requirements/04_inventory_service.md
+
+microservice InventoryService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity Inventory {
+    id: UUID primary_key
+    product_id: UUID not_null
+    variation_id: UUID nullable
+    shop_id: UUID not_null
+    quantity: int not_null default(0)
+    reserved_quantity: int not_null default(0)
+    available_quantity: int not_null default(0)
+    alert_threshold: int not_null default(5)
+    last_alerted_at: timestamp nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity Reservation {
+    id: UUID primary_key
+    inventory_id: UUID foreign_key(Inventory.id) not_null
+    order_id: UUID not_null
+    quantity: int not_null
+    status: ReservationStatus not_null default(RESERVED)
+    expires_at: timestamp not_null
+    confirmed_at: timestamp nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity InventoryHistory {
+    id: UUID primary_key
+    inventory_id: UUID foreign_key(Inventory.id) not_null
+    change_type: ChangeType not_null
+    change_quantity: int not_null
+    quantity_before: int not_null
+    quantity_after: int not_null
+    reason: string not_null
+    operator: string not_null
+    order_id: UUID nullable
+    created_at: timestamp not_null
+  }
+
+  entity StockTaking {
+    id: UUID primary_key
+    inventory_id: UUID foreign_key(Inventory.id) not_null
+    shop_id: UUID not_null
+    system_quantity: int not_null
+    actual_quantity: int not_null
+    difference: int not_null
+    difference_reason: string nullable
+    operator: string not_null
+    created_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum ReservationStatus {
+    RESERVED,
+    CONFIRMED,
+    RELEASED,
+    EXPIRED
+  }
+
+  enum ChangeType {
+    INITIAL,
+    RESTOCK,
+    RETURN,
+    RESERVATION,
+    RELEASE,
+    CONFIRMATION,
+    DAMAGE,
+    STOCK_TAKING,
+    MANUAL_ADJUSTMENT
+  }
+
+  enum InventoryStatus {
+    IN_STOCK,
+    LOW_STOCK,
+    OUT_OF_STOCK,
+    RESERVED
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Inventory Management
+  usecase RegisterInventory {
+    input: {
+      product_id: UUID
+      variation_id: UUID
+      shop_id: UUID
+      initial_quantity: int
+      alert_threshold: int
+    }
+    output: {
+      inventory_id: UUID
+    }
+    errors: {
+      ProductNotFound,
+      InventoryAlreadyExists
+    }
+    validation: {
+      initial_quantity: min(0)
+      alert_threshold: min(0)
+    }
+  }
+
+  usecase UpdateInventoryQuantity {
+    input: {
+      inventory_id: UUID
+      shop_id: UUID
+      change_quantity: int
+      change_type: ChangeType
+      reason: string
+      operator: string
+    }
+    output: {
+      inventory_id: UUID
+      new_quantity: int
+    }
+    errors: {
+      InventoryNotFound,
+      UnauthorizedAccess,
+      InvalidQuantity
+    }
+    events: {
+      publish InventoryUpdated
+      publish StockRestoredIfApplicable
+    }
+  }
+
+  usecase GetInventory {
+    input: {
+      inventory_id: UUID
+    }
+    output: {
+      inventory: Inventory
+      status: InventoryStatus
+    }
+    errors: {
+      InventoryNotFound
+    }
+  }
+
+  usecase GetInventoryByProduct {
+    input: {
+      product_id: UUID
+      variation_id: UUID
+    }
+    output: {
+      inventory: Inventory
+      status: InventoryStatus
+    }
+    errors: {
+      InventoryNotFound
+    }
+  }
+
+  usecase BulkGetInventory {
+    input: {
+      product_ids: list<UUID>
+    }
+    output: {
+      inventories: map<UUID, Inventory>
+    }
+    errors: {}
+  }
+
+  // Stock Reservation
+  usecase ReserveStock {
+    input: {
+      inventory_id: UUID
+      order_id: UUID
+      quantity: int
+    }
+    output: {
+      reservation_id: UUID
+      expires_at: timestamp
+    }
+    errors: {
+      InventoryNotFound,
+      InsufficientStock,
+      InvalidQuantity
+    }
+    validation: {
+      quantity: min(1)
+    }
+  }
+
+  usecase BulkReserveStock {
+    input: {
+      reservations: list<ReservationRequest>
+      order_id: UUID
+    }
+    output: {
+      reservation_ids: list<UUID>
+      expires_at: timestamp
+    }
+    errors: {
+      InsufficientStock,
+      PartialReservationFailed
+    }
+    transaction: true
+  }
+
+  usecase ReleaseStock {
+    input: {
+      reservation_id: UUID
+      order_id: UUID
+    }
+    output: {
+      inventory_id: UUID
+      released_quantity: int
+    }
+    errors: {
+      ReservationNotFound,
+      ReservationAlreadyConfirmed
+    }
+    events: {
+      publish StockReleased
+    }
+  }
+
+  usecase ConfirmStock {
+    input: {
+      reservation_id: UUID
+      order_id: UUID
+    }
+    output: {
+      inventory_id: UUID
+      confirmed_quantity: int
+    }
+    errors: {
+      ReservationNotFound,
+      ReservationExpired
+    }
+    events: {
+      publish StockConfirmed
+    }
+  }
+
+  usecase ReleaseExpiredReservations {
+    input: {}
+    output: {
+      released_count: int
+    }
+    errors: {}
+    scheduled: "*/5 * * * *"  // Every 5 minutes
+  }
+
+  // Stock Alert
+  usecase CheckStockAlert {
+    input: {
+      inventory_id: UUID
+    }
+    output: {
+      should_alert: boolean
+      current_quantity: int
+      threshold: int
+    }
+    errors: {
+      InventoryNotFound
+    }
+    events: {
+      publish LowStockAlert
+      publish OutOfStockAlert
+    }
+  }
+
+  // Stock History
+  usecase GetInventoryHistory {
+    input: {
+      inventory_id: UUID
+      date_from: date
+      date_to: date
+      change_types: list<ChangeType>
+      page: int
+      page_size: int
+    }
+    output: {
+      history: list<InventoryHistory>
+      total_count: int
+    }
+    errors: {
+      InventoryNotFound
+    }
+  }
+
+  // Stock Taking
+  usecase RecordStockTaking {
+    input: {
+      inventory_id: UUID
+      shop_id: UUID
+      actual_quantity: int
+      difference_reason: string
+      operator: string
+    }
+    output: {
+      stock_taking_id: UUID
+      difference: int
+    }
+    errors: {
+      InventoryNotFound,
+      UnauthorizedAccess
+    }
+    events: {
+      publish StockTakingCompleted
+    }
+  }
+
+  usecase GetStockTakingHistory {
+    input: {
+      shop_id: UUID
+      date_from: date
+      date_to: date
+    }
+    output: {
+      stock_takings: list<StockTaking>
+    }
+    errors: {
+      UnauthorizedAccess
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Inventory Management
+    rpc RegisterInventory(RegisterInventoryRequest) returns (RegisterInventoryResponse)
+    rpc UpdateInventoryQuantity(UpdateInventoryQuantityRequest) returns (UpdateInventoryQuantityResponse)
+    rpc GetInventory(GetInventoryRequest) returns (GetInventoryResponse)
+    rpc GetInventoryByProduct(GetInventoryByProductRequest) returns (GetInventoryByProductResponse)
+    rpc BulkGetInventory(BulkGetInventoryRequest) returns (BulkGetInventoryResponse)
+
+    // Stock Reservation
+    rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse)
+    rpc BulkReserveStock(BulkReserveStockRequest) returns (BulkReserveStockResponse)
+    rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse)
+    rpc ConfirmStock(ConfirmStockRequest) returns (ConfirmStockResponse)
+
+    // Stock History
+    rpc GetInventoryHistory(GetInventoryHistoryRequest) returns (GetInventoryHistoryResponse)
+
+    // Stock Taking
+    rpc RecordStockTaking(RecordStockTakingRequest) returns (RecordStockTakingResponse)
+    rpc GetStockTakingHistory(GetStockTakingHistoryRequest) returns (GetStockTakingHistoryResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis  // For high-frequency inventory queries
+    messaging: RabbitMQ
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    publish InventoryUpdated {
+      inventory_id: UUID
+      product_id: UUID
+      shop_id: UUID
+      old_quantity: int
+      new_quantity: int
+      change_type: ChangeType
+      updated_at: timestamp
+    }
+
+    publish StockReserved {
+      reservation_id: UUID
+      inventory_id: UUID
+      product_id: UUID
+      order_id: UUID
+      quantity: int
+      expires_at: timestamp
+      created_at: timestamp
+    }
+
+    publish StockReleased {
+      reservation_id: UUID
+      inventory_id: UUID
+      product_id: UUID
+      order_id: UUID
+      quantity: int
+      released_at: timestamp
+    }
+
+    publish StockConfirmed {
+      reservation_id: UUID
+      inventory_id: UUID
+      product_id: UUID
+      order_id: UUID
+      quantity: int
+      confirmed_at: timestamp
+    }
+
+    publish LowStockAlert {
+      inventory_id: UUID
+      product_id: UUID
+      shop_id: UUID
+      current_quantity: int
+      threshold: int
+      alerted_at: timestamp
+    }
+
+    publish OutOfStockAlert {
+      inventory_id: UUID
+      product_id: UUID
+      shop_id: UUID
+      alerted_at: timestamp
+    }
+
+    publish StockRestored {
+      inventory_id: UUID
+      product_id: UUID
+      shop_id: UUID
+      new_quantity: int
+      restored_at: timestamp
+    }
+
+    publish StockTakingCompleted {
+      stock_taking_id: UUID
+      inventory_id: UUID
+      shop_id: UUID
+      difference: int
+      difference_reason: string
+      completed_at: timestamp
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    reservation_expiry_minutes: 30
+    reservation_cleanup_interval_minutes: 5
+    default_alert_threshold: 5
+    max_alert_frequency_hours: 24
+  }
+}

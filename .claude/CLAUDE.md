@@ -206,6 +206,94 @@ docs/requirements/       # 要件定義（必ず参照）
 - [mps-workflow.md](./.claude/rules/mps-workflow.md) - MPS開発フロー
 - [code-generation.md](./.claude/rules/code-generation.md) - コード生成ルール
 - [token-optimization.md](./.claude/rules/token-optimization.md) - トークン最適化
+- [phase-execution-plan.md](./.claude/rules/phase-execution-plan.md) - Phase別実行計画
+- [autonomous-execution.md](./.claude/rules/autonomous-execution.md) - 自律実行ルール
+
+---
+
+## 🤖 Claude の自律実行
+
+### Phase 2-4の自律実行権限
+
+Claudeは以下を**ユーザー承認なし**で自律実行可能：
+
+1. **要件定義の読み込み**
+   ```bash
+   cat docs/requirements/XX_service.md
+   ```
+
+2. **DSL定義の作成**
+   ```bash
+   vim mps-workspace/solutions/<service>/service.model
+   ```
+
+3. **コード生成の実行**
+   ```bash
+   ./scripts/mps-generate.sh <service>
+   ```
+
+4. **品質チェック**
+   - DSL定義の検証（100-300行目標）
+   - コード生成成功確認
+   - ディレクトリ構造確認
+
+5. **進捗記録**
+   - `docs/PROJECT_STATUS.md` 更新
+   - トークン消費記録
+
+### ユーザー承認が必要な作業
+
+1. **Phase移行**
+   - Phase 2 → Phase 3への移行
+   - Phase 3 → Phase 4への移行
+
+2. **Git操作**
+   - `git commit`
+   - `git push`
+
+3. **カスタムロジック実装**
+   - `manual/` への実装追加
+
+### 並行実行の自動制御
+
+Claudeは依存関係を解析して、並行実行可能なサービスを自動判定：
+
+```
+Phase 2:
+  [Customer Service] + [Inventory Service] → 並行実行
+  ↓
+  [Order Service] → 順次実行
+  ↓
+  [Payment Service] → 順次実行
+
+Phase 3:
+  [Notification Service] + [Review Service] → 並行実行
+  ↓
+  [Shipping Service] → 順次実行
+
+Phase 4:
+  [Chat Service] + [Search Service] → 並行実行
+  ↓
+  [Admin Service] → 順次実行
+```
+
+### Phase実行コマンド
+
+ユーザーが使用できるコマンド：
+
+```
+"Phase 2を開始して"
+→ Phase 2を自律的に実行開始
+
+"Phase 2を並行実行して"
+→ 並行可能なサービスを並行実行
+
+"Phase 2の進捗を確認"
+→ 現在の進捗を表示
+
+"トークン消費を確認"
+→ 現在までのトークン消費を表示
+```
 
 ---
 
@@ -216,5 +304,15 @@ docs/requirements/       # 要件定義（必ず参照）
 1. **DSL First**: すべてはDSL定義から始める
 2. **Read Only Generated**: 生成コードは読まない・触らない
 3. **Token Efficiency**: 常にトークン消費を意識
+
+### Phase 2-4の自律実行
+
+Claudeは要件定義からDSL定義作成、コード生成、品質チェック、進捗記録までを自律的に実行。
+
+**ユーザーの役割**:
+- Phase開始の承認
+- カスタムロジックの実装判断
+- Git操作の承認
+- 最終的な品質確認
 
 これらを守ることで、12個のマイクロサービスを効率的に開発できます。

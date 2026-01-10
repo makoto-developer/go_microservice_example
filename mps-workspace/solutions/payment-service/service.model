@@ -1,0 +1,463 @@
+// Payment Service DSL Definition
+// Based on: docs/requirements/06_payment_service.md
+
+microservice PaymentService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity Payment {
+    id: UUID primary_key
+    order_id: UUID not_null
+    payment_method: PaymentMethodType not_null
+    amount: decimal not_null
+    currency: string not_null default("JPY")
+    status: PaymentStatus not_null default(PENDING)
+    stripe_payment_intent_id: string nullable
+    stripe_client_secret: string nullable
+    requires_authentication: boolean default(false)
+    authentication_url: string nullable
+    error_code: string nullable
+    error_message: text nullable
+    cod_fee: decimal nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity Refund {
+    id: UUID primary_key
+    payment_id: UUID foreign_key(Payment.id) not_null
+    order_id: UUID not_null
+    amount: decimal not_null
+    reason: string not_null
+    status: RefundStatus not_null default(PENDING)
+    stripe_refund_id: string nullable
+    error_message: text nullable
+    refunded_at: timestamp nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity WebhookEvent {
+    id: UUID primary_key
+    stripe_event_id: string unique not_null
+    event_type: string not_null
+    payload: json not_null
+    processed: boolean default(false)
+    processed_at: timestamp nullable
+    created_at: timestamp not_null
+  }
+
+  entity PaymentHistory {
+    id: UUID primary_key
+    payment_id: UUID foreign_key(Payment.id) not_null
+    old_status: PaymentStatus nullable
+    new_status: PaymentStatus not_null
+    changed_by: string not_null
+    change_reason: string nullable
+    created_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum PaymentMethodType {
+    CREDIT_CARD,
+    CASH_ON_DELIVERY
+  }
+
+  enum PaymentStatus {
+    PENDING,
+    PROCESSING,
+    REQUIRES_AUTHENTICATION,
+    SUCCEEDED,
+    FAILED,
+    REFUNDING,
+    REFUNDED
+  }
+
+  enum RefundStatus {
+    PENDING,
+    PROCESSING,
+    SUCCEEDED,
+    FAILED
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Credit Card Payment
+  usecase CreatePaymentIntent {
+    input: {
+      order_id: UUID
+      amount: decimal
+      currency: string
+      payment_method_id: string
+      customer_id: UUID
+    }
+    output: {
+      payment_id: UUID
+      client_secret: string
+      requires_authentication: boolean
+      authentication_url: string
+    }
+    errors: {
+      InvalidAmount,
+      InvalidPaymentMethod,
+      StripeAPIError
+    }
+    external_api: {
+      stripe: CreatePaymentIntent
+    }
+  }
+
+  usecase ConfirmPayment {
+    input: {
+      payment_id: UUID
+      payment_intent_id: string
+    }
+    output: {
+      payment_id: UUID
+      status: PaymentStatus
+    }
+    errors: {
+      PaymentNotFound,
+      PaymentAlreadyProcessed,
+      StripeAPIError
+    }
+    external_api: {
+      stripe: ConfirmPaymentIntent
+    }
+  }
+
+  usecase GetPaymentStatus {
+    input: {
+      payment_id: UUID
+    }
+    output: {
+      payment: Payment
+      history: list<PaymentHistory>
+    }
+    errors: {
+      PaymentNotFound
+    }
+  }
+
+  // Cash on Delivery Payment
+  usecase CreateCODPayment {
+    input: {
+      order_id: UUID
+      amount: decimal
+    }
+    output: {
+      payment_id: UUID
+      cod_fee: decimal
+      total_amount: decimal
+    }
+    errors: {
+      InvalidAmount,
+      CODNotAvailable
+    }
+  }
+
+  usecase ConfirmCODPayment {
+    input: {
+      payment_id: UUID
+      order_id: UUID
+    }
+    output: {
+      payment_id: UUID
+      status: PaymentStatus
+    }
+    errors: {
+      PaymentNotFound,
+      OrderNotDelivered
+    }
+    events: {
+      publish PaymentCompleted
+    }
+  }
+
+  // Refund Processing
+  usecase CreateRefund {
+    input: {
+      payment_id: UUID
+      order_id: UUID
+      amount: decimal
+      reason: string
+    }
+    output: {
+      refund_id: UUID
+      status: RefundStatus
+    }
+    errors: {
+      PaymentNotFound,
+      InvalidRefundAmount,
+      PaymentNotRefundable,
+      StripeAPIError
+    }
+    external_api: {
+      stripe: CreateRefund
+    }
+    validation: {
+      amount: min(1) && max(payment.amount)
+    }
+  }
+
+  usecase GetRefundStatus {
+    input: {
+      refund_id: UUID
+    }
+    output: {
+      refund: Refund
+    }
+    errors: {
+      RefundNotFound
+    }
+  }
+
+  // Payment History
+  usecase ListPayments {
+    input: {
+      order_id: UUID
+      customer_id: UUID
+      shop_id: UUID
+      status_filter: list<PaymentStatus>
+      date_from: date
+      date_to: date
+      payment_method: PaymentMethodType
+      page: int
+      page_size: int
+    }
+    output: {
+      payments: list<Payment>
+      total_count: int
+    }
+    errors: {}
+  }
+
+  usecase GetPaymentDetail {
+    input: {
+      payment_id: UUID
+      requester_id: UUID
+      requester_role: string
+    }
+    output: {
+      payment: Payment
+      refunds: list<Refund>
+      history: list<PaymentHistory>
+    }
+    errors: {
+      PaymentNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  // Webhook Processing
+  usecase HandleStripeWebhook {
+    input: {
+      stripe_signature: string
+      payload: string
+    }
+    output: {
+      event_id: string
+      processed: boolean
+    }
+    errors: {
+      InvalidSignature,
+      DuplicateEvent,
+      UnknownEventType
+    }
+  }
+
+  usecase ProcessPaymentIntentSucceeded {
+    input: {
+      payment_intent_id: string
+      amount: decimal
+    }
+    output: {
+      payment_id: UUID
+    }
+    errors: {
+      PaymentNotFound
+    }
+    events: {
+      publish PaymentCompleted
+    }
+  }
+
+  usecase ProcessPaymentIntentFailed {
+    input: {
+      payment_intent_id: string
+      error_code: string
+      error_message: string
+    }
+    output: {
+      payment_id: UUID
+    }
+    errors: {
+      PaymentNotFound
+    }
+    events: {
+      publish PaymentFailed
+    }
+  }
+
+  usecase ProcessRefundCompleted {
+    input: {
+      refund_id: string
+      amount: decimal
+    }
+    output: {
+      refund_id: UUID
+    }
+    errors: {
+      RefundNotFound
+    }
+    events: {
+      publish RefundCompleted
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Credit Card Payment
+    rpc CreatePaymentIntent(CreatePaymentIntentRequest) returns (CreatePaymentIntentResponse)
+    rpc ConfirmPayment(ConfirmPaymentRequest) returns (ConfirmPaymentResponse)
+    rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse)
+
+    // Cash on Delivery
+    rpc CreateCODPayment(CreateCODPaymentRequest) returns (CreateCODPaymentResponse)
+    rpc ConfirmCODPayment(ConfirmCODPaymentRequest) returns (ConfirmCODPaymentResponse)
+
+    // Refund
+    rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse)
+    rpc GetRefundStatus(GetRefundStatusRequest) returns (GetRefundStatusResponse)
+
+    // Payment History
+    rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse)
+    rpc GetPaymentDetail(GetPaymentDetailRequest) returns (GetPaymentDetailResponse)
+
+    // Webhook (HTTP endpoint, not gRPC)
+    // POST /webhooks/stripe
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    messaging: RabbitMQ
+    external_api: {
+      stripe: StripeAPI
+    }
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    publish PaymentCompleted {
+      payment_id: UUID
+      order_id: UUID
+      amount: decimal
+      payment_method: PaymentMethodType
+      completed_at: timestamp
+    }
+
+    publish PaymentFailed {
+      payment_id: UUID
+      order_id: UUID
+      error_code: string
+      error_message: string
+      failed_at: timestamp
+    }
+
+    publish PaymentRequiresAuthentication {
+      payment_id: UUID
+      order_id: UUID
+      authentication_url: string
+      expires_at: timestamp
+    }
+
+    publish RefundCompleted {
+      refund_id: UUID
+      payment_id: UUID
+      order_id: UUID
+      amount: decimal
+      refunded_at: timestamp
+    }
+
+    publish RefundFailed {
+      refund_id: UUID
+      payment_id: UUID
+      order_id: UUID
+      error_message: string
+      failed_at: timestamp
+    }
+
+    subscribe OrderCreated {
+      order_id: UUID
+      customer_id: UUID
+      amount: decimal
+      payment_method: PaymentMethodType
+      payment_method_id: string
+    }
+
+    subscribe OrderCancelled {
+      order_id: UUID
+      cancel_reason: string
+    }
+
+    subscribe OrderDelivered {
+      order_id: UUID
+      payment_id: UUID
+      delivered_at: timestamp
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    stripe_api_key: env("STRIPE_API_KEY")
+    stripe_webhook_secret: env("STRIPE_WEBHOOK_SECRET")
+    stripe_api_version: "2024-12-18.acacia"
+    payment_timeout_seconds: 30
+    authentication_timeout_minutes: 5
+    default_currency: "JPY"
+    cod_fee_tiers: [
+      { max_amount: 10000, fee: 330 },
+      { max_amount: 30000, fee: 440 },
+      { max_amount: 100000, fee: 660 },
+      { max_amount: 999999999, fee: 1100 }
+    ]
+    refund_processing_days: 7
+  }
+
+  // =========================================
+  // Custom Logic Required
+  // =========================================
+
+  custom_implementations {
+    // manual/payment/stripe_client.go
+    stripe_payment_intent_creation
+    stripe_payment_intent_confirmation
+    stripe_refund_creation
+    stripe_webhook_verification
+
+    // manual/payment/cod_calculator.go
+    cod_fee_calculation
+  }
+}
