@@ -297,8 +297,8 @@ services:
 
   auth-service:
     build:
-      context: ./generated/auth-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./generated/auth-service/Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_auth_service_${ENV}
     hostname: ${AUTH_SERVICE_HOST}_${ENV}
     env_file:
