@@ -67,3 +67,7 @@ docker-volumes/
 # Docker logs
 *.log
 docker-compose.override.yml
+
+# AI
+.serena
+
