@@ -1,0 +1,332 @@
+name: 📋 要件定義（Gherkin）
+description: 各サービスの詳細な要件定義をGherkin形式で記述
+title: "[Requirement] "
+labels: ["requirement", "documentation", "gherkin"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 要件定義（Gherkin形式）
+        各マイクロサービスや機能の詳細な要件をGherkin形式で定義します。
+
+        **Gherkinとは**: 振る舞い駆動開発（BDD）で使われる、自然言語に近い形式で要件を記述する手法
+        - **Feature**: 機能の説明
+        - **Scenario**: 具体的なシナリオ
+        - **Given**: 前提条件
+        - **When**: アクション
+        - **Then**: 期待される結果
+        - **And/But**: 追加の条件や結果
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: 対象サービス
+      description: どのサービスの要件ですか？
+      options:
+        - 認証認可サービス (Auth Service)
+        - カスタマーサービス (Customer Service)
+        - ショップサービス (Shop Service)
+        - 在庫サービス (Inventory Service)
+        - 注文サービス (Order Service)
+        - 決済サービス (Payment Service)
+        - 配送サービス (Shipping Service)
+        - レビューサービス (Review Service)
+        - 通知サービス (Notification Service)
+        - チャットサービス (Chat Service)
+        - 管理者サービス (Admin Service)
+        - 検索サービス (Search Service)
+        - フロントエンド (Phoenix)
+        - インフラ
+        - その他
+    validations:
+      required: true
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: サービス概要
+      description: このサービスの目的と役割
+      placeholder: |
+        例：認証認可サービスは、ユーザーの認証とアクセス制御を担当します。
+        JWTトークンの発行・検証、ロールベースアクセス制御（RBAC）を提供します。
+    validations:
+      required: true
+
+  - type: textarea
+    id: gherkin-features
+    attributes:
+      label: Gherkin Feature定義
+      description: このサービスが提供する機能をGherkin形式で記述
+      render: gherkin
+      placeholder: |
+        Feature: ユーザー登録
+          新規ユーザーがアカウントを作成できる
+
+          Background:
+            Given データベースがクリーンな状態である
+
+          Scenario: カスタマーとして新規登録する
+            Given 登録フォームを開いている
+            When 以下の情報を入力する
+              | フィールド         | 値                      |
+              | メールアドレス     | customer@example.com    |
+              | パスワード         | SecurePass123!          |
+              | パスワード確認     | SecurePass123!          |
+              | ユーザー種別       | カスタマー              |
+            And 「登録」ボタンをクリックする
+            Then ユーザーアカウントが作成される
+            And 確認メールが送信される
+            And ログイン画面にリダイレクトされる
+
+          Scenario: メールアドレスが既に登録されている場合
+            Given メールアドレス "customer@example.com" が既に登録されている
+            When 同じメールアドレスで登録しようとする
+            Then 「このメールアドレスは既に登録されています」というエラーが表示される
+            And ユーザーアカウントは作成されない
+
+          Scenario: パスワードが弱い場合
+            Given 登録フォームを開いている
+            When パスワードに "123" を入力する
+            Then 「パスワードは8文字以上で、大文字、小文字、数字を含む必要があります」というエラーが表示される
+            And 登録ボタンが無効になる
+
+        Feature: ログイン
+          登録済みユーザーがログインできる
+
+          Scenario: 正しい認証情報でログインする
+            Given メールアドレス "customer@example.com" でユーザーが登録されている
+            When 以下の情報でログインする
+              | メールアドレス | customer@example.com |
+              | パスワード     | SecurePass123!       |
+            Then ログインに成功する
+            And JWTトークンが発行される
+            And トークンの有効期限が1時間である
+            And ホーム画面にリダイレクトされる
+
+          Scenario: パスワードが間違っている場合
+            Given メールアドレス "customer@example.com" でユーザーが登録されている
+            When 間違ったパスワードでログインしようとする
+            Then 「メールアドレスまたはパスワードが正しくありません」というエラーが表示される
+            And ログインに失敗する
+
+          Scenario: 存在しないメールアドレスでログイン
+            Given メールアドレス "nonexistent@example.com" のユーザーが存在しない
+            When そのメールアドレスでログインしようとする
+            Then 「メールアドレスまたはパスワードが正しくありません」というエラーが表示される
+            And ログインに失敗する
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-functional-requirements
+    attributes:
+      label: 非機能要件
+      description: パフォーマンス、セキュリティ、可用性など
+      placeholder: |
+        ## パフォーマンス
+        - 認証レスポンス: 100ms以内
+        - 同時接続数: 10,000ユーザー
+        - スループット: 1,000 req/sec
+
+        ## セキュリティ
+        - パスワードはbcryptでハッシュ化（cost: 12）
+        - JWTトークンの有効期限: 1時間
+        - リフレッシュトークンの有効期限: 30日
+        - レート制限: 同一IPから5分間に10回まで
+
+        ## 可用性
+        - SLA: 99.9%
+        - ダウンタイム: 月間43分以内
+        - 障害検知: 1分以内
+        - 復旧時間: 5分以内
+
+  - type: textarea
+    id: api-endpoints
+    attributes:
+      label: gRPC API 定義（draft）
+      description: 提供するgRPC APIの一覧
+      render: protobuf
+      placeholder: |
+        syntax = "proto3";
+
+        package auth.v1;
+
+        service AuthService {
+          // ユーザー登録
+          rpc Register(RegisterRequest) returns (RegisterResponse);
+
+          // ログイン
+          rpc Login(LoginRequest) returns (LoginResponse);
+
+          // JWTトークン検証
+          rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
+
+          // トークンリフレッシュ
+          rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+          // ログアウト
+          rpc Logout(LogoutRequest) returns (LogoutResponse);
+        }
+
+        message RegisterRequest {
+          string email = 1;
+          string password = 2;
+          string role = 3;  // "customer", "shop_owner"
+        }
+
+        message RegisterResponse {
+          string user_id = 1;
+          string message = 2;
+        }
+
+        message LoginRequest {
+          string email = 1;
+          string password = 2;
+        }
+
+        message LoginResponse {
+          string access_token = 1;
+          string refresh_token = 2;
+          int64 expires_in = 3;
+        }
+
+  - type: textarea
+    id: events
+    attributes:
+      label: RabbitMQ イベント定義
+      description: 発行するイベントと購読するイベント
+      placeholder: |
+        ## 発行するイベント
+
+        ### user.registered
+        ```json
+        {
+          "event_type": "user.registered",
+          "timestamp": "2024-01-01T00:00:00Z",
+          "data": {
+            "user_id": "uuid",
+            "email": "customer@example.com",
+            "role": "customer"
+          }
+        }
+        ```
+        **購読サービス**: Notification Service（確認メール送信）
+
+        ### user.login
+        ```json
+        {
+          "event_type": "user.login",
+          "timestamp": "2024-01-01T00:00:00Z",
+          "data": {
+            "user_id": "uuid",
+            "email": "customer@example.com",
+            "ip_address": "192.168.1.1"
+          }
+        }
+        ```
+        **購読サービス**: Admin Service（ログ記録）
+
+        ## 購読するイベント
+        - なし（このサービスは独立して動作）
+
+  - type: textarea
+    id: database-schema
+    attributes:
+      label: データベーススキーマ（draft）
+      description: 必要なテーブル定義
+      render: sql
+      placeholder: |
+        -- ユーザーテーブル
+        CREATE TABLE users (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          role VARCHAR(50) NOT NULL CHECK (role IN ('customer', 'shop_owner', 'admin')),
+          email_verified BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE INDEX idx_users_email ON users(email);
+        CREATE INDEX idx_users_role ON users(role);
+
+        -- リフレッシュトークンテーブル
+        CREATE TABLE refresh_tokens (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          token VARCHAR(500) NOT NULL UNIQUE,
+          expires_at TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+        CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依存関係
+      description: 他のサービスとの依存関係
+      placeholder: |
+        ## このサービスが依存するサービス
+        - なし（独立サービス）
+
+        ## このサービスに依存するサービス
+        - **カスタマーサービス**: JWT検証
+        - **ショップサービス**: JWT検証
+        - **注文サービス**: JWT検証
+        - **すべてのサービス**: 認証が必要な操作でJWT検証を利用
+
+  - type: textarea
+    id: testing-strategy
+    attributes:
+      label: テスト戦略
+      description: Gherkinシナリオをベースにしたテスト戦略
+      placeholder: |
+        ## BDD（Behavior-Driven Development）
+        - すべてのGherkinシナリオに対応するテストを作成
+        - Goの場合: godog（Cucumber for Go）を使用
+        - Elixirの場合: White Bread（Gherkin for Elixir）を使用
+
+        ## ユニットテスト
+        - カバレッジ: 80%以上
+        - すべてのビジネスロジックをテスト
+        - テストフレームワーク: testify (Go)
+
+        ## 統合テスト
+        - gRPC APIのテスト
+        - データベース連携テスト
+        - RabbitMQイベント送信テスト
+
+        ## E2Eテスト
+        - ユーザー登録からログインまでの一連の流れ
+        - Gherkinシナリオをそのまま実行
+
+  - type: textarea
+    id: implementation-phases
+    attributes:
+      label: 実装フェーズ
+      description: どの順番で実装するか
+      placeholder: |
+        ## Phase 1: 基本認証機能（Week 1-2）
+        - [ ] データベーススキーマ作成
+        - [ ] ユーザー登録機能
+        - [ ] ログイン機能
+        - [ ] JWT発行機能
+        - [ ] Gherkinテストの実装
+
+        ## Phase 2: 拡張機能（Week 3）
+        - [ ] パスワードリセット
+        - [ ] メール認証
+        - [ ] リフレッシュトークン
+
+        ## Phase 3: 権限管理（Week 4）
+        - [ ] RBAC実装
+        - [ ] 権限チェックAPI
+        - [ ] 管理者機能
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: 追加メモ
+      description: その他の重要事項

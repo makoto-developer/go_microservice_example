@@ -1,0 +1,103 @@
+name: 🐛 バグ報告
+description: バグや不具合の報告
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## バグ報告
+        発生したバグや不具合について報告してください。
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: 対象サービス
+      description: どのサービスでバグが発生しましたか？
+      options:
+        - 認証認可サービス (Auth Service)
+        - カスタマーサービス (Customer Service)
+        - ショップサービス (Shop Service)
+        - 在庫サービス (Inventory Service)
+        - 注文サービス (Order Service)
+        - 決済サービス (Payment Service)
+        - 配送サービス (Shipping Service)
+        - レビューサービス (Review Service)
+        - 通知サービス (Notification Service)
+        - チャットサービス (Chat Service)
+        - 管理者サービス (Admin Service)
+        - 検索サービス (Search Service)
+        - フロントエンド (Phoenix)
+        - インフラ
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 深刻度
+      description: このバグの深刻度は？
+      options:
+        - 🔴 Critical（システムダウン、データ損失）
+        - 🟠 High（主要機能が使えない）
+        - 🟡 Medium（一部機能に影響）
+        - 🟢 Low（軽微な問題）
+      default: 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: バグの説明
+      description: 何が起きているか説明してください
+      placeholder: |
+        例：商品をカートに追加した後、カート画面が真っ白になる
+
+  - type: textarea
+    id: gherkin-scenario
+    attributes:
+      label: Gherkin シナリオ（バグの再現手順）
+      description: Gherkin形式でバグの再現手順を記述してください
+      render: gherkin
+      placeholder: |
+        Feature: カート機能
+
+          Scenario: 商品をカートに追加するとカート画面が真っ白になる（バグ）
+            Given カスタマーとしてログインしている
+            And 商品詳細画面を表示している
+            When 「カートに追加」ボタンをクリックする
+            And カート画面を開く
+            Then カート画面に追加した商品が表示される  # ← 期待される動作
+            But 実際には画面が真っ白になる           # ← 実際の動作（バグ）
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-logs
+    attributes:
+      label: エラーログ
+      description: エラーメッセージやスタックトレース
+      render: shell
+      placeholder: |
+        [error] #PID<0.1234.0> GenServer MyApp.CartServer terminating
+        ** (RuntimeError) something went wrong
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 環境
+      description: 発生環境の情報
+      placeholder: |
+        - OS: macOS 14.0
+        - ブラウザ: Chrome 120
+        - サービスバージョン: v1.2.3
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 追加情報
+      description: スクリーンショット、関連するログなど

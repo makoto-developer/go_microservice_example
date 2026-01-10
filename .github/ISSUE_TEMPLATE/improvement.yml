@@ -1,0 +1,117 @@
+name: 💡 改善提案
+description: 既存機能の改善やリファクタリングの提案
+title: "[Improvement] "
+labels: ["enhancement", "improvement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 改善提案
+        既存機能の改善、パフォーマンス向上、リファクタリングなどを提案してください。
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: 対象サービス
+      description: どのサービスの改善ですか？
+      options:
+        - 認証認可サービス (Auth Service)
+        - カスタマーサービス (Customer Service)
+        - ショップサービス (Shop Service)
+        - 在庫サービス (Inventory Service)
+        - 注文サービス (Order Service)
+        - 決済サービス (Payment Service)
+        - 配送サービス (Shipping Service)
+        - レビューサービス (Review Service)
+        - 通知サービス (Notification Service)
+        - チャットサービス (Chat Service)
+        - 管理者サービス (Admin Service)
+        - 検索サービス (Search Service)
+        - フロントエンド (Phoenix)
+        - インフラ
+        - 全体アーキテクチャ
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: 改善タイプ
+      description: どのような改善ですか？
+      options:
+        - パフォーマンス改善
+        - コード品質向上（リファクタリング）
+        - UX/UI改善
+        - セキュリティ強化
+        - テスト改善
+        - ドキュメント改善
+        - 運用改善
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度
+      description: この改善の優先度は？
+      options:
+        - 🔴 High（早急に対応が必要）
+        - 🟡 Medium（重要だが後回し可能）
+        - 🟢 Low（時間があるときに）
+      default: 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-situation
+    attributes:
+      label: 現状の問題点
+      description: 現在どのような問題がありますか？
+      placeholder: |
+        例：商品検索のレスポンスが5秒以上かかり、ユーザー体験が悪い
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 改善案
+      description: どのように改善しますか？
+      placeholder: |
+        例：
+        - Elasticsearchの導入
+        - インデックスの最適化
+        - キャッシュレイヤーの追加
+
+  - type: textarea
+    id: expected-benefits
+    attributes:
+      label: 期待される効果（Gherkin形式で記述可能）
+      description: この改善によって何が良くなりますか？
+      render: gherkin
+      placeholder: |
+        Feature: 商品検索パフォーマンス改善
+
+          Scenario: 商品検索が高速化される
+            Given 10万件の商品データが登録されている
+            When 「スニーカー」で商品を検索する
+            Then 検索結果が1秒以内に表示される  # 改善前: 5秒以上
+            And 検索結果が関連度順に表示される
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-considerations
+    attributes:
+      label: 技術的な考慮事項
+      description: 実装時の注意点、影響範囲など
+      placeholder: |
+        - データ移行が必要
+        - 既存APIとの互換性維持
+        - 他のサービスへの影響
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 追加情報
+      description: 参考資料、ベンチマーク結果など

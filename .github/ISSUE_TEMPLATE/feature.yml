@@ -1,0 +1,145 @@
+name: 🚀 機能追加
+description: 新しい機能やサービスの追加リクエスト
+title: "[Feature] "
+labels: ["enhancement", "feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 機能追加リクエスト
+        新しい機能やマイクロサービスの追加について記載してください。
+        要件はGherkin形式（Given-When-Then）で記述してください。
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: 対象サービス
+      description: どのサービスに関連する機能ですか？
+      options:
+        - 認証認可サービス (Auth Service)
+        - カスタマーサービス (Customer Service)
+        - ショップサービス (Shop Service)
+        - 在庫サービス (Inventory Service)
+        - 注文サービス (Order Service)
+        - 決済サービス (Payment Service)
+        - 配送サービス (Shipping Service)
+        - レビューサービス (Review Service)
+        - 通知サービス (Notification Service)
+        - チャットサービス (Chat Service)
+        - 管理者サービス (Admin Service)
+        - 検索サービス (Search Service)
+        - フロントエンド (Phoenix)
+        - インフラ
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度
+      description: この機能の優先度は？
+      options:
+        - 🔴 High（必須機能、早急に必要）
+        - 🟡 Medium（重要だが後回し可能）
+        - 🟢 Low（あると便利）
+      default: 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: 機能の説明
+      description: 追加したい機能について詳しく説明してください
+      placeholder: |
+        例：カスタマーが商品をお気に入り登録できる機能を追加したい
+
+  - type: textarea
+    id: gherkin-scenarios
+    attributes:
+      label: Gherkin シナリオ
+      description: Gherkin形式で要件を記述してください
+      render: gherkin
+      placeholder: |
+        Feature: 商品お気に入り登録機能
+          カスタマーが気になった商品をお気に入りに登録して、後で簡単に見つけられるようにする
+
+          Scenario: 商品詳細画面からお気に入りに登録する
+            Given カスタマーとしてログインしている
+            And 商品詳細画面を表示している
+            When 「お気に入りに追加」ボタンをクリックする
+            Then お気に入りに商品が追加される
+            And 「お気に入りに追加済み」と表示される
+            And お気に入り数が1増える
+
+          Scenario: お気に入り一覧を表示する
+            Given カスタマーとしてログインしている
+            And お気に入りに3つの商品を登録している
+            When お気に入り一覧ページを開く
+            Then 登録した3つの商品が表示される
+            And 各商品の画像、名前、価格が表示される
+
+          Scenario: お気に入りから削除する
+            Given カスタマーとしてログインしている
+            And お気に入り一覧ページを開いている
+            When 商品の「削除」ボタンをクリックする
+            Then その商品がお気に入りから削除される
+            And お気に入り数が1減る
+
+          Scenario: 未ログイン状態でお気に入りボタンをクリック
+            Given 未ログイン状態である
+            And 商品詳細画面を表示している
+            When 「お気に入りに追加」ボタンをクリックする
+            Then ログイン画面にリダイレクトされる
+            And 「ログインが必要です」というメッセージが表示される
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 受け入れ条件（テスト観点）
+      description: この機能が完成したと判断する基準
+      placeholder: |
+        - [ ] すべてのGherkinシナリオが実装され、テストが通る
+        - [ ] ユニットテストカバレッジ80%以上
+        - [ ] gRPC APIが定義され、実装されている
+        - [ ] フロントエンドUIが実装されている
+        - [ ] ドキュメントが更新されている
+
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: 技術的な検討事項
+      description: 実装に関する技術的なメモ（任意）
+      placeholder: |
+        ## データベーススキーマ
+        ```sql
+        CREATE TABLE favorites (
+          id UUID PRIMARY KEY,
+          customer_id UUID NOT NULL,
+          product_id UUID NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(customer_id, product_id)
+        );
+        ```
+
+        ## gRPC API
+        ```protobuf
+        service FavoriteService {
+          rpc AddFavorite(AddFavoriteRequest) returns (AddFavoriteResponse);
+          rpc RemoveFavorite(RemoveFavoriteRequest) returns (RemoveFavoriteResponse);
+          rpc ListFavorites(ListFavoritesRequest) returns (ListFavoritesResponse);
+        }
+        ```
+
+        ## 依存サービス
+        - Customer Service (認証)
+        - Shop Service (商品情報取得)
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 追加情報
+      description: スクリーンショット、参考リンクなど

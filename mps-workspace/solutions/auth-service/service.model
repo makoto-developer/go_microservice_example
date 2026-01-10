@@ -1,0 +1,259 @@
+// Auth Service DSL Definition
+// Based on: docs/requirements/01_auth_service.md
+
+microservice AuthService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity User {
+    id: UUID primary_key
+    email: string unique not_null
+    password_hash: string not_null
+    role: Role not_null
+    email_verified: boolean default(false)
+    email_verification_token: string nullable
+    email_verification_expires_at: timestamp nullable
+    password_reset_token: string nullable
+    password_reset_expires_at: timestamp nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity RefreshToken {
+    id: UUID primary_key
+    user_id: UUID foreign_key(User.id) not_null
+    token: string unique not_null
+    expires_at: timestamp not_null
+    revoked: boolean default(false)
+    created_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum Role {
+    CUSTOMER,
+    SHOP_OWNER,
+    ADMIN
+  }
+
+  // =========================================
+  // Value Objects
+  // =========================================
+
+  value_object JWT {
+    access_token: string
+    refresh_token: string
+    expires_in: int
+  }
+
+  value_object EmailVerificationRequest {
+    email: string
+    verification_link: string
+    expires_at: timestamp
+  }
+
+  value_object PasswordResetRequest {
+    email: string
+    reset_link: string
+    expires_at: timestamp
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  usecase UserRegistration {
+    input: {
+      email: string
+      password: string
+      role: Role
+    }
+    output: {
+      user_id: UUID
+      message: string
+    }
+    errors: {
+      EmailAlreadyExists,
+      WeakPassword,
+      InvalidEmailFormat
+    }
+    validation: {
+      email: email_format
+      password: min_length(8) && has_uppercase && has_lowercase && has_digit && has_symbol
+    }
+  }
+
+  usecase EmailVerification {
+    input: {
+      token: string
+    }
+    output: {
+      user_id: UUID
+      email: string
+      verified: boolean
+    }
+    errors: {
+      InvalidToken,
+      TokenExpired
+    }
+  }
+
+  usecase UserLogin {
+    input: {
+      email: string
+      password: string
+      keep_logged_in: boolean
+    }
+    output: {
+      user_id: UUID
+      access_token: string
+      refresh_token: string
+      expires_in: int
+    }
+    errors: {
+      InvalidCredentials,
+      EmailNotVerified
+    }
+  }
+
+  usecase UserLogout {
+    input: {
+      refresh_token: string
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      InvalidToken
+    }
+  }
+
+  usecase TokenRefresh {
+    input: {
+      refresh_token: string
+    }
+    output: {
+      access_token: string
+      refresh_token: string
+      expires_in: int
+    }
+    errors: {
+      InvalidToken,
+      TokenExpired,
+      TokenRevoked
+    }
+  }
+
+  usecase TokenVerification {
+    input: {
+      access_token: string
+    }
+    output: {
+      user_id: UUID
+      email: string
+      role: Role
+      valid: boolean
+    }
+    errors: {
+      InvalidToken,
+      TokenExpired
+    }
+  }
+
+  usecase PasswordResetRequest {
+    input: {
+      email: string
+    }
+    output: {
+      message: string
+    }
+    errors: {
+      UserNotFound
+    }
+  }
+
+  usecase PasswordReset {
+    input: {
+      token: string
+      new_password: string
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      InvalidToken,
+      TokenExpired,
+      WeakPassword
+    }
+    validation: {
+      new_password: min_length(8) && has_uppercase && has_lowercase && has_digit && has_symbol
+    }
+  }
+
+  usecase PasswordChange {
+    input: {
+      user_id: UUID
+      current_password: string
+      new_password: string
+    }
+    output: {
+      success: boolean
+    }
+    errors: {
+      InvalidCurrentPassword,
+      WeakPassword
+    }
+    validation: {
+      new_password: min_length(8) && has_uppercase && has_lowercase && has_digit && has_symbol
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    rpc Register(RegisterRequest) returns (RegisterResponse)
+    rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse)
+    rpc Login(LoginRequest) returns (LoginResponse)
+    rpc Logout(LogoutRequest) returns (LogoutResponse)
+    rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse)
+    rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse)
+    rpc RequestPasswordReset(PasswordResetRequest) returns (PasswordResetResponse)
+    rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse)
+    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    messaging: RabbitMQ
+    email: SMTP
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    jwt_secret: env("JWT_SECRET")
+    jwt_access_token_expiry: 3600  // 1 hour
+    jwt_refresh_token_expiry_short: 86400  // 1 day
+    jwt_refresh_token_expiry_long: 2592000  // 30 days
+    email_verification_expiry: 86400  // 24 hours
+    password_reset_expiry: 3600  // 1 hour
+    smtp_host: env("SMTP_HOST")
+    smtp_port: env("SMTP_PORT")
+    smtp_user: env("SMTP_USER")
+    smtp_password: env("SMTP_PASSWORD")
+  }
+}

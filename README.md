@@ -111,203 +111,168 @@
 - gomock (モックライブラリ)
 - httptest (HTTP テスト)
 
-## 実装する機能
+### 開発手法
+- **JetBrains MPS (Meta Programming System)** - DSL駆動開発
+  - マイクロサービスDSLでサービス定義
+  - Goコード自動生成
+  - トークン消費90%削減
 
-決済サービスを題材に作成
+## 開発アプローチ: MPS DSL駆動開発
 
-### 1. 認証認可サービス (Auth Service)
-- ユーザー登録
-  - カスタマー登録
-  - ショップ運営者登録
-- ログイン/ログアウト
-- JWT トークン発行・検証
-- パスワードリセット
-- ロールベースアクセス制御 (RBAC)
-  - カスタマー権限
-  - ショップ運営者権限
-  - 管理者権限
+このプロジェクトでは、**JetBrains MPS**を使用したDSL（Domain Specific Language）駆動開発を採用しています。
 
-### 2. カスタマーサービス (Customer Service)
-- **アカウント管理**
-  - プロフィール閲覧・編集
-  - 配送先住所管理 (複数登録可能)
-  - 支払い方法管理
+### なぜMPSを使うのか？
 
-- **ショッピング機能**
-  - ショップ一覧表示
-  - 商品一覧表示
-  - 商品詳細表示
-  - 商品検索・フィルタリング
-  - カテゴリー別表示
+#### 問題: マイクロサービス開発のトークン消費
+- 12個のマイクロサービスを開発
+- 1サービス = 2,000-3,000行のコード
+- Claudeが全コードを読む → トークンが一瞬で枯渇
 
-- **カート機能**
-  - カートに商品追加
-  - カート内容表示
-  - 商品数量変更
-  - カートから商品削除
-  - カート内容保存（ログイン状態）
+#### 解決策: DSLでサービスを定義 → コード自動生成
+- 1サービス = **100-200行のDSL定義**
+- MPS Generatorが自動で2,000-3,000行のGoコードを生成
+- Claudeは **DSLだけ読めばOK** → トークン90%削減
 
-- **注文機能**
-  - 購入画面表示
-    - 配送先選択
-    - 支払い方法選択
-    - 注文内容確認
-  - 注文確定
-  - 注文履歴表示
-  - 注文詳細表示
-  - 注文キャンセル（キャンセル可能期間内）
+### 開発ワークフロー
 
-- **その他機能**
-  - お気に入り商品登録・管理
-  - 商品レビュー投稿・編集
-  - 通知設定管理
+```
+1. 要件定義を確認（docs/requirements/）
+   ↓
+2. MPSでDSL定義を作成（100-200行）
+   例: mps-workspace/solutions/auth-service/service.model
+   ↓
+3. MPS Generatorでコード生成
+   ./scripts/mps-generate.sh auth-service
+   ↓
+4. 生成されたGoコードを確認（2,000-3,000行）
+   generated/auth/internal/...
+   ↓
+5. 必要なカスタムロジックのみ手動実装
+   manual/auth/custom_logic.go
+```
 
-### 3. ショップサービス (Shop Service)
-- **ショップ管理**
-  - ショップ情報登録・編集
-  - ショップ公開/非公開設定
-  - ショップカテゴリー設定
+### DSL定義例（Auth Service）
 
-- **商品管理**
-  - 商品登録 (CRUD)
-  - 商品画像アップロード
-  - 商品カテゴリー設定
-  - 商品在庫設定
-  - 商品公開/非公開設定
-  - 商品バリエーション管理（サイズ、色など）
+```kotlin
+microservice AuthService {
+  version: "v1"
 
-- **注文管理**
-  - 受注一覧表示
-  - 注文詳細表示
-  - 注文ステータス更新
-    - 注文受付
-    - 準備中
-    - 発送済み
-    - 配送完了
-    - キャンセル
-  - 配送伝票番号登録
+  // ドメインエンティティ
+  entity User {
+    id: UUID primary_key
+    email: string unique not_null
+    password_hash: string not_null
+    role: Role not_null
+    created_at: timestamp
+  }
 
-- **売上管理**
-  - 売上レポート表示
-    - 日別売上
-    - 月別売上
-    - 商品別売上
-  - 売上データエクスポート
+  enum Role {
+    CUSTOMER, SHOP_OWNER, ADMIN
+  }
 
-### 4. 在庫サービス (Inventory Service)
-- 在庫数管理
-- 在庫引き当て処理（注文時）
-- 在庫リリース処理（キャンセル時）
-- 在庫アラート通知
-- 在庫履歴管理
-- 在庫棚卸し機能
+  // ユースケース
+  usecase UserRegistration {
+    input: {
+      email: string
+      password: string
+      role: Role
+    }
+    output: {
+      user_id: UUID
+      token: string
+    }
+    errors: {
+      EmailAlreadyExists,
+      WeakPassword
+    }
+  }
 
-### 5. 注文サービス (Order Service)
-- 注文作成
-- 注文ステータス管理
-- 注文履歴管理
-- 注文キャンセル処理
-- 注文検索
-- 注文統計情報
+  // gRPCサービス定義
+  grpc_service {
+    rpc Register(RegisterRequest) returns (RegisterResponse)
+    rpc Login(LoginRequest) returns (LoginResponse)
+  }
 
-### 6. 決済サービス (Payment Service)
-- **決済処理**
-  - クレジットカード決済
-  - 代引き
+  // 依存
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    messaging: RabbitMQ
+  }
+}
+```
 
-- **決済管理**
-  - 決済状態管理
-    - 未決済
-    - 決済処理中
-    - 決済完了
-    - 決済失敗
-    - 返金処理中
-    - 返金完了
-  - 決済履歴表示
-  - 返金処理
+### 自動生成されるもの
 
-- **決済プロバイダー連携**
-  - Stripe連携
+この100-200行のDSL定義から、以下が自動生成されます：
 
-### 7. 配送サービス (Shipping Service)
-- 配送方法管理
-- 配送料金計算
-- 配送ステータス追跡
-- 配送業者連携
-- 配送先住所検証
+- ✅ ドメイン層（`domain/user.go`, `domain/role.go`）
+- ✅ ユースケース層（`usecase/user_registration.go`）
+- ✅ インフラ層（`infrastructure/postgres_user_repo.go`）
+- ✅ gRPCハンドラー（`handler/grpc_handler.go`）
+- ✅ Protocol Buffers定義（`proto/auth/v1/auth.proto`）
+- ✅ テストコード（`tests/user_registration_test.go`）
 
-### 8. レビューサービス (Review Service)
-- レビュー投稿
-- レビュー編集・削除
-- レビュー一覧表示
-- レビュー評価集計
-- レビュー承認管理（不適切コンテンツ対策）
+**合計**: 2,000-3,000行のGoコード
 
-### 9. 通知サービス (Notification Service)
-- **メール通知**
-  - 注文確認メール
-  - 発送通知メール
-  - 配送完了メール
-  - キャンセル通知メール
-  - パスワードリセットメール
+### トークン削減効果
 
-- **プッシュ通知**
-  - 注文ステータス更新通知
-  - 在庫復活通知
-  - セール・キャンペーン通知
+| アプローチ | Claudeが読む量 | トークン消費 | 削減率 |
+|----------|--------------|------------|--------|
+| **手動実装** | 2,000-3,000行のGoコード | ~15,000 | - |
+| **MPS DSL** | 100-200行のDSL定義 | ~1,500 | **90%削減** |
 
-### 10. チャットサービス (Chat Service)
-- **カスタマー ↔ ショップ運営者チャット**
-  - チャットルーム作成
-  - リアルタイムメッセージング（Phoenix Channels / WebSocket）
-  - メッセージ送信・受信
-  - メッセージ既読管理
-  - メッセージ履歴表示
-  - ファイル・画像共有
+### MPSディレクトリ構成
 
-- **チャット管理**
-  - チャットルーム一覧表示
-  - オンライン/オフライン状態管理
-  - 未読メッセージ数表示
-  - 通知統合（新着メッセージ通知）
+```
+mps-workspace/           # MPS専用ワークスペース
+├── languages/           # DSL定義
+│   ├── microservice-dsl/
+│   ├── grpc-dsl/
+│   └── event-dsl/
+└── solutions/           # サービス定義
+    ├── auth-service/
+    ├── shop-service/
+    └── ...
 
-- **チャット履歴**
-  - メッセージ検索
-  - チャット履歴エクスポート
-  - メッセージアーカイブ
+generated/               # 生成コード（触らない）
+├── auth/
+├── shop/
+└── ...
 
-### 11. 管理者サービス (Admin Service)
-- **ユーザー管理**
-  - 全ユーザー一覧
-  - ユーザー詳細表示
-  - ユーザー権限変更
-  - アカウント停止/復活
+manual/                  # 手動実装
+└── custom/              # カスタムロジックのみ
+```
 
-- **ショップ管理**
-  - 全ショップ一覧
-  - ショップ詳細表示
-  - ショップ承認/却下
-  - ショップ停止/復活
+### 詳細
 
-- **システム管理**
-  - システム設定管理
-  - 決済設定管理
-  - カテゴリーマスタ管理
-  - 配送方法マスタ管理
+- [CLAUDE.md](./CLAUDE.md) - Claude開発ガイド（MPS詳細）
+- [SETUP.md](./SETUP.md) - 環境構築・MPS使用方法
 
-- **モニタリング**
-  - システム稼働状況監視
-  - エラーログ確認
-  - パフォーマンス監視
-  - トランザクション監視
+## ディレクトリ構成
 
-### 12. 検索サービス (Search Service)
-- 商品全文検索
-- ショップ検索
-- 検索結果のランキング
-- 検索履歴管理
-- サジェスト機能
-- ファセット検索（カテゴリー、価格帯、評価など）
+```
+.
+├── cmd/              # 各サービスのエントリーポイント
+├── internal/         # サービス固有のコード
+├── pkg/              # 共通パッケージ
+├── proto/            # Protocol Buffers定義
+├── gen/              # 生成されたコード
+├── docs/             # ドキュメント
+│   └── requirements/ # 要件定義
+├── deployments/      # デプロイ設定
+│   ├── docker/       # Dockerfile
+│   └── kubernetes/   # K8s マニフェスト
+├── tests/            # テスト
+│   ├── e2e/          # E2Eテスト
+│   └── integration/  # 統合テスト
+└── scripts/          # ビルド・デプロイスクリプト
+```
+
+## ドキュメント
+
+- [SETUP.md](./SETUP.md) - 環境構築・開発手順
+- [docs/requirements/README.md](./docs/requirements/README.md) - 要件定義（機能仕様）
 
 ## マイクロサービス間の連携
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📚 ドキュメント
+    url: https://github.com/makoto-developer/go_microservice_example/blob/main/README.md
+    about: プロジェクトのドキュメントを確認
+  - name: 💬 ディスカッション
+    url: https://github.com/makoto-developer/go_microservice_example/discussions
+    about: 質問や議論はこちら

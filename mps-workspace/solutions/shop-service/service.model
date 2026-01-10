@@ -1,0 +1,481 @@
+// Shop Service DSL Definition
+// Based on: docs/requirements/02_shop_service.md
+
+microservice ShopService {
+  version: "v1"
+
+  // =========================================
+  // Entities (Domain Models)
+  // =========================================
+
+  entity Shop {
+    id: UUID primary_key
+    owner_id: UUID not_null  // Reference to User in Auth Service
+    name: string not_null
+    description: text not_null
+    logo_url: string nullable
+    owner_name: string not_null
+    phone_number: string not_null
+    business_hours: string not_null
+    return_policy: text not_null
+    status: ShopStatus not_null default(PENDING_APPROVAL)
+    published: boolean default(false)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity ShopCategory {
+    id: UUID primary_key
+    shop_id: UUID foreign_key(Shop.id) not_null
+    category_name: string not_null
+    created_at: timestamp not_null
+  }
+
+  entity Product {
+    id: UUID primary_key
+    shop_id: UUID foreign_key(Shop.id) not_null
+    name: string not_null
+    description: text not_null
+    price: decimal not_null
+    category: string not_null
+    stock_quantity: int not_null default(0)
+    weight: decimal nullable
+    size: string nullable
+    jan_code: string nullable
+    published: boolean default(false)
+    deleted: boolean default(false)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity ProductImage {
+    id: UUID primary_key
+    product_id: UUID foreign_key(Product.id) not_null
+    url: string not_null
+    display_order: int not_null
+    thumbnail_200_url: string not_null
+    thumbnail_400_url: string not_null
+    thumbnail_800_url: string not_null
+    created_at: timestamp not_null
+  }
+
+  entity ProductTag {
+    id: UUID primary_key
+    product_id: UUID foreign_key(Product.id) not_null
+    tag_name: string not_null
+    created_at: timestamp not_null
+  }
+
+  entity ProductVariation {
+    id: UUID primary_key
+    product_id: UUID foreign_key(Product.id) not_null
+    sku: string unique not_null
+    attribute_name: string not_null  // e.g., "Size", "Color"
+    attribute_value: string not_null  // e.g., "M", "Red"
+    price: decimal not_null
+    stock_quantity: int not_null default(0)
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity Order {
+    id: UUID primary_key
+    shop_id: UUID foreign_key(Shop.id) not_null
+    customer_id: UUID not_null
+    order_number: string unique not_null
+    status: OrderStatus not_null default(RECEIVED)
+    total_amount: decimal not_null
+    shipping_address: string not_null
+    payment_method: string not_null
+    tracking_number: string nullable
+    carrier: Carrier nullable
+    created_at: timestamp not_null
+    updated_at: timestamp not_null
+  }
+
+  entity OrderItem {
+    id: UUID primary_key
+    order_id: UUID foreign_key(Order.id) not_null
+    product_id: UUID not_null
+    product_name: string not_null
+    quantity: int not_null
+    unit_price: decimal not_null
+    subtotal: decimal not_null
+    created_at: timestamp not_null
+  }
+
+  entity SalesReport {
+    id: UUID primary_key
+    shop_id: UUID foreign_key(Shop.id) not_null
+    date: date not_null
+    total_sales: decimal not_null
+    order_count: int not_null
+    average_order_value: decimal not_null
+    created_at: timestamp not_null
+  }
+
+  // =========================================
+  // Enums
+  // =========================================
+
+  enum ShopStatus {
+    PENDING_APPROVAL,
+    APPROVED,
+    REJECTED,
+    SUSPENDED
+  }
+
+  enum OrderStatus {
+    RECEIVED,
+    PREPARING,
+    SHIPPED,
+    DELIVERED,
+    CANCELLED
+  }
+
+  enum Carrier {
+    YAMATO,
+    SAGAWA,
+    JAPAN_POST
+  }
+
+  // =========================================
+  // Use Cases
+  // =========================================
+
+  // Shop Management
+  usecase RegisterShop {
+    input: {
+      owner_id: UUID
+      name: string
+      description: string
+      logo_url: string
+      owner_name: string
+      phone_number: string
+      business_hours: string
+      return_policy: string
+      categories: list<string>
+    }
+    output: {
+      shop_id: UUID
+      status: ShopStatus
+      message: string
+    }
+    errors: {
+      InvalidShopData,
+      OwnerAlreadyHasShop
+    }
+  }
+
+  usecase UpdateShopInfo {
+    input: {
+      shop_id: UUID
+      name: string
+      description: string
+      logo_url: string
+      business_hours: string
+      return_policy: string
+    }
+    output: {
+      shop_id: UUID
+      requires_reapproval: boolean
+    }
+    errors: {
+      ShopNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase ToggleShopPublish {
+    input: {
+      shop_id: UUID
+      published: boolean
+    }
+    output: {
+      shop_id: UUID
+      published: boolean
+    }
+    errors: {
+      ShopNotFound,
+      ShopNotApproved
+    }
+  }
+
+  // Product Management
+  usecase RegisterProduct {
+    input: {
+      shop_id: UUID
+      name: string
+      description: string
+      price: decimal
+      category: string
+      stock_quantity: int
+      weight: decimal
+      size: string
+      jan_code: string
+      tags: list<string>
+    }
+    output: {
+      product_id: UUID
+    }
+    errors: {
+      InvalidProductData,
+      ShopNotFound
+    }
+  }
+
+  usecase UpdateProduct {
+    input: {
+      product_id: UUID
+      name: string
+      description: string
+      price: decimal
+      category: string
+      stock_quantity: int
+      weight: decimal
+      size: string
+      jan_code: string
+    }
+    output: {
+      product_id: UUID
+    }
+    errors: {
+      ProductNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase DeleteProduct {
+    input: {
+      product_id: UUID
+    }
+    output: {
+      product_id: UUID
+      deleted: boolean
+    }
+    errors: {
+      ProductNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase ToggleProductPublish {
+    input: {
+      product_id: UUID
+      published: boolean
+    }
+    output: {
+      product_id: UUID
+      published: boolean
+    }
+    errors: {
+      ProductNotFound
+    }
+  }
+
+  usecase UploadProductImage {
+    input: {
+      product_id: UUID
+      image_data: bytes
+      display_order: int
+    }
+    output: {
+      image_id: UUID
+      url: string
+      thumbnails: map<string, string>
+    }
+    errors: {
+      ProductNotFound,
+      ImageTooLarge,
+      InvalidImageFormat,
+      MaxImagesExceeded
+    }
+  }
+
+  usecase ManageProductVariation {
+    input: {
+      product_id: UUID
+      variations: list<ProductVariationInput>
+    }
+    output: {
+      variation_ids: list<UUID>
+    }
+    errors: {
+      ProductNotFound,
+      DuplicateSKU
+    }
+  }
+
+  // Order Management
+  usecase ListOrders {
+    input: {
+      shop_id: UUID
+      status: OrderStatus
+      date_from: date
+      date_to: date
+      customer_name: string
+      product_name: string
+      sort_by: string
+      sort_order: string
+    }
+    output: {
+      orders: list<OrderSummary>
+      total_count: int
+    }
+    errors: {
+      ShopNotFound
+    }
+  }
+
+  usecase GetOrderDetail {
+    input: {
+      order_id: UUID
+      shop_id: UUID
+    }
+    output: {
+      order: OrderDetail
+    }
+    errors: {
+      OrderNotFound,
+      UnauthorizedAccess
+    }
+  }
+
+  usecase UpdateOrderStatus {
+    input: {
+      order_id: UUID
+      shop_id: UUID
+      new_status: OrderStatus
+      tracking_number: string
+      carrier: Carrier
+    }
+    output: {
+      order_id: UUID
+      status: OrderStatus
+    }
+    errors: {
+      OrderNotFound,
+      InvalidStatusTransition,
+      UnauthorizedAccess
+    }
+    events: {
+      publish OrderStatusUpdated
+    }
+  }
+
+  // Sales Management
+  usecase GetSalesReport {
+    input: {
+      shop_id: UUID
+      report_type: string  // "daily", "monthly"
+      date_from: date
+      date_to: date
+    }
+    output: {
+      report_data: list<SalesData>
+      summary: SalesSummary
+    }
+    errors: {
+      ShopNotFound,
+      InvalidDateRange
+    }
+  }
+
+  usecase ExportSalesData {
+    input: {
+      shop_id: UUID
+      date_from: date
+      date_to: date
+    }
+    output: {
+      csv_url: string
+      expires_at: timestamp
+    }
+    errors: {
+      ShopNotFound,
+      NoDataFound
+    }
+  }
+
+  // =========================================
+  // gRPC Service Definition
+  // =========================================
+
+  grpc_service {
+    // Shop
+    rpc RegisterShop(RegisterShopRequest) returns (RegisterShopResponse)
+    rpc UpdateShop(UpdateShopRequest) returns (UpdateShopResponse)
+    rpc ToggleShopPublish(ToggleShopPublishRequest) returns (ToggleShopPublishResponse)
+    rpc GetShop(GetShopRequest) returns (GetShopResponse)
+
+    // Product
+    rpc RegisterProduct(RegisterProductRequest) returns (RegisterProductResponse)
+    rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse)
+    rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse)
+    rpc ToggleProductPublish(ToggleProductPublishRequest) returns (ToggleProductPublishResponse)
+    rpc GetProduct(GetProductRequest) returns (GetProductResponse)
+    rpc ListProducts(ListProductsRequest) returns (ListProductsResponse)
+    rpc UploadProductImage(UploadProductImageRequest) returns (UploadProductImageResponse)
+    rpc ManageVariation(ManageVariationRequest) returns (ManageVariationResponse)
+
+    // Order
+    rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse)
+    rpc GetOrderDetail(GetOrderDetailRequest) returns (GetOrderDetailResponse)
+    rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse)
+
+    // Sales
+    rpc GetSalesReport(GetSalesReportRequest) returns (GetSalesReportResponse)
+    rpc ExportSalesData(ExportSalesDataRequest) returns (ExportSalesDataResponse)
+  }
+
+  // =========================================
+  // Dependencies
+  // =========================================
+
+  dependencies {
+    database: PostgreSQL
+    cache: Redis
+    storage: MinIO  // For product images
+    messaging: RabbitMQ
+  }
+
+  // =========================================
+  // Events
+  // =========================================
+
+  events {
+    publish OrderStatusUpdated {
+      order_id: UUID
+      shop_id: UUID
+      customer_id: UUID
+      old_status: OrderStatus
+      new_status: OrderStatus
+      tracking_number: string
+      carrier: Carrier
+      updated_at: timestamp
+    }
+
+    publish ProductStockUpdated {
+      product_id: UUID
+      shop_id: UUID
+      old_quantity: int
+      new_quantity: int
+      updated_at: timestamp
+    }
+  }
+
+  // =========================================
+  // Configuration
+  // =========================================
+
+  config {
+    max_product_images: 5
+    max_image_size_mb: 5
+    supported_image_formats: ["jpg", "jpeg", "png", "webp"]
+    thumbnail_sizes: [200, 400, 800]
+    minio_endpoint: env("MINIO_ENDPOINT")
+    minio_access_key: env("MINIO_ACCESS_KEY")
+    minio_secret_key: env("MINIO_SECRET_KEY")
+    minio_bucket: env("MINIO_BUCKET")
+  }
+}
