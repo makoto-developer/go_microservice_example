@@ -9,6 +9,9 @@
 # Variables
 # ========================================
 COMPOSE := docker-compose
+PROJECT_ROOT := $(shell pwd)
+WEB_DIR := $(PROJECT_ROOT)/web/shop_mall_web
+
 SERVICES_ALL := postgres redis rabbitmq mailhog \
 	mock-stripe mock-fcm mock-elasticsearch mock-carriers \
 	auth-service shop-service customer-service inventory-service \
@@ -20,6 +23,7 @@ SERVICES_MOCKS := mock-stripe mock-fcm mock-elasticsearch mock-carriers
 SERVICES_MICRO := auth-service shop-service customer-service inventory-service \
 	order-service payment-service shipping-service notification-service \
 	review-service chat-service search-service admin-service
+SERVICES_PHASE1 := auth-service shop-service
 
 # ========================================
 # Help
@@ -129,8 +133,54 @@ health: ## Check health status of all services
 	@$(COMPOSE) ps | grep -E "(healthy|running)" || true
 
 # ========================================
+# Phoenix Web Commands
+# ========================================
+phoenix: ## Start Phoenix web server (foreground)
+	@echo "Starting Phoenix server..."
+	@echo "Press Ctrl+C to stop"
+	@cd $(WEB_DIR) && PORT=20200 mix phx.server
+
+phoenix-bg: ## Start Phoenix web server (background)
+	@echo "Starting Phoenix server in background..."
+	@cd $(WEB_DIR) && PORT=20200 mix phx.server > /tmp/phoenix.log 2>&1 &
+	@echo "✓ Phoenix started! (Logs: /tmp/phoenix.log)"
+	@echo "  Access at: http://localhost:20200"
+
+phoenix-stop: ## Stop Phoenix web server
+	@echo "Stopping Phoenix server..."
+	@pkill -f "mix phx.server" || echo "Phoenix not running"
+
+phoenix-logs: ## Show Phoenix logs
+	@tail -f /tmp/phoenix.log
+
+phoenix-deps: ## Install Phoenix dependencies
+	@echo "Installing Phoenix dependencies..."
+	@cd $(WEB_DIR) && mix deps.get
+
+phoenix-assets: ## Setup Phoenix assets
+	@echo "Setting up Phoenix assets..."
+	@cd $(WEB_DIR) && mix assets.setup
+
+phoenix-compile: ## Compile Phoenix project
+	@echo "Compiling Phoenix..."
+	@cd $(WEB_DIR) && mix compile
+
+phoenix-setup: ## Setup Phoenix (deps + assets)
+	@echo "Setting up Phoenix project..."
+	@make phoenix-deps
+	@make phoenix-assets
+	@make phoenix-compile
+	@echo "✓ Phoenix setup complete!"
+
+# ========================================
 # Database Commands
 # ========================================
+db-migrate: ## Run database migrations
+	@echo "Running database migrations..."
+	@docker exec -i go_microservice_postgres_dev psql -U admin -d auth_db < scripts/migrations/auth/001_create_tables.sql
+	@docker exec -i go_microservice_postgres_dev psql -U admin -d shop_db < scripts/migrations/shop/001_create_tables.sql
+	@echo "✓ Migrations complete!"
+
 db-init: ## Initialize databases
 	@echo "Initializing databases..."
 	@docker exec go_microservice_postgres_dev psql -U admin -d postgres -f /docker-entrypoint-initdb.d/init.sql
@@ -158,15 +208,45 @@ db-reset: ## Reset all databases (WARNING: removes all data)
 # ========================================
 # Development Commands
 # ========================================
-dev: ## Start development environment (infra + mocks)
-	@echo "Starting development environment..."
+dev: ## Start full development environment (infra + services + phoenix)
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "Starting full development environment..."
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@make up-infra
+	@sleep 10
+	@make db-migrate
+	@make up-phase1
+	@sleep 5
+	@make phoenix-bg
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "✓ Development environment is ready!"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "Access URLs:"
+	@echo "  - Phoenix Web:      http://localhost:20200/auth"
+	@echo "  - Auth gRPC:        localhost:20100"
+	@echo "  - Shop gRPC:        localhost:20101"
+	@echo "  - PostgreSQL:       localhost:20000"
+	@echo "  - Redis:            localhost:20001"
+	@echo "  - RabbitMQ:         localhost:20002 (UI: http://localhost:20003)"
+	@echo ""
+	@echo "Useful commands:"
+	@echo "  - View all logs:    make logs-all"
+	@echo "  - View Phoenix:     make phoenix-logs"
+	@echo "  - Stop all:         make dev-stop"
+	@echo ""
+
+dev-infra: ## Start development environment (infra + mocks only)
+	@echo "Starting development infrastructure..."
 	@make up-infra
 	@sleep 15
 	@make db-init
 	@make up-mocks
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "Development environment is ready!"
+	@echo "Development infrastructure is ready!"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@echo "Access URLs:"
@@ -179,6 +259,21 @@ dev: ## Start development environment (infra + mocks)
 	@echo "  - Elasticsearch:    http://localhost:20013"
 	@echo "  - Carriers Mock:    http://localhost:20014"
 	@echo ""
+
+dev-stop: ## Stop development environment
+	@echo "Stopping development environment..."
+	@make down
+	@make phoenix-stop
+	@echo "✓ Development environment stopped!"
+
+up-phase1: ## Start Phase 1 services (Auth + Shop)
+	@echo "Starting Phase 1 services..."
+	@$(COMPOSE) up -d $(SERVICES_PHASE1)
+	@echo "✓ Phase 1 services started!"
+
+logs-all: ## Show all logs (Docker + Phoenix)
+	@echo "Showing all logs (Ctrl+C to stop)..."
+	@( $(COMPOSE) logs -f & tail -f /tmp/phoenix.log 2>/dev/null & wait )
 
 clean: ## Clean up containers, volumes, and images
 	@echo "Cleaning up..."
@@ -272,7 +367,10 @@ inspect: ## Inspect a service (usage: make inspect SERVICE=postgres)
 # Quick Start
 # ========================================
 init: ## Initial setup (first time only)
-	@echo "Setting up project for the first time..."
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "Go MicroService Example - Initial Setup"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
 	@if [ ! -f .env ]; then \
 		echo "Creating .env file..."; \
 		cp .env.example .env; \
@@ -281,24 +379,44 @@ init: ## Initial setup (first time only)
 		echo "✓ .env already exists"; \
 	fi
 	@echo ""
-	@echo "Building services..."
-	@make build-mocks
+	@echo "Setting up Phoenix..."
+	@make phoenix-setup
 	@echo ""
-	@echo "Starting development environment..."
-	@make dev
+	@echo "Building Docker services..."
+	@make build-mocks
+	@$(COMPOSE) build $(SERVICES_PHASE1)
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "✓ Initial setup complete!"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Check services: make ps"
-	@echo "  2. View logs: make logs"
-	@echo "  3. Open MailHog: make open-mailhog"
-	@echo "  4. Build microservices: make build-services"
+	@echo "  1. Start all services:  make dev"
+	@echo "  2. Open browser:        open http://localhost:20200/auth"
+	@echo "  3. Check status:        make status"
+	@echo "  4. View logs:           make logs-all"
 	@echo ""
 
-quickstart: init ## Alias for init
+quickstart: ## Quick start (setup + run)
+	@make init
+	@make dev
+
+status: ## Show system status
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "System Status"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "Docker Containers:"
+	@$(COMPOSE) ps --format "table {{.Name}}\t{{.Status}}" | head -10
+	@echo ""
+	@echo -n "Phoenix Server: "
+	@pgrep -f "mix phx.server" > /dev/null 2>&1 && echo "✓ Running" || echo "✗ Not running"
+	@echo ""
+	@echo "Access URLs:"
+	@echo "  - Phoenix Web:      http://localhost:20200/auth"
+	@echo "  - Auth gRPC:        localhost:20100"
+	@echo "  - Shop gRPC:        localhost:20101"
+	@echo ""
 
 # ========================================
 # Danger Zone

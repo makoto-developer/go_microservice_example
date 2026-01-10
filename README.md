@@ -1,5 +1,49 @@
 # Go MicroService 実践例
 
+オンラインショップ（モール型）を題材にした Go マイクロサービスの実装例です。
+
+## 🚀 Quick Start
+
+### 初回セットアップ
+
+```bash
+# 1. リポジトリをクローン
+git clone <repository-url>
+cd go_microservice_example
+
+# 2. 初期セットアップ（依存関係インストール + ビルド）
+make init
+
+# 3. 開発環境を起動（インフラ + サービス + フロントエンド）
+make dev
+```
+
+開発環境が起動したら、ブラウザで http://localhost:4000/auth にアクセスしてください。
+
+### よく使うコマンド
+
+```bash
+# 開発環境の起動
+make dev
+
+# 停止
+make dev-stop
+
+# 状態確認
+make status
+
+# ログ確認
+make logs-all           # すべてのログ
+make logs              # Docker コンテナのみ
+make phoenix-logs      # Phoenix のみ
+
+# データベースリセット
+make db-reset
+
+# すべてのコマンドを表示
+make help
+```
+
 ## Motivation
 
 - マイクロサービスをどのように設計したのか実際の例

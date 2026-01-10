@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package inventory_service .v1;
+package inventory_service.v1;
 
-option go_package = "github.com/makoto-developer/go_microservice_example/proto/inventory_service /v1";
+option go_package = "github.com/makoto-developer/go_microservice_example/proto/inventory_service/v1";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
