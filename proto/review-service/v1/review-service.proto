@@ -8,11 +8,13 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
 enum ReviewStatus {
+
 	REVIEW_STATUS_UNSPECIFIED = 0;
-	PENDING = 1;
-	APPROVED = 2;
-	REJECTED = 3;
-	DELETED = 4;
+	REVIEW_STATUS_PENDING = 1;
+	REVIEW_STATUS_APPROVED = 2;
+	REVIEW_STATUS_REJECTED = 3;
+	REVIEW_STATUS_DELETED = 4;
+
 }
 
 enum ReportReason {
@@ -26,11 +28,13 @@ enum ReportReason {
 }
 
 enum ReportStatus {
+
 	REPORT_STATUS_UNSPECIFIED = 0;
-	PENDING = 1;
-	REVIEWED = 2;
-	ACTION_TAKEN = 3;
-	DISMISSED = 4;
+	REPORT_STATUS_PENDING = 1;
+	REPORT_STATUS_REVIEWED = 2;
+	REPORT_STATUS_ACTION_TAKEN = 3;
+	REPORT_STATUS_DISMISSED = 4;
+
 }
 
 message Review {
@@ -41,7 +45,7 @@ message Review {
 	string nickname = 5;
 	int32 rating = 6;
 	string title = 7;
-	text content = 8;
+	string content = 8;
 	repeated string image_urls = 9;
 	ReviewStatus status = 10;
 	string rejection_reason = 11;
@@ -71,8 +75,8 @@ message ReviewEditHistory {
 	int32 new_rating = 4;
 	string old_title = 5;
 	string new_title = 6;
-	text old_content = 7;
-	text new_content = 8;
+	string old_content = 7;
+	string new_content = 8;
 	google.protobuf.Timestamp edited_at = 9;
 }
 
@@ -80,7 +84,7 @@ message ShopReply {
 	string id = 1;
 	string review_id = 2;
 	string shop_id = 3;
-	text content = 4;
+	string content = 4;
 	bool edited = 5;
 	google.protobuf.Timestamp created_at = 6;
 	google.protobuf.Timestamp updated_at = 7;
@@ -91,7 +95,6 @@ message ReviewHelpful {
 	string review_id = 2;
 	string user_id = 3;
 	google.protobuf.Timestamp created_at = 4;
-	(review_id, unique_constraint = 5;
 }
 
 message ReviewReport {
@@ -99,7 +102,7 @@ message ReviewReport {
 	string review_id = 2;
 	string reporter_id = 3;
 	ReportReason reason = 4;
-	text description = 5;
+	string description = 5;
 	ReportStatus status = 6;
 	string resolved_by = 7;
 	google.protobuf.Timestamp resolved_at = 8;
@@ -259,4 +262,107 @@ service ReviewService  {
 	rpc ReportReview(ReportReviewRequest) returns (ReportReviewResponse);
 	rpc GetReviewReports(GetReviewReportsRequest) returns (GetReviewReportsResponse);
 	rpc ResolveReviewReport(ResolveReviewReportRequest) returns (ResolveReviewReportResponse);
+}
+
+// Auto-generated response messages
+
+message PostReviewResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateReviewResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteReviewResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteReviewByAdminResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetReviewsByProductResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetReviewDetailResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetMyReviewsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetProductRatingResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetPendingReviewsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ApproveReviewResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message RejectReviewResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message MarkReviewHelpfulResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UnmarkReviewHelpfulResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message PostShopReplyResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateShopReplyResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteShopReplyResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ReportReviewResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetReviewReportsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ResolveReviewReportResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+// Additional request message
+message GetPendingReviewsRequest {
+	int32 page = 1;
+	int32 page_size = 2;
 }

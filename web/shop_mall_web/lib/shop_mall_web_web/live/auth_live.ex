@@ -41,8 +41,8 @@ defmodule ShopMallWebWeb.AuthLive do
       {:ok, response} ->
         {:noreply,
          socket
-         |> assign(:success, "ログイン成功！ユーザーID: #{response.user_id}")
-         |> assign(:error, nil)}
+         |> put_flash(:info, "ログイン成功！")
+         |> push_navigate(to: "/dashboard")}
 
       {:error, reason} ->
         {:noreply,
@@ -63,9 +63,9 @@ defmodule ShopMallWebWeb.AuthLive do
       {:ok, response} ->
         {:noreply,
          socket
-         |> assign(:success, "登録成功！ユーザーID: #{response.user_id}")
-         |> assign(:error, nil)
-         |> assign(:mode, :login)}
+         |> put_flash(:info, "登録成功！メールを確認してください。ログイン画面に移動します...")
+         |> assign(:mode, :login)
+         |> assign(:error, nil)}
 
       {:error, reason} ->
         {:noreply,

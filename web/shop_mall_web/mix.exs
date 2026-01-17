@@ -62,7 +62,8 @@ defmodule ShopMallWeb.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:grpc, "~> 0.9"},
-      {:protobuf, "~> 0.13"}
+      {:protobuf, "~> 0.13"},
+      {:decimal, "~> 2.0"}
     ]
   end
 

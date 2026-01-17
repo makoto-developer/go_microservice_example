@@ -36,7 +36,7 @@ message ProductIndex {
 	string id = 1;
 	string product_id = 2;
 	string product_name = 3;
-	text description = 4;
+	string description = 4;
 	string category = 5;
 	repeated string tags = 6;
 	string shop_id = 7;
@@ -53,7 +53,7 @@ message ShopIndex {
 	string id = 1;
 	string shop_id = 2;
 	string shop_name = 3;
-	text description = 4;
+	string description = 4;
 	repeated string categories = 5;
 	string average_rating = 6;
 	int32 product_count = 7;
@@ -85,7 +85,7 @@ message PopularKeyword {
 	int32 rank = 4;
 	string category = 5;
 	PeriodType period_type = 6;
-	date period_date = 7;
+	string period_date = 7;  // YYYY-MM-DD format
 	google.protobuf.Timestamp created_at = 8;
 }
 
@@ -180,8 +180,9 @@ message DeleteProductIndexRequest {
 	string product_id = 1;
 }
 
-message ReindexAllProductsRequest {
-	{ output = 1;
+message ReindexAllProductsRequest {}
+
+message ReindexAllProductsResponse {
 	int32 total_indexed = 2;
 	repeated string errors = 3;
 }
@@ -205,12 +206,12 @@ message RecordSearchLogRequest {
 	string keyword = 2;
 	int32 result_count = 3;
 	int32 execution_time_ms = 4;
-	map<string, filters = 5;
+	map<string, string> filters = 5;
 }
 
 message GetSearchAnalyticsRequest {
-	date date_from = 1;
-	date date_to = 2;
+	string date_from = 1;  // YYYY-MM-DD format
+	string date_to = 2;  // YYYY-MM-DD format
 	string report_type = 3;
 }
 
@@ -230,4 +231,81 @@ service SearchService  {
 	rpc IndexShop(IndexShopRequest) returns (IndexShopResponse);
 	rpc DeleteShopIndex(DeleteShopIndexRequest) returns (DeleteShopIndexResponse);
 	rpc GetSearchAnalytics(GetSearchAnalyticsRequest) returns (GetSearchAnalyticsResponse);
+}
+
+// Auto-generated response messages
+
+message SearchProductsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetSearchSuggestionsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SearchShopsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message RecordSearchHistoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetSearchHistoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteSearchHistoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ClearAllSearchHistoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetPopularKeywordsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetTrendingKeywordsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message IndexProductResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateProductIndexResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteProductIndexResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message IndexShopResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteShopIndexResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetSearchAnalyticsResponse {
+	bool success = 1;
+	string message = 2;
 }

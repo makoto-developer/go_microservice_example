@@ -63,12 +63,12 @@ message Notification {
 	NotificationType notification_type = 3;
 	NotificationChannel channel = 4;
 	string title = 5;
-	text content = 6;
+	string content = 6;
 	NotificationStatus status = 7;
 	google.protobuf.Timestamp sent_at = 8;
-	text error_message = 9;
+	string error_message = 9;
 	int32 retry_count = 10;
-	json metadata = 11;
+	string metadata = 11;  // JSON format
 	google.protobuf.Timestamp created_at = 12;
 	google.protobuf.Timestamp updated_at = 13;
 }
@@ -77,8 +77,8 @@ message EmailTemplate {
 	string id = 1;
 	string template_key = 2;
 	string subject_template = 3;
-	text html_template = 4;
-	text text_template = 5;
+	string html_template = 4;
+	string text_template = 5;
 	repeated string variables = 6;
 	int32 version = 7;
 	bool is_active = 8;
@@ -123,8 +123,8 @@ message NotificationPreference {
 	bool push_campaigns = 10;
 	bool push_chat_messages = 11;
 	NotificationFrequency frequency = 12;
-	time quiet_hours_start = 13;
-	time quiet_hours_end = 14;
+	google.protobuf.Timestamp quiet_hours_start = 13;
+	google.protobuf.Timestamp quiet_hours_end = 14;
 	google.protobuf.Timestamp created_at = 15;
 	google.protobuf.Timestamp updated_at = 16;
 }
@@ -133,22 +133,22 @@ message SendEmailRequest {
 	string user_id = 1;
 	string email = 2;
 	string template_key = 3;
-	map<string, variables = 4;
+	map<string, string> variables = 4;
 	NotificationType notification_type = 5;
 }
 
 message SendBulkEmailRequest {
 	repeated string user_ids = 1;
 	string template_key = 2;
-	map<string, variables = 3;
+	map<string, string> variables = 3;
 }
 
 message SendPushNotificationRequest {
 	string user_id = 1;
 	string template_key = 2;
-	map<string, variables = 3;
+	map<string, string> variables = 3;
 	NotificationType notification_type = 4;
-	map<string, data = 5;
+	map<string, string> data = 5;
 }
 
 message RegisterDeviceTokenRequest {
@@ -185,7 +185,7 @@ message UpdateEmailTemplateRequest {
 
 message PreviewEmailTemplateRequest {
 	string template_key = 1;
-	map<string, variables = 2;
+	map<string, string> variables = 2;
 }
 
 message GetNotificationPreferenceRequest {
@@ -204,16 +204,16 @@ message UpdateNotificationPreferenceRequest {
 	bool push_campaigns = 9;
 	bool push_chat_messages = 10;
 	NotificationFrequency frequency = 11;
-	time quiet_hours_start = 12;
-	time quiet_hours_end = 13;
+	google.protobuf.Timestamp quiet_hours_start = 12;
+	google.protobuf.Timestamp quiet_hours_end = 13;
 }
 
 message GetNotificationHistoryRequest {
 	string user_id = 1;
 	NotificationChannel channel = 2;
 	NotificationStatus status = 3;
-	date date_from = 4;
-	date date_to = 5;
+	string date_from = 4;  // YYYY-MM-DD format
+	string date_to = 5;  // YYYY-MM-DD format
 	int32 page = 6;
 	int32 page_size = 7;
 }
@@ -264,4 +264,71 @@ service NotificationService  {
 	rpc UpdateNotificationPreference(UpdateNotificationPreferenceRequest) returns (UpdateNotificationPreferenceResponse);
 	rpc GetNotificationHistory(GetNotificationHistoryRequest) returns (GetNotificationHistoryResponse);
 	rpc ResendNotification(ResendNotificationRequest) returns (ResendNotificationResponse);
+}
+
+// Auto-generated response messages
+
+message SendEmailResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SendBulkEmailResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SendPushNotificationResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message RegisterDeviceTokenResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UnregisterDeviceTokenResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message RefreshDeviceTokenResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message CreateEmailTemplateResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateEmailTemplateResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message PreviewEmailTemplateResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetNotificationPreferenceResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateNotificationPreferenceResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetNotificationHistoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ResendNotificationResponse {
+	bool success = 1;
+	string message = 2;
 }

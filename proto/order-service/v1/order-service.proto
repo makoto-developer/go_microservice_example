@@ -67,7 +67,7 @@ message Order {
 	string recipient_phone = 14;
 	string tracking_number = 15;
 	string carrier = 16;
-	text notes = 17;
+	string notes = 17;
 	google.protobuf.Timestamp created_at = 18;
 	google.protobuf.Timestamp updated_at = 19;
 }
@@ -79,7 +79,7 @@ message OrderItem {
 	string product_id = 4;
 	string variation_id = 5;
 	string product_name = 6;
-	json product_snapshot = 7;
+	string product_snapshot = 7;  // JSON format
 	string unit_price = 8;
 	int32 quantity = 9;
 	string subtotal = 10;
@@ -101,7 +101,7 @@ message OrderCancellation {
 	string order_id = 2;
 	string cancelled_by = 3;
 	CancelReason cancel_reason = 4;
-	text cancel_note = 5;
+	string cancel_note = 5;
 	string refund_id = 6;
 	google.protobuf.Timestamp created_at = 7;
 }
@@ -112,8 +112,8 @@ message SagaState {
 	SagaType saga_type = 3;
 	string current_step = 4;
 	SagaStatus status = 5;
-	json compensation_data = 6;
-	text error_message = 7;
+	string compensation_data = 6;  // JSON format
+	string error_message = 7;
 	google.protobuf.Timestamp created_at = 8;
 	google.protobuf.Timestamp updated_at = 9;
 }
@@ -139,8 +139,8 @@ message ListOrdersRequest {
 	string customer_id = 1;
 	string shop_id = 2;
 	repeated OrderStatus status_filter = 3;
-	date date_from = 4;
-	date date_to = 5;
+	string date_from = 4;  // YYYY-MM-DD format
+	string date_to = 5;  // YYYY-MM-DD format
 	string search_query = 6;
 	string sort_by = 7;
 	string sort_order = 8;
@@ -174,8 +174,8 @@ message SearchOrdersRequest {
 	string customer_name = 3;
 	string customer_email = 4;
 	string product_name = 5;
-	date date_from = 6;
-	date date_to = 7;
+	string date_from = 6;  // YYYY-MM-DD format
+	string date_to = 7;  // YYYY-MM-DD format
 	repeated OrderStatus status_filter = 8;
 	string min_amount = 9;
 	string max_amount = 10;
@@ -185,22 +185,22 @@ message SearchOrdersRequest {
 
 message GetOrderStatisticsRequest {
 	string shop_id = 1;
-	date date_from = 2;
-	date date_to = 3;
+	string date_from = 2;  // YYYY-MM-DD format
+	string date_to = 3;  // YYYY-MM-DD format
 	string group_by = 4;
 }
 
 message GetProductSalesRankingRequest {
 	string shop_id = 1;
-	date date_from = 2;
-	date date_to = 3;
+	string date_from = 2;  // YYYY-MM-DD format
+	string date_to = 3;  // YYYY-MM-DD format
 	int32 limit = 4;
 }
 
 message ExportOrdersToCSVRequest {
 	string shop_id = 1;
-	date date_from = 2;
-	date date_to = 3;
+	string date_from = 2;  // YYYY-MM-DD format
+	string date_to = 3;  // YYYY-MM-DD format
 	repeated OrderStatus status_filter = 4;
 }
 
@@ -221,4 +221,77 @@ service OrderService  {
 	rpc GetProductSalesRanking(GetProductSalesRankingRequest) returns (GetProductSalesRankingResponse);
 	rpc ExportOrdersToCSV(ExportOrdersToCSVRequest) returns (ExportOrdersToCSVResponse);
 	rpc CreateReorder(CreateReorderRequest) returns (CreateReorderResponse);
+}
+
+// Response messages (auto-generated)
+message CreateOrderResponse {
+	string order_id = 1;
+	string order_number = 2;
+	string message = 3;
+}
+
+message GetOrderDetailResponse {
+	Order order = 1;
+}
+
+message ListOrdersResponse {
+	repeated Order orders = 1;
+	int32 total_count = 2;
+	int32 page = 3;
+	int32 page_size = 4;
+}
+
+message UpdateOrderStatusResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetOrderStatusHistoryResponse {
+	repeated OrderStatus history = 1;
+}
+
+message CancelOrderResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SearchOrdersResponse {
+	repeated Order orders = 1;
+	int32 total_count = 2;
+}
+
+message GetOrderStatisticsResponse {
+	int32 total_orders = 1;
+	int64 total_sales = 2;
+	int32 pending_orders = 3;
+	int32 completed_orders = 4;
+}
+
+message GetProductSalesRankingResponse {
+	repeated ProductSalesRank rankings = 1;
+}
+
+message ProductSalesRank {
+	string product_id = 1;
+	string product_name = 2;
+	int32 total_sold = 3;
+	int64 total_revenue = 4;
+}
+
+message ExportOrdersToCSVResponse {
+	string csv_url = 1;
+	string message = 2;
+}
+
+message CreateReorderResponse {
+	string order_id = 1;
+	string message = 2;
+}
+
+// Additional message types
+message CartItemInput {
+	string product_id = 1;
+	string variation_id = 2;
+	int32 quantity = 3;
+	int64 unit_price = 4;
 }

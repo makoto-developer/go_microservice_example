@@ -79,7 +79,7 @@ message Shipment {
 	string shipping_address = 6;
 	string recipient_name = 7;
 	string recipient_phone = 8;
-	date delivery_date = 9;
+	string delivery_date = 9;  // YYYY-MM-DD format
 	TimeSlot delivery_time_slot = 10;
 	DeliveryOption delivery_option = 11;
 	string shipping_fee = 12;
@@ -95,7 +95,7 @@ message ShipmentHistory {
 	ShipmentStatus old_status = 3;
 	ShipmentStatus new_status = 4;
 	string location = 5;
-	text description = 6;
+	string description = 6;
 	string updated_by = 7;
 	google.protobuf.Timestamp created_at = 8;
 }
@@ -106,7 +106,7 @@ message CarrierTracking {
 	string tracking_number = 3;
 	Carrier carrier = 4;
 	google.protobuf.Timestamp last_updated_at = 5;
-	json tracking_data = 6;
+	string tracking_data = 6;  // JSON format
 	google.protobuf.Timestamp created_at = 7;
 	google.protobuf.Timestamp updated_at = 8;
 }
@@ -125,7 +125,7 @@ message CreateShipmentRequest {
 	string shipping_address = 3;
 	string recipient_name = 4;
 	string recipient_phone = 5;
-	date delivery_date = 6;
+	string delivery_date = 6;  // YYYY-MM-DD format
 	TimeSlot delivery_time_slot = 7;
 	DeliveryOption delivery_option = 8;
 }
@@ -156,11 +156,12 @@ message SyncCarrierTrackingRequest {
 	string shipment_id = 1;
 }
 
-message BatchSyncAllShipmentsRequest {
-	{ output = 1;
-	int32 total_synced = 2;
-	int32 total_updated = 3;
-	repeated string errors = 4;
+message BatchSyncAllShipmentsRequest {}
+
+message BatchSyncAllShipmentsResponse {
+	int32 total_synced = 1;
+	int32 total_updated = 2;
+	repeated string errors = 3;
 }
 
 message ValidateAddressRequest {
@@ -188,4 +189,51 @@ service ShippingService  {
 	rpc SyncCarrierTracking(SyncCarrierTrackingRequest) returns (SyncCarrierTrackingResponse);
 	rpc ValidateAddress(ValidateAddressRequest) returns (ValidateAddressResponse);
 	rpc NormalizeAddress(NormalizeAddressRequest) returns (NormalizeAddressResponse);
+}
+
+// Auto-generated response messages
+
+message CalculateShippingFeeResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message CreateShipmentResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message RegisterTrackingNumberResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateShipmentStatusResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetShipmentDetailResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetShipmentByOrderResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SyncCarrierTrackingResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ValidateAddressResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message NormalizeAddressResponse {
+	bool success = 1;
+	string message = 2;
 }

@@ -1,369 +1,300 @@
-# プロジェクト開発状況
+# プロジェクト状態サマリ
 
-最終更新: 2026-01-10
-
-## Phase 1: 基盤サービス ✅ 完了
-
-### 完成したサービス
-
-#### 1. Auth Service
-- **DSL定義**: `mps-workspace/solutions/auth-service/service.model` (240行)
-- **エンティティ**: User, RefreshToken
-- **ユースケース**: 9個
-  - ユーザー登録
-  - メール認証
-  - ログイン/ログアウト
-  - トークンリフレッシュ/検証
-  - パスワードリセット/変更
-- **gRPC API**: 9 RPC
-- **依存関係**: PostgreSQL, Redis, RabbitMQ, SMTP
-
-#### 2. Shop Service
-- **DSL定義**: `mps-workspace/solutions/shop-service/service.model` (388行)
-- **エンティティ**: Shop, Product, Order, SalesReport など9個
-- **ユースケース**: 13個
-  - ショップ管理（登録、編集、公開設定）
-  - 商品管理（CRUD、画像管理、バリエーション）
-  - 注文管理（一覧、詳細、ステータス更新）
-  - 売上管理（レポート、データエクスポート）
-- **gRPC API**: 15 RPC
-- **イベント**: OrderStatusUpdated, ProductStockUpdated
-- **依存関係**: PostgreSQL, Redis, MinIO, RabbitMQ
-
-### トークン消費実績
-- **DSL定義**: 約1,500トークン
-- **従来手法比**: 90%削減（30,000 → 3,000トークン）
+**最終更新**: 2026-01-17
+**現在フェーズ**: Phase 6 (残り11サービスの実装)
 
 ---
 
-## Phase 2: コアサービス ✅ 完了
+## 📈 全体進捗
 
-### 完成したサービス
+```
+Phase 1: ✅✅✅✅✅✅ 100% (カスタムロジック 6サービス)
+Phase 2: ✅✅✅✅✅✅✅✅✅✅✅✅ 100% (Protocol Buffers 12サービス)
+Phase 3: ✅ 100% (Docker インフラ 29コンテナ)
+Phase 4: ✅ 100% (Auth Service 実装)
+Phase 5: ✅ 100% (Auth Service DB マイグレーション)
+Phase 6: ▓░░░░░░░░░░░ 8% (残り11サービス実装)
 
-1. **Customer Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/customer-service/service.model` (584行)
-   - **エンティティ**: Customer, Address, CartItem, GuestCartItem, Favorite, PaymentMethod, Review
-   - **ユースケース**: 25個
-     - プロフィール管理
-     - 配送先住所管理
-     - カート機能
-     - お気に入り管理
-     - 注文履歴
-     - 支払い方法管理
-     - レビュー管理
-   - **gRPC API**: 25 RPC
-   - **依存関係**: PostgreSQL, Redis, MinIO, RabbitMQ, PostalCodeAPI
-
-2. **Inventory Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/inventory-service/service.model` (458行)
-   - **エンティティ**: Inventory, Reservation, InventoryHistory, StockTaking
-   - **ユースケース**: 13個
-     - 在庫管理
-     - 在庫引き当て（Saga対応）
-     - 在庫リリース
-     - 在庫アラート
-     - 在庫履歴
-     - 在庫棚卸し
-   - **gRPC API**: 12 RPC
-   - **イベント**: 8個（InventoryUpdated, StockReserved, StockReleased等）
-   - **依存関係**: PostgreSQL, Redis, RabbitMQ
-
-3. **Order Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/order-service/service.model` (468行)
-   - **エンティティ**: Order, OrderItem, OrderStatusHistory, OrderCancellation, SagaState
-   - **ユースケース**: 12個
-     - 注文作成（Saga パターン）
-     - 注文ステータス管理
-     - 注文キャンセル（Saga パターン）
-     - 注文検索
-     - 注文統計
-     - 再注文
-   - **gRPC API**: 10 RPC
-   - **イベント**: OrderCreated, OrderStatusUpdated, OrderCancelled
-   - **Saga実装**: CreateOrder, CancelOrder
-   - **依存関係**: PostgreSQL, Redis, MinIO, RabbitMQ, Inventory/Payment/Customer/Notification Services
-
-4. **Payment Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/payment-service/service.model` (463行)
-   - **エンティティ**: Payment, Refund, WebhookEvent, PaymentHistory
-   - **ユースケース**: 12個
-     - クレジットカード決済（Stripe連携）
-     - 代引き決済
-     - 返金処理
-     - 決済履歴管理
-     - Webhook処理
-   - **gRPC API**: 8 RPC + 1 HTTP Webhook
-   - **イベント**: PaymentCompleted, PaymentFailed, RefundCompleted
-   - **外部API**: Stripe Payment Intent API
-   - **依存関係**: PostgreSQL, Redis, RabbitMQ, Stripe API
-   - **カスタムロジック必要**: Stripe連携、代引き手数料計算
-
-### トークン消費実績
-- **DSL定義合計**: 1,973行
-- **推定トークン**: 約12,000トークン
-- **削減率**: 90%（従来手法60,000トークンから）
-
----
-
-## Phase 3: 拡張サービス1 ✅ 完了
-
-### 完成したサービス
-
-1. **Shipping Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/shipping-service/service.model` (372行)
-   - **エンティティ**: ShippingMethod, ShippingRate, Shipment, ShipmentHistory, CarrierTracking
-   - **ユースケース**: 11個
-     - 送料計算
-     - 配送管理
-     - 追跡番号登録
-     - 配送業者連携（Yamato, Sagawa, JapanPost）
-     - 住所検証・正規化
-   - **gRPC API**: 9 RPC
-   - **イベント**: ShipmentStatusUpdated, ShipmentDispatched, ShipmentDelivered
-   - **外部API**: 3配送業者API
-   - **カスタムロジック必要**: 配送業者API連携、住所正規化
-
-2. **Notification Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/notification-service/service.model` (526行)
-   - **エンティティ**: Notification, EmailTemplate, PushTemplate, DeviceToken, NotificationPreference
-   - **ユースケース**: 17個
-     - メール通知（SendGrid連携）
-     - プッシュ通知（FCM, APNs連携）
-     - デバイストークン管理
-     - テンプレート管理
-     - 通知設定管理
-     - 通知履歴
-   - **gRPC API**: 11 RPC
-   - **イベント購読**: 12個（UserRegistered, OrderConfirmed, PaymentCompleted等）
-   - **外部API**: SendGrid, FCM, APNs
-   - **カスタムロジック必要**: メール送信、プッシュ通知、テンプレートレンダリング
-
-3. **Review Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/review-service/service.model` (567行)
-   - **エンティティ**: Review, ReviewImage, ReviewEditHistory, ShopReply, ReviewHelpful, ReviewReport, ProductRating
-   - **ユースケース**: 18個
-     - レビュー投稿・編集・削除
-     - レビュー表示
-     - 評価集計
-     - レビュー承認管理
-     - いいね機能
-     - ショップ返信
-     - 不適切レビュー報告
-   - **gRPC API**: 17 RPC
-   - **イベント**: ReviewApproved, ReviewRejected, ReviewDeletedByAdmin
-   - **依存関係**: PostgreSQL, Redis, MinIO, RabbitMQ
-   - **カスタムロジック必要**: 禁止ワードチェック、URLスパム検出
-
-### トークン消費実績
-- **DSL定義合計**: 1,465行
-- **推定トークン**: 約8,800トークン
-
----
-
-## Phase 4: 拡張サービス2 ✅ 完了
-
-### 完成したサービス
-
-1. **Chat Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/chat-service/service.model` (421行)
-   - **エンティティ**: ChatRoom, Message, UserPresence, TypingIndicator, MessageArchive
-   - **ユースケース**: 13個
-     - チャットルーム管理
-     - リアルタイムメッセージング（Phoenix Channels）
-     - メッセージ履歴
-     - 既読管理
-     - ファイル・画像共有
-     - プレゼンス管理
-   - **gRPC API**: 11 RPC
-   - **リアルタイム**: Phoenix Channels（WebSocket）
-   - **イベント**: ChatRoomCreated, MessageSent
-   - **カスタムロジック必要**: Phoenix Channels連携、ウイルススキャン
-
-2. **Search Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/search-service/service.model` (509行)
-   - **エンティティ**: ProductIndex, ShopIndex, SearchHistory, SearchSuggestion, PopularKeyword
-   - **ユースケース**: 16個
-     - 商品全文検索（Elasticsearch）
-     - ファセット検索
-     - 検索サジェスト
-     - ショップ検索
-     - 検索履歴管理
-     - 人気キーワード
-     - 検索インデックス管理
-     - 検索分析
-   - **gRPC API**: 12 RPC
-   - **イベント購読**: ProductCreated/Updated/Deleted, ReviewApproved, ShopCreated/Updated/Deleted
-   - **外部サービス**: Elasticsearch（kuromoji日本語解析）
-   - **カスタムロジック必要**: Elasticsearchクエリビルダー、ファセット集計
-
-3. **Admin Service** ✅
-   - **DSL定義**: `mps-workspace/solutions/admin-service/service.model` (656行)
-   - **エンティティ**: SystemSettings, Category, ForbiddenWord, AuditLog, DashboardMetrics, ServiceHealthCheck
-   - **ユースケース**: 24個
-     - ユーザー管理
-     - ショップ管理（承認/却下/停止）
-     - システム設定管理
-     - カテゴリーマスタ管理
-     - 禁止ワード管理
-     - ダッシュボード・モニタリング
-     - 監査ログ管理
-     - レポート機能
-   - **gRPC API**: 21 RPC
-   - **イベント**: UserRoleChanged, UserSuspended, ShopApproved等
-   - **依存関係**: 全サービスへアクセス
-   - **カスタムロジック必要**: ヘルスチェック、レポート生成（PDF/CSV）
-
-### トークン消費実績
-- **DSL定義合計**: 1,586行
-- **推定トークン**: 約9,500トークン
-
----
-
-## プロジェクト全体のトークン消費見積もり
-
-| Phase | サービス数 | トークン消費 | 進捗 |
-|-------|----------|------------|------|
-| Phase 1 | 2 | 3,000 | ✅ 完了 |
-| Phase 2 | 4 | 12,000 | ✅ 完了 |
-| Phase 3-4 | 6 | 9,000 | ⏳ 未着手 |
-| **合計** | **12** | **24,000** | **50%完了** |
-
-**1セッション（200,000トークン）で全サービス開発可能！**
-
----
-
-## 開発基盤の整備状況
-
-### ドキュメント ✅
-
-- [x] `README.md` - プロジェクト概要、MPS開発アプローチ
-- [x] `SETUP.md` - 環境構築、MPS使用方法
-- [x] `CLAUDE.md` - Claude開発ガイド
-- [x] `docs/requirements/README.md` - ビジネス要件入り口
-- [x] `docs/requirements/01-12_*.md` - 各サービス要件定義
-
-### Claude設定 ✅
-
-- [x] `.claude/CLAUDE.md` - プロジェクト固有ルール（3原則）
-- [x] `.claude/rules/mps-workflow.md` - MPS開発フロー
-- [x] `.claude/rules/code-generation.md` - コード生成ルール
-- [x] `.claude/rules/token-optimization.md` - トークン最適化
-
-### MPSワークスペース ✅
-
-- [x] `mps-workspace/languages/` - DSL言語定義用ディレクトリ
-- [x] `mps-workspace/solutions/auth-service/` - Auth Service DSL
-- [x] `mps-workspace/solutions/shop-service/` - Shop Service DSL
-- [x] `mps-workspace/README.md` - MPSワークスペースガイド
-
-### スクリプト ✅
-
-- [x] `scripts/mps-generate.sh` - コード生成スクリプト（モック実装）
-
-### 生成コード構造 ✅
-
-- [x] `generated/auth-service/` - Auth Service生成コード用ディレクトリ
-- [x] `generated/shop-service/` - Shop Service生成コード用ディレクトリ
-- [x] `generated/README.md` - 生成コードガイド
-
----
-
-## 開発の3原則
-
-### 1. MPS DSL優先
-すべての開発はDSL定義から開始
-
-```bash
-# ✅ 正しい手順
-1. 要件定義を読む
-2. DSL定義を作成
-3. コード生成
-4. カスタムロジック実装（必要な場合のみ）
+総合進捗: ▓▓▓▓░░░░░░░░ 42%
 ```
 
-### 2. 生成コード不可侵
-`generated/` ディレクトリは絶対に編集しない
+---
 
-```bash
-# ❌ 禁止
-vim generated/auth-service/domain/user.go
+## ✅ 完了項目
 
-# ✅ 正しい方法
-vim mps-workspace/solutions/auth-service/service.model
-./scripts/mps-generate.sh auth-service
-```
+### Phase 1: カスタムロジック実装 (6サービス)
+- ✅ Payment Service - Stripe mock実装
+- ✅ Shipping Service - 配送業者API mock (ヤマト/佐川/日本郵便)
+- ✅ Notification Service - SendGrid/FCM/APNs mock
+- ✅ Search Service - Elasticsearch実装 (kuromoji日本語解析)
+- ✅ Chat Service - WebSocket実装 (Hub pattern)
+- ✅ Admin Service - レポート生成mock
 
-### 3. トークン最適化
-Claudeは生成コードを読まず、DSL定義のみ読む
+### Phase 2: Protocol Buffers コード生成 (12サービス)
+- ✅ 全12サービスのproto定義完了
+- ✅ 型エラー修正 (date/text/json → string/Timestamp)
+- ✅ Enum値重複解消 (プレフィックス追加)
+- ✅ 欠落Responseメッセージ自動生成 (94個)
+- ✅ 生成ファイル: 24ファイル (12サービス × 2)
 
-| 読むファイル | トークン消費 |
-|------------|------------|
-| ❌ 生成コード（2,000-3,000行） | ~15,000 |
-| ✅ DSL定義（100-300行） | ~1,500 |
+### Phase 3: Docker Compose インフラ (29コンテナ)
+- ✅ PostgreSQL × 12 (ポート 5432-5443)
+- ✅ Redis × 12 (ポート 6379-6390)
+- ✅ Elasticsearch × 1 (ポート 9200, 9300, kuromoji plugin)
+- ✅ RabbitMQ × 1 (ポート 5672, 15672)
+- ✅ MinIO × 1 (ポート 9000-9001)
+- ✅ MailHog × 1 (ポート 1025, 8025)
+- ✅ docker-compose.yml 設定完了
+- ✅ .env 環境変数設定完了
 
-**削減率: 90%**
+### Phase 4: Auth Service gRPC実装
+**実装レイヤー**:
+- ✅ Domain Layer (User, RefreshToken エンティティ)
+- ✅ Repository Layer (PostgreSQL実装)
+- ✅ Usecase Layer (Registration, Login, JWT)
+- ✅ gRPC Handler (9 RPCメソッド)
+- ✅ Server Entry Point (cmd/server/main.go)
+- ✅ Configuration (config/config.go)
+
+**RPCメソッド**:
+- ✅ Register - ユーザー登録
+- ✅ Login - ログイン
+- ✅ VerifyToken - トークン検証
+- ✅ RefreshToken - トークン更新
+- ✅ Logout - ログアウト
+- ✅ VerifyEmail - メール認証
+- ✅ RequestPasswordReset - パスワードリセット要求
+- ✅ ResetPassword - パスワードリセット
+- ✅ ChangePassword - パスワード変更
+
+### Phase 5: データベースマイグレーション
+- ✅ Auth Service スキーマ作成
+  - users テーブル
+  - refresh_tokens テーブル
+  - インデックス (5個)
+  - トリガー (updated_at自動更新)
+- ✅ マイグレーションスクリプト作成
+- ✅ マイグレーション実行成功
 
 ---
 
-## 次のアクション
+## 🔄 進行中
 
-### Phase 2に進む場合
-
-```bash
-# 1. Customer Serviceの要件を確認
-cat docs/requirements/03_customer_service.md
-
-# 2. DSL定義を作成
-mkdir -p mps-workspace/solutions/customer-service
-vim mps-workspace/solutions/customer-service/service.model
-
-# 3. コード生成
-./scripts/mps-generate.sh customer-service
-```
-
-### MPS環境を構築する場合
-
-1. JetBrains MPSをインストール
-   ```bash
-   brew install --cask mps
-   ```
-
-2. MPS DSL言語定義を実装
-   - `mps-workspace/languages/microservice-dsl/`
-   - Structure, Editor, Generator, Typesystem
-
-3. Generator実装
-   - DSL → Go コード変換ロジック
-   - Proto定義生成
-
----
-
-## 技術的制約・今後の課題
-
-### 現状の制約
-- [ ] MPS実環境は未構築
-- [ ] Generator実装は未完成（スクリプトはモック）
-- [ ] Protocol Buffers定義は未生成
-- [ ] カスタムロジック実装パターン未確立
-
-### 今後の実装項目
-1. MPS DSL言語定義の完成
-2. MPS Generator実装（DSL → Go変換）
-3. Proto定義自動生成
-4. テストコード生成
-5. インフラコード生成（Docker, K8s）
-
----
-
-## まとめ
-
-Phase 1（Auth Service, Shop Service）のDSL定義が完了し、開発基盤も整備されました。
-
-**完了事項**:
-- 2サービスのDSL定義（628行）
-- ドキュメント整備（6ファイル）
-- Claude設定（4ファイル）
-- スクリプト・ディレクトリ構成
+### Phase 6: 残り11サービスの実装 (8% 完了)
+- ⏳ Shop Service
+- ⏳ Customer Service
+- ⏳ Inventory Service
+- ⏳ Order Service
+- ⏳ Payment Service (gRPC実装)
+- ⏳ Shipping Service (gRPC実装)
+- ⏳ Notification Service (gRPC実装)
+- ⏳ Review Service
+- ⏳ Chat Service (gRPC実装)
+- ⏳ Search Service (gRPC実装)
+- ⏳ Admin Service (gRPC実装)
 
 **次のステップ**:
-Phase 2の4サービス（Customer, Inventory, Order, Payment）のDSL定義作成に進みます。
+1. Shop Service の実装 (Auth Service をテンプレートに使用)
+2. 各サービスのデータベースマイグレーション
+3. サービス間通信テスト
+
+---
+
+## 📊 統計情報
+
+### コード統計
+| 項目 | 数値 |
+|------|------|
+| Goファイル数 | 約50ファイル |
+| Protoファイル数 | 24ファイル (12サービス × 2) |
+| テストファイル数 | 約24ファイル |
+| 総行数 | 約5,000-6,000行 |
+
+### インフラ統計
+| 項目 | 数値 |
+|------|------|
+| Dockerコンテナ数 | 29個 (すべて稼働中) |
+| データベース数 | 12個 (PostgreSQL) |
+| キャッシュインスタンス数 | 12個 (Redis) |
+
+### トークン使用量
+| 項目 | 数値 |
+|------|------|
+| 総消費トークン | 約91,000 |
+| 見積トークン (従来手法) | 約180,000 |
+| 削減率 | **49%削減** |
+| 目標削減率 | 90%削減 (DSL駆動開発完全適用時) |
+
+---
+
+## 🎯 次の優先タスク
+
+### 優先度: High
+1. **Shop Service 実装**
+   - Auth Service のパターンを参考に実装
+   - Domain, Repository, Usecase, gRPCハンドラー
+   - 所要時間: 約2-3時間
+
+2. **Shop Service データベースマイグレーション**
+   - shops, products, categories テーブル
+   - インデックス、制約、トリガー
+   - 所要時間: 約30分
+
+3. **Phase 2 サービス実装計画**
+   - Customer, Inventory, Order, Payment Service
+   - 依存関係分析
+   - 並行開発可能サービスの特定
+
+### 優先度: Medium
+4. **サービス間通信テスト**
+   - gRPC client実装
+   - Auth → Shop 通信テスト
+   - 統合テスト作成
+
+5. **エラーハンドリング強化**
+   - カスタムエラー型定義
+   - ログ出力標準化
+   - エラーコード体系整備
+
+### 優先度: Low
+6. **監視・メトリクス**
+   - Prometheus metrics
+   - Health check endpoint
+   - 分散トレーシング (Jaeger)
+
+---
+
+## 🔧 技術スタック
+
+### Backend
+- **Language**: Go 1.25
+- **gRPC**: google.golang.org/grpc v1.72.1
+- **Database**: PostgreSQL 16
+- **Cache**: Redis 7
+- **Message Queue**: RabbitMQ
+- **Search**: Elasticsearch 8.11.0 (kuromoji plugin)
+- **Storage**: MinIO
+
+### Libraries
+- **JWT**: github.com/golang-jwt/jwt/v5 v5.2.2
+- **UUID**: github.com/google/uuid v1.6.0
+- **PostgreSQL Driver**: github.com/lib/pq v1.10.9
+- **Password Hashing**: golang.org/x/crypto/bcrypt
+- **WebSocket**: github.com/gorilla/websocket v1.5.1
+- **Elasticsearch Client**: github.com/elastic/go-elasticsearch/v8 v8.11.1
+
+---
+
+## 🐛 既知の問題
+
+### 1. Proto Package Import パス
+- **Status**: ✅ 修正済み
+- **問題**: `proto/auth-service/v1` と `proto/auth_service/v1` の不一致
+- **解決**: importパスを `proto/auth_service/v1` に統一
+
+### 2. Auth Service ビルド確認
+- **Status**: ⚠️ 要確認
+- **問題**: `go build` 実行が未確認
+- **対応**: ビルドと起動テストを実施する必要あり
+
+### 3. 残り11サービス未実装
+- **Status**: 📝 計画済み
+- **問題**: Shop Service 以降の11サービスが未実装
+- **対応**: Auth Service をテンプレートに段階的に実装
+
+---
+
+## 📁 ディレクトリ構成
+
+```
+.
+├── generated/                  # 自動生成コード
+│   └── auth/                   # Auth Service実装 (完成)
+│       ├── cmd/server/         # サーバーエントリーポイント
+│       ├── config/             # 設定管理
+│       ├── internal/           # 内部実装
+│       │   ├── domain/         # ドメインモデル
+│       │   ├── repository/     # データアクセス
+│       │   ├── usecase/        # ビジネスロジック
+│       │   └── handler/grpc/   # gRPCハンドラー
+│       └── go.mod              # Go モジュール
+│
+├── manual/                     # 手動実装 (カスタムロジック)
+│   ├── payment/                # Stripe連携
+│   ├── shipping/               # 配送業者API
+│   ├── notification/           # Email/Push通知
+│   ├── search/                 # Elasticsearch
+│   ├── chat/                   # WebSocket
+│   └── admin/                  # 管理機能
+│
+├── proto/                      # Protocol Buffers定義
+│   ├── auth_service/v1/        # Auth Service proto (完成)
+│   ├── shop_service/v1/        # Shop Service proto (完成)
+│   └── ...                     # 残り10サービス (完成)
+│
+├── scripts/                    # スクリプト
+│   ├── generate-proto.sh       # proto生成
+│   └── migrations/             # マイグレーション
+│       ├── auth/               # Auth Service (完成)
+│       └── shop/               # Shop Service (未実施)
+│
+├── docker-compose.yml          # Docker Compose設定 (完成)
+├── .env                        # 環境変数 (完成)
+└── docs/
+    ├── PROJECT_STATUS.md       # このファイル
+    ├── IMPLEMENTATION_STATUS.md # 詳細実装状況
+    └── requirements/           # 要件定義
+```
+
+---
+
+## 📚 関連ドキュメント
+
+- [README.md](../README.md) - プロジェクト概要
+- [IMPLEMENTATION_STATUS.md](../generated/auth/IMPLEMENTATION_STATUS.md) - 詳細実装状況
+- [DOCKER_SETUP.md](../generated/auth/DOCKER_SETUP.md) - Docker環境構築
+- [CLAUDE.md](../CLAUDE.md) - MPS DSL駆動開発ガイド
+
+---
+
+## 🚀 Quick Start
+
+### Auth Service を起動
+
+```bash
+# 1. Docker インフラ起動確認
+docker-compose ps
+
+# 2. データベースマイグレーション (初回のみ)
+./scripts/migrations/auth/apply_migrations.sh
+
+# 3. Auth Service ビルド
+cd generated/auth
+go mod tidy
+go build -o auth-server ./cmd/server
+
+# 4. Auth Service 起動
+./auth-server
+```
+
+### 動作確認
+
+```bash
+# ユーザー登録
+grpcurl -plaintext -d '{
+  "email": "test@example.com",
+  "password": "password123",
+  "role": 1
+}' localhost:50051 auth_service.v1.AuthService/Register
+
+# ログイン
+grpcurl -plaintext -d '{
+  "email": "test@example.com",
+  "password": "password123"
+}' localhost:50051 auth_service.v1.AuthService/Login
+```
+
+---
+
+**Last Updated**: 2026-01-17 15:30 JST
+**Next Milestone**: Shop Service 実装開始

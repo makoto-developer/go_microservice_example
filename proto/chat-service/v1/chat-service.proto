@@ -45,7 +45,7 @@ message Message {
 	string sender_id = 3;
 	string receiver_id = 4;
 	MessageType message_type = 5;
-	text content = 6;
+	string content = 6;
 	string file_url = 7;
 	string file_name = 8;
 	int32 file_size = 9;
@@ -133,8 +133,8 @@ message SearchMessagesRequest {
 	string room_id = 1;
 	string user_id = 2;
 	string keyword = 3;
-	date date_from = 4;
-	date date_to = 5;
+	string date_from = 4;  // YYYY-MM-DD format
+	string date_to = 5;  // YYYY-MM-DD format
 }
 
 message UploadChatImageRequest {
@@ -177,8 +177,8 @@ message ArchiveOldMessagesRequest {
 message GetArchivedMessagesRequest {
 	string room_id = 1;
 	string user_id = 2;
-	date date_from = 3;
-	date date_to = 4;
+	string date_from = 3;  // YYYY-MM-DD format
+	string date_to = 4;  // YYYY-MM-DD format
 }
 
 service ChatService  {
@@ -195,4 +195,71 @@ service ChatService  {
 	rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse);
 	rpc GetUserPresence(GetUserPresenceRequest) returns (GetUserPresenceResponse);
 	rpc GetArchivedMessages(GetArchivedMessagesRequest) returns (GetArchivedMessagesResponse);
+}
+
+// Auto-generated response messages
+
+message CreateChatRoomResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetChatRoomsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetChatRoomDetailResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateRoomStatusResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SendMessageResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetMessagesResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message MarkMessagesAsReadResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SearchMessagesResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UploadChatImageResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UploadChatFileResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdatePresenceResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetUserPresenceResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetArchivedMessagesResponse {
+	bool success = 1;
+	string message = 2;
 }

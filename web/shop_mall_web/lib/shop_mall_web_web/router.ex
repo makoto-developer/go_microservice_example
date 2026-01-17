@@ -19,6 +19,17 @@ defmodule ShopMallWebWeb.Router do
 
     get "/", PageController, :home
     live "/auth", AuthLive
+
+    # Customer routes
+    live "/dashboard", DashboardLive
+    live "/products", ProductListLive
+    live "/products/:id", ProductDetailLive
+
+    # Owner routes
+    live "/owner/dashboard", Owner.DashboardLive
+    live "/owner/products", Owner.ProductListLive
+    live "/owner/products/new", Owner.ProductFormLive
+    live "/owner/products/:id/edit", Owner.ProductFormLive
   end
 
   # Other scopes may use custom stacks.

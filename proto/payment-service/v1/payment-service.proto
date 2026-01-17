@@ -14,22 +14,26 @@ enum PaymentMethodType {
 }
 
 enum PaymentStatus {
-	PAYMENT_STATUS_UNSPECIFIED = 0;
-	PENDING = 1;
-	PROCESSING = 2;
-	REQUIRES_AUTHENTICATION = 3;
-	SUCCEEDED = 4;
-	FAILED = 5;
-	REFUNDING = 6;
-	REFUNDED = 7;
+
+	PAYMENT_STATUS_PAYMENT_STATUS_UNSPECIFIED = 0;
+	PAYMENT_STATUS_PENDING = 1;
+	PAYMENT_STATUS_PROCESSING = 2;
+	PAYMENT_STATUS_REQUIRES_AUTHENTICATION = 3;
+	PAYMENT_STATUS_SUCCEEDED = 4;
+	PAYMENT_STATUS_FAILED = 5;
+	PAYMENT_STATUS_REFUNDING = 6;
+	PAYMENT_STATUS_REFUNDED = 7;
+
 }
 
 enum RefundStatus {
-	REFUND_STATUS_UNSPECIFIED = 0;
-	PENDING = 1;
-	PROCESSING = 2;
-	SUCCEEDED = 3;
-	FAILED = 4;
+
+	REFUND_STATUS_REFUND_STATUS_UNSPECIFIED = 0;
+	REFUND_STATUS_PENDING = 1;
+	REFUND_STATUS_PROCESSING = 2;
+	REFUND_STATUS_SUCCEEDED = 3;
+	REFUND_STATUS_FAILED = 4;
+
 }
 
 message Payment {
@@ -44,7 +48,7 @@ message Payment {
 	bool requires_authentication = 9;
 	string authentication_url = 10;
 	string error_code = 11;
-	text error_message = 12;
+	string error_message = 12;
 	string cod_fee = 13;
 	google.protobuf.Timestamp created_at = 14;
 	google.protobuf.Timestamp updated_at = 15;
@@ -58,7 +62,7 @@ message Refund {
 	string reason = 5;
 	RefundStatus status = 6;
 	string stripe_refund_id = 7;
-	text error_message = 8;
+	string error_message = 8;
 	google.protobuf.Timestamp refunded_at = 9;
 	google.protobuf.Timestamp created_at = 10;
 	google.protobuf.Timestamp updated_at = 11;
@@ -68,7 +72,7 @@ message WebhookEvent {
 	string id = 1;
 	string stripe_event_id = 2;
 	string event_type = 3;
-	json payload = 4;
+	string payload = 4;  // JSON format
 	bool processed = 5;
 	google.protobuf.Timestamp processed_at = 6;
 	google.protobuf.Timestamp created_at = 7;
@@ -127,8 +131,8 @@ message ListPaymentsRequest {
 	string customer_id = 2;
 	string shop_id = 3;
 	repeated PaymentStatus status_filter = 4;
-	date date_from = 5;
-	date date_to = 6;
+	string date_from = 5;  // YYYY-MM-DD format
+	string date_to = 6;  // YYYY-MM-DD format
 	PaymentMethodType payment_method = 7;
 	int32 page = 8;
 	int32 page_size = 9;
@@ -172,3 +176,51 @@ service PaymentService  {
 	rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
 	rpc GetPaymentDetail(GetPaymentDetailRequest) returns (GetPaymentDetailResponse);
 }
+
+// Response messages (auto-generated)
+message CreatePaymentIntentResponse {
+	string payment_id = 1;
+	string client_secret = 2;
+	string message = 3;
+}
+
+message ConfirmPaymentResponse {
+	bool success = 1;
+	PaymentStatus status = 2;
+	string message = 3;
+}
+
+message GetPaymentStatusResponse {
+	PaymentStatus status = 1;
+	string transaction_id = 2;
+}
+
+message CreateCODPaymentResponse {
+	string payment_id = 1;
+	string message = 2;
+}
+
+message ConfirmCODPaymentResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message CreateRefundResponse {
+	string refund_id = 1;
+	string message = 2;
+}
+
+message GetRefundStatusResponse {
+	RefundStatus status = 1;
+	int64 refund_amount = 2;
+}
+
+message ListPaymentsResponse {
+	repeated Payment payments = 1;
+	int32 total_count = 2;
+}
+
+message GetPaymentDetailResponse {
+	Payment payment = 1;
+}
+

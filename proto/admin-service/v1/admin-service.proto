@@ -76,7 +76,7 @@ message SystemSettings {
 	string setting_key = 2;
 	string setting_value = 3;
 	SettingType setting_type = 4;
-	text description = 5;
+	string description = 5;
 	string updated_by = 6;
 	google.protobuf.Timestamp created_at = 7;
 	google.protobuf.Timestamp updated_at = 8;
@@ -108,7 +108,7 @@ message AuditLog {
 	string operator_name = 4;
 	string target_type = 5;
 	string target_id = 6;
-	json operation_detail = 7;
+	string operation_detail = 7;  // JSON format
 	string ip_address = 8;
 	string user_agent = 9;
 	google.protobuf.Timestamp created_at = 10;
@@ -118,8 +118,8 @@ message DashboardMetrics {
 	string id = 1;
 	MetricType metric_type = 2;
 	string metric_value = 3;
-	date metric_date = 4;
-	json metadata = 5;
+	string metric_date = 4;  // YYYY-MM-DD format
+	string metadata = 5;  // JSON format
 	google.protobuf.Timestamp created_at = 6;
 }
 
@@ -128,7 +128,7 @@ message ServiceHealthCheck {
 	string service_name = 2;
 	HealthStatus status = 3;
 	int32 response_time_ms = 4;
-	text error_message = 5;
+	string error_message = 5;
 	google.protobuf.Timestamp checked_at = 6;
 }
 
@@ -136,8 +136,8 @@ message GetAllUsersRequest {
 	string role_filter = 1;
 	string status_filter = 2;
 	bool email_verified = 3;
-	date date_from = 4;
-	date date_to = 5;
+	string date_from = 4;  // YYYY-MM-DD format
+	string date_to = 5;  // YYYY-MM-DD format
 	string sort_by = 6;
 	int32 page = 7;
 	int32 page_size = 8;
@@ -186,8 +186,8 @@ message GetAllShopsRequest {
 	string approval_status = 1;
 	string status_filter = 2;
 	string category = 3;
-	date date_from = 4;
-	date date_to = 5;
+	string date_from = 4;  // YYYY-MM-DD format
+	string date_to = 5;  // YYYY-MM-DD format
 	string sort_by = 6;
 	int32 page = 7;
 	int32 page_size = 8;
@@ -205,8 +205,9 @@ message ActivateShopRequest {
 	string reason = 3;
 }
 
-message GetSystemSettingsRequest {
-	{ output = 1;
+message GetSystemSettingsRequest {}
+
+message GetSystemSettingsResponse {
 	repeated SystemSettings settings = 2;
 }
 
@@ -216,8 +217,9 @@ message UpdateSystemSettingRequest {
 	string setting_value = 3;
 }
 
-message GetCategoriesRequest {
-	{ output = 1;
+message GetCategoriesRequest {}
+
+message GetCategoriesResponse {
 	repeated Category categories = 2;
 }
 
@@ -257,22 +259,24 @@ message DeleteForbiddenWordRequest {
 }
 
 message GetDashboardMetricsRequest {
-	date date = 1;
+	string date = 1;  // YYYY-MM-DD format
 }
 
 message GetSalesChartRequest {
-	date date_from = 1;
-	date date_to = 2;
+	string date_from = 1;  // YYYY-MM-DD format
+	string date_to = 2;  // YYYY-MM-DD format
 	string group_by = 3;
 }
 
-message GetServiceHealthRequest {
-	{ output = 1;
+message GetServiceHealthRequest {}
+
+message GetServiceHealthResponse {
 	repeated ServiceHealthCheck services = 2;
 }
 
-message PerformHealthCheckRequest {
-	{ output = 1;
+message PerformHealthCheckRequest {}
+
+message PerformHealthCheckResponse {
 	repeated ServiceHealthCheck results = 2;
 }
 
@@ -282,7 +286,7 @@ message RecordAuditLogRequest {
 	string operator_name = 3;
 	string target_type = 4;
 	string target_id = 5;
-	map<string, operation_detail = 6;
+	map<string, string> operation_detail = 6;
 	string ip_address = 7;
 	string user_agent = 8;
 }
@@ -291,32 +295,32 @@ message GetAuditLogsRequest {
 	OperationType operation_type = 1;
 	string operator_id = 2;
 	string target_type = 3;
-	date date_from = 4;
-	date date_to = 5;
+	string date_from = 4;  // YYYY-MM-DD format
+	string date_to = 5;  // YYYY-MM-DD format
 	int32 page = 6;
 	int32 page_size = 7;
 }
 
 message ExportAuditLogsRequest {
-	date date_from = 1;
-	date date_to = 2;
+	string date_from = 1;  // YYYY-MM-DD format
+	string date_to = 2;  // YYYY-MM-DD format
 }
 
 message GenerateSalesReportRequest {
-	date date_from = 1;
-	date date_to = 2;
+	string date_from = 1;  // YYYY-MM-DD format
+	string date_to = 2;  // YYYY-MM-DD format
 	string report_type = 3;
 }
 
 message GenerateUserReportRequest {
-	date date_from = 1;
-	date date_to = 2;
+	string date_from = 1;  // YYYY-MM-DD format
+	string date_to = 2;  // YYYY-MM-DD format
 }
 
 message ExportReportRequest {
 	string report_type = 1;
-	date date_from = 2;
-	date date_to = 3;
+	string date_from = 2;  // YYYY-MM-DD format
+	string date_to = 3;  // YYYY-MM-DD format
 	string format = 4;
 }
 
@@ -349,4 +353,131 @@ service AdminService  {
 	rpc GenerateSalesReport(GenerateSalesReportRequest) returns (GenerateSalesReportResponse);
 	rpc GenerateUserReport(GenerateUserReportRequest) returns (GenerateUserReportResponse);
 	rpc ExportReport(ExportReportRequest) returns (ExportReportResponse);
+}
+
+// Auto-generated response messages
+
+message GetAllUsersResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetUserDetailResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ChangeUserRoleResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SuspendUserResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ActivateUserResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetPendingShopsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ApproveShopResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message RejectShopResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetAllShopsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SuspendShopResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ActivateShopResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateSystemSettingResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message CreateCategoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message UpdateCategoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteCategoryResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetForbiddenWordsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message AddForbiddenWordResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message DeleteForbiddenWordResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetDashboardMetricsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetSalesChartResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GetAuditLogsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ExportAuditLogsResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GenerateSalesReportResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message GenerateUserReportResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ExportReportResponse {
+	bool success = 1;
+	string message = 2;
 }

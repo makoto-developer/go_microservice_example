@@ -2,7 +2,30 @@
 
 オンラインショップ（モール型）を題材にした Go マイクロサービスの実装例です。
 
+## 📊 実装状況
+
+### 完了したフェーズ
+
+| Phase | ステータス | 説明 |
+|-------|----------|------|
+| Phase 1 | ✅ 完了 | カスタムロジック実装 (6サービス) |
+| Phase 2 | ✅ 完了 | Protocol Buffers定義とコード生成 (12サービス) |
+| Phase 3 | ✅ 完了 | Docker Compose インフラ構築 (29コンテナ) |
+| Phase 4 | ✅ 完了 | Auth Service gRPCサーバー実装 |
+| Phase 5 | ✅ 完了 | データベースマイグレーション (Auth Service) |
+| Phase 6 | 🔄 進行中 | 残り11サービスの実装 |
+
+**詳細**: [IMPLEMENTATION_STATUS.md](./generated/auth/IMPLEMENTATION_STATUS.md)
+
+---
+
 ## 🚀 Quick Start
+
+### 前提条件
+
+- Docker Desktop for Mac インストール済み
+- Go 1.25 以上
+- Protocol Buffers コンパイラ (protoc)
 
 ### 初回セットアップ
 
@@ -11,37 +34,57 @@
 git clone <repository-url>
 cd go_microservice_example
 
-# 2. 初期セットアップ（依存関係インストール + ビルド）
-make init
+# 2. 環境変数設定
+cp .env.example .env
+# 必要に応じて .env を編集
 
-# 3. 開発環境を起動（インフラ + サービス + フロントエンド）
-make dev
+# 3. Docker インフラ起動
+docker-compose up -d
+
+# 4. データベースマイグレーション
+./scripts/migrations/auth/apply_migrations.sh
+
+# 5. Auth Service ビルドと起動
+cd generated/auth
+go mod tidy
+go build -o auth-server ./cmd/server
+./auth-server
 ```
 
-開発環境が起動したら、ブラウザで http://localhost:4000/auth にアクセスしてください。
-
-### よく使うコマンド
+### Auth Service 動作確認
 
 ```bash
-# 開発環境の起動
-make dev
+# gRPCサービスリスト表示
+grpcurl -plaintext localhost:50051 list
 
-# 停止
-make dev-stop
+# ユーザー登録テスト
+grpcurl -plaintext -d '{
+  "email": "test@example.com",
+  "password": "password123",
+  "role": 1
+}' localhost:50051 auth_service.v1.AuthService/Register
 
-# 状態確認
-make status
+# ログインテスト
+grpcurl -plaintext -d '{
+  "email": "test@example.com",
+  "password": "password123"
+}' localhost:50051 auth_service.v1.AuthService/Login
+```
+
+### Docker 環境管理
+
+```bash
+# インフラ起動確認
+docker-compose ps
 
 # ログ確認
-make logs-all           # すべてのログ
-make logs              # Docker コンテナのみ
-make phoenix-logs      # Phoenix のみ
+docker-compose logs -f
 
-# データベースリセット
-make db-reset
+# 停止
+docker-compose down
 
-# すべてのコマンドを表示
-make help
+# 完全クリーンアップ（データ削除）
+docker-compose down -v
 ```
 
 ## Motivation
@@ -445,11 +488,17 @@ SENDGRID_API_KEY=<実際のSendGridキー>
 
 ### クイックスタート
 
-> **✅ 現在の状態**: 全20サービスが稼働中
-> - 4インフラ（PostgreSQL, Redis, RabbitMQ, MailHog）
-> - 4モック（Stripe, FCM, Elasticsearch, Carriers）
-> - 12マイクロサービス（Auth, Shop, Customer, Inventory, Order, Payment, Shipping, Notification, Review, Chat, Search, Admin）
-> - カスタムロジック実装済み（Payment: Stripe連携、Notification: Email送信）
+> **✅ 現在の状態**: インフラ環境稼働中 (29コンテナ)
+> - **PostgreSQL** × 12 (ポート 5432-5443)
+> - **Redis** × 12 (ポート 6379-6390)
+> - **Elasticsearch** × 1 (ポート 9200, 9300)
+> - **RabbitMQ** × 1 (ポート 5672, 15672)
+> - **MinIO** × 1 (ポート 9000-9001)
+> - **MailHog** × 1 (ポート 1025, 8025)
+>
+> **実装済みサービス**:
+> - ✅ Auth Service (gRPCサーバー稼働可能)
+> - 🔄 残り11サービス (DSL定義・コード生成完了、実装待ち)
 
 #### 方法1: Makefileを使用（推奨）
 

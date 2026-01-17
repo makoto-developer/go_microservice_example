@@ -5,7 +5,6 @@ package customer_service.v1;
 option go_package = "github.com/makoto-developer/go_microservice_example/proto/customer_service/v1";
 
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/empty.proto";
 
 enum Gender {
 	GENDER_UNSPECIFIED = 0;
@@ -21,7 +20,7 @@ message Customer {
 	string first_name = 3;
 	string last_name = 4;
 	string phone = 5;
-	date birth_date = 6;
+	string birth_date = 6;  // YYYY-MM-DD format
 	Gender gender = 7;
 	string profile_image_url = 8;
 	string profile_thumbnail_100_url = 9;
@@ -96,23 +95,24 @@ message Review {
 	string product_id = 3;
 	string order_id = 4;
 	int32 rating = 5;
-	text review_text = 6;
+	string review_text = 6;
 	repeated string image_urls = 7;
 	google.protobuf.Timestamp editable_until = 8;
 	google.protobuf.Timestamp created_at = 9;
 	google.protobuf.Timestamp updated_at = 10;
 }
 
-message GetCustomerProfileRequest {
+// Request messages
+message GetProfileRequest {
 	string customer_id = 1;
 }
 
-message UpdateCustomerProfileRequest {
+message UpdateProfileRequest {
 	string customer_id = 1;
 	string first_name = 2;
 	string last_name = 3;
 	string phone = 4;
-	date birth_date = 5;
+	string birth_date = 5;  // YYYY-MM-DD format
 	Gender gender = 6;
 }
 
@@ -204,8 +204,8 @@ message RemoveFromFavoriteRequest {
 message GetOrderHistoryRequest {
 	string customer_id = 1;
 	string status_filter = 2;
-	date date_from = 3;
-	date date_to = 4;
+	string date_from = 3;  // YYYY-MM-DD format
+	string date_to = 4;    // YYYY-MM-DD format
 	int32 page = 5;
 	int32 page_size = 6;
 }
@@ -258,7 +258,141 @@ message GetMyReviewsRequest {
 	string customer_id = 1;
 }
 
-service CustomerService  {
+// Response messages
+message GetProfileResponse {
+	Customer customer = 1;
+	string message = 2;
+}
+
+message UpdateProfileResponse {
+	Customer customer = 1;
+	string message = 2;
+}
+
+message UploadProfileImageResponse {
+	string image_url = 1;
+	string thumbnail_100_url = 2;
+	string thumbnail_200_url = 3;
+	string message = 4;
+}
+
+message RegisterAddressResponse {
+	Address address = 1;
+	string message = 2;
+}
+
+message UpdateAddressResponse {
+	Address address = 1;
+	string message = 2;
+}
+
+message DeleteAddressResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message SearchPostalCodeResponse {
+	string prefecture = 1;
+	string city = 2;
+	string address_line1 = 3;
+}
+
+message AddToCartResponse {
+	CartItem cart_item = 1;
+	string message = 2;
+}
+
+message GetCartResponse {
+	repeated CartItem cart_items = 1;
+	int32 total_quantity = 2;
+}
+
+message UpdateCartItemQuantityResponse {
+	CartItem cart_item = 1;
+	string message = 2;
+}
+
+message RemoveFromCartResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message MergeGuestCartResponse {
+	repeated CartItem cart_items = 1;
+	string message = 2;
+}
+
+message AddToFavoriteResponse {
+	Favorite favorite = 1;
+	string message = 2;
+}
+
+message GetFavoritesResponse {
+	repeated Favorite favorites = 1;
+	int32 total_count = 2;
+}
+
+message RemoveFromFavoriteResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message OrderSummary {
+	string order_id = 1;
+	string order_number = 2;
+	string status = 3;
+	int64 total_amount = 4;
+	google.protobuf.Timestamp ordered_at = 5;
+}
+
+message GetOrderHistoryResponse {
+	repeated OrderSummary orders = 1;
+	int32 total_count = 2;
+	int32 page = 3;
+	int32 page_size = 4;
+}
+
+message GetOrderDetailResponse {
+	OrderSummary order = 1;
+	repeated string item_details = 2;
+}
+
+message RequestOrderCancelResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message ReorderFromHistoryResponse {
+	repeated CartItem cart_items = 1;
+	string message = 2;
+}
+
+message RegisterPaymentMethodResponse {
+	PaymentMethod payment_method = 1;
+	string message = 2;
+}
+
+message DeletePaymentMethodResponse {
+	bool success = 1;
+	string message = 2;
+}
+
+message PostReviewResponse {
+	Review review = 1;
+	string message = 2;
+}
+
+message UpdateReviewResponse {
+	Review review = 1;
+	string message = 2;
+}
+
+message GetMyReviewsResponse {
+	repeated Review reviews = 1;
+	int32 total_count = 2;
+}
+
+service CustomerService {
 	rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
 	rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
 	rpc UploadProfileImage(UploadProfileImageRequest) returns (UploadProfileImageResponse);
