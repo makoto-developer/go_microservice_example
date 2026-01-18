@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+**/bin/
+**/dist/
+**/*.exe
+**/*.dll
+**/*.so
+**/*.dylib
+
+# Test files
+**/*_test.go
+**/testdata/
+
+# MPS workspace
+mps-workspace/
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
