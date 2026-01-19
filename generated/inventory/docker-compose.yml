@@ -1,0 +1,178 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Databases
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+
+  postgres-shop:
+    image: postgres:16-alpine
+    container_name: postgres-shop
+    environment:
+      POSTGRES_DB: shop_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-shop-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+
+  postgres-customer:
+    image: postgres:16-alpine
+    container_name: postgres-customer
+    environment:
+      POSTGRES_DB: customer_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-customer-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+
+  postgres-inventory:
+    image: postgres:16-alpine
+    container_name: postgres-inventory
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-inventory-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+
+  # Microservices
+  auth-service:
+    build:
+      context: .
+      dockerfile: generated/auth/Dockerfile
+    container_name: auth-service
+    environment:
+      GRPC_PORT: "50051"
+      DB_HOST: postgres-auth
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: auth_db
+      DB_SSLMODE: disable
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  shop-service:
+    build:
+      context: .
+      dockerfile: generated/shop/Dockerfile
+    container_name: shop-service
+    environment:
+      GRPC_PORT: "50052"
+      DB_HOST: postgres-shop
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: shop_db
+      DB_SSLMODE: disable
+    ports:
+      - "50052:50052"
+    depends_on:
+      postgres-shop:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: generated/customer/Dockerfile
+    container_name: customer-service
+    environment:
+      GRPC_PORT: "50053"
+      DB_HOST: postgres-customer
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: customer_db
+      DB_SSLMODE: disable
+    ports:
+      - "50053:50053"
+    depends_on:
+      postgres-customer:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: generated/inventory/Dockerfile
+    container_name: inventory-service
+    environment:
+      GRPC_PORT: "50054"
+      DB_HOST: postgres-inventory
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: inventory_db
+      DB_SSLMODE: disable
+    ports:
+      - "50054:50054"
+    depends_on:
+      postgres-inventory:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+volumes:
+  postgres-auth-data:
+  postgres-shop-data:
+  postgres-customer-data:
+  postgres-inventory-data:
+
+networks:
+  microservices:
+    driver: bridge

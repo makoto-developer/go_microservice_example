@@ -21,7 +21,7 @@ go.work
 vendor/
 
 # MPS Generated Code (オプション: コミットしない場合)
-generated/
+#generated/
 
 # MPS Cache
 mps-workspace/.mps/
