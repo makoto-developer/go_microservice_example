@@ -26,7 +26,7 @@ type DatabaseConfig struct {
 func Load() (*Config, error) {
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("PAYMENT_SERVICE_PORT", "50055"),
+			Port: getEnv("PAYMENT_SERVICE_PORT", "50056"),
 		},
 		Database: DatabaseConfig{
 			Host:     getEnv("PAYMENT_DB_HOST", "localhost"),

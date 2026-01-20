@@ -48,9 +48,10 @@ func (u *registerAddressUsecase) Execute(ctx context.Context, input RegisterAddr
 
 	address := domain.NewAddress(
 		input.CustomerID, input.AddressName, input.PostalCode, input.Prefecture,
-		input.City, input.AddressLine1, input.AddressLine2, input.RecipientName,
-		input.RecipientPhone, input.IsDefault,
+		input.City, input.AddressLine1, input.RecipientName,
+		input.RecipientPhone, input.AddressLine2,
 	)
+	address.IsDefault = input.IsDefault
 
 	if err := u.addressRepo.Create(ctx, address); err != nil {
 		return RegisterAddressOutput{}, err

@@ -39,7 +39,7 @@ func (u *addToFavoriteUsecase) Execute(ctx context.Context, input AddToFavoriteI
 		return AddToFavoriteOutput{}, domain.ErrAlreadyFavorited
 	}
 
-	favorite := domain.NewFavorite(input.CustomerID, input.ProductID, input.NotifyOnRestock)
+	favorite := domain.NewFavorite(input.CustomerID, input.ProductID)
 
 	if err := u.favoriteRepo.Add(ctx, favorite); err != nil {
 		return AddToFavoriteOutput{}, err

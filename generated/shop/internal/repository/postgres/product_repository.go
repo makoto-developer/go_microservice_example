@@ -3,245 +3,221 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/repository"
 )
 
 type productRepository struct {
 	db *sql.DB
 }
 
-func NewProductRepository(db *sql.DB) repository.ProductRepository {
+// NewProductRepository creates a new product repository
+func NewProductRepository(db *sql.DB) *productRepository {
 	return &productRepository{db: db}
 }
 
 func (r *productRepository) Create(ctx context.Context, product *domain.Product) error {
 	query := `
-		INSERT INTO products (id, shop_id, name, description, price, category, stock_quantity,
-		                     weight, size, jan_code, published, deleted, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-	`
+		INSERT INTO products (
+			id, shop_id, name, description, price, category_id,
+			tags, weight, dimensions, jan_code, stock_count,
+			status, is_public, is_deleted, created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+		)`
+
 	_, err := r.db.ExecContext(ctx, query,
-		product.ID, product.ShopID, product.Name, product.Description, product.Price,
-		product.Category, product.StockQuantity, product.Weight, product.Size, product.JANCode,
-		product.Published, product.Deleted, product.CreatedAt, product.UpdatedAt,
+		product.ID, product.ShopID, product.Name, product.Description,
+		product.Price, product.CategoryID, pq.Array(product.Tags),
+		product.Weight, product.Dimensions, product.JANCode,
+		product.StockCount, product.Status, product.IsPublic,
+		product.IsDeleted, product.CreatedAt, product.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create product: %w", err)
+	}
+
+	return nil
 }
 
 func (r *productRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
 	query := `
-		SELECT id, shop_id, name, description, price, category, stock_quantity,
-		       weight, size, jan_code, published, deleted, created_at, updated_at
-		FROM products WHERE id = $1
-	`
-	product := &domain.Product{}
+		SELECT id, shop_id, name, description, price, category_id,
+			   tags, weight, dimensions, jan_code, stock_count,
+			   status, is_public, is_deleted, created_at, updated_at, deleted_at
+		FROM products
+		WHERE id = $1`
+
+	var product domain.Product
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&product.ID, &product.ShopID, &product.Name, &product.Description, &product.Price,
-		&product.Category, &product.StockQuantity, &product.Weight, &product.Size, &product.JANCode,
-		&product.Published, &product.Deleted, &product.CreatedAt, &product.UpdatedAt,
+		&product.ID, &product.ShopID, &product.Name, &product.Description,
+		&product.Price, &product.CategoryID, pq.Array(&product.Tags),
+		&product.Weight, &product.Dimensions, &product.JANCode,
+		&product.StockCount, &product.Status, &product.IsPublic,
+		&product.IsDeleted, &product.CreatedAt, &product.UpdatedAt,
+		&product.DeletedAt,
 	)
 	if err == sql.ErrNoRows {
-		return nil, domain.ErrProductNotFound
+		return nil, fmt.Errorf("product not found: %s", id)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get product: %w", err)
 	}
-	return product, nil
+
+	return &product, nil
 }
 
-func (r *productRepository) Update(ctx context.Context, product *domain.Product) error {
+func (r *productRepository) GetByShopID(ctx context.Context, shopID uuid.UUID, includeDeleted bool) ([]*domain.Product, error) {
 	query := `
-		UPDATE products SET name = $2, description = $3, price = $4, category = $5, stock_quantity = $6,
-		                   weight = $7, size = $8, jan_code = $9, updated_at = $10
-		WHERE id = $1
-	`
-	_, err := r.db.ExecContext(ctx, query,
-		product.ID, product.Name, product.Description, product.Price, product.Category,
-		product.StockQuantity, product.Weight, product.Size, product.JANCode, product.UpdatedAt,
-	)
-	return err
-}
+		SELECT id, shop_id, name, description, price, category_id,
+			   tags, weight, dimensions, jan_code, stock_count,
+			   status, is_public, is_deleted, created_at, updated_at, deleted_at
+		FROM products
+		WHERE shop_id = $1`
 
-func (r *productRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE products SET deleted = true, updated_at = NOW() WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
-}
-
-func (r *productRepository) UpdatePublished(ctx context.Context, productID uuid.UUID, published bool) error {
-	query := `UPDATE products SET published = $2, updated_at = NOW() WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, productID, published)
-	return err
-}
-
-func (r *productRepository) List(ctx context.Context, shopID uuid.UUID, includeDeleted bool) ([]*domain.Product, error) {
-	query := `
-		SELECT id, shop_id, name, description, price, category, stock_quantity,
-		       weight, size, jan_code, published, deleted, created_at, updated_at
-		FROM products WHERE shop_id = $1
-	`
 	if !includeDeleted {
-		query += ` AND deleted = false`
+		query += " AND is_deleted = FALSE"
 	}
-	query += ` ORDER BY created_at DESC`
+
+	query += " ORDER BY created_at DESC"
 
 	rows, err := r.db.QueryContext(ctx, query, shopID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get products by shop: %w", err)
 	}
 	defer rows.Close()
 
 	var products []*domain.Product
 	for rows.Next() {
-		p := &domain.Product{}
-		if err := rows.Scan(
-			&p.ID, &p.ShopID, &p.Name, &p.Description, &p.Price, &p.Category, &p.StockQuantity,
-			&p.Weight, &p.Size, &p.JANCode, &p.Published, &p.Deleted, &p.CreatedAt, &p.UpdatedAt,
-		); err != nil {
-			return nil, err
+		var product domain.Product
+		err := rows.Scan(
+			&product.ID, &product.ShopID, &product.Name, &product.Description,
+			&product.Price, &product.CategoryID, pq.Array(&product.Tags),
+			&product.Weight, &product.Dimensions, &product.JANCode,
+			&product.StockCount, &product.Status, &product.IsPublic,
+			&product.IsDeleted, &product.CreatedAt, &product.UpdatedAt,
+			&product.DeletedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan product: %w", err)
 		}
-		products = append(products, p)
+		products = append(products, &product)
 	}
-	return products, rows.Err()
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating products: %w", err)
+	}
+
+	return products, nil
 }
 
-func (r *productRepository) AddImage(ctx context.Context, image *domain.ProductImage) error {
+func (r *productRepository) Update(ctx context.Context, product *domain.Product) error {
 	query := `
-		INSERT INTO product_images (id, product_id, url, display_order, thumbnail_200_url,
-		                           thumbnail_400_url, thumbnail_800_url, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`
+		UPDATE products
+		SET name = $2, description = $3, price = $4, category_id = $5,
+			tags = $6, weight = $7, dimensions = $8, jan_code = $9,
+			stock_count = $10, updated_at = $11
+		WHERE id = $1`
+
 	_, err := r.db.ExecContext(ctx, query,
-		image.ID, image.ProductID, image.URL, image.DisplayOrder,
-		image.Thumbnail200URL, image.Thumbnail400URL, image.Thumbnail800URL, image.CreatedAt,
+		product.ID, product.Name, product.Description, product.Price,
+		product.CategoryID, pq.Array(product.Tags), product.Weight,
+		product.Dimensions, product.JANCode, product.StockCount,
+		product.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to update product: %w", err)
+	}
+
+	return nil
 }
 
-func (r *productRepository) GetImages(ctx context.Context, productID uuid.UUID) ([]*domain.ProductImage, error) {
+func (r *productRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `
-		SELECT id, product_id, url, display_order, thumbnail_200_url, thumbnail_400_url,
-		       thumbnail_800_url, created_at
-		FROM product_images WHERE product_id = $1 ORDER BY display_order ASC
-	`
-	rows, err := r.db.QueryContext(ctx, query, productID)
+		UPDATE products
+		SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW()
+		WHERE id = $1`
+
+	_, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to delete product: %w", err)
+	}
+
+	return nil
+}
+
+func (r *productRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.ProductStatus) error {
+	query := `UPDATE products SET status = $2, updated_at = NOW() WHERE id = $1`
+
+	_, err := r.db.ExecContext(ctx, query, id, status)
+	if err != nil {
+		return fmt.Errorf("failed to update product status: %w", err)
+	}
+
+	return nil
+}
+
+func (r *productRepository) UpdateIsPublic(ctx context.Context, id uuid.UUID, isPublic bool) error {
+	query := `UPDATE products SET is_public = $2, updated_at = NOW() WHERE id = $1`
+
+	_, err := r.db.ExecContext(ctx, query, id, isPublic)
+	if err != nil {
+		return fmt.Errorf("failed to update product is_public: %w", err)
+	}
+
+	return nil
+}
+
+func (r *productRepository) UpdateStock(ctx context.Context, id uuid.UUID, stockCount int) error {
+	query := `UPDATE products SET stock_count = $2, updated_at = NOW() WHERE id = $1`
+
+	_, err := r.db.ExecContext(ctx, query, id, stockCount)
+	if err != nil {
+		return fmt.Errorf("failed to update product stock: %w", err)
+	}
+
+	return nil
+}
+
+func (r *productRepository) List(ctx context.Context, limit, offset int) ([]*domain.Product, error) {
+	query := `
+		SELECT id, shop_id, name, description, price, category_id,
+			   tags, weight, dimensions, jan_code, stock_count,
+			   status, is_public, is_deleted, created_at, updated_at, deleted_at
+		FROM products
+		WHERE is_deleted = FALSE
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`
+
+	rows, err := r.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list products: %w", err)
 	}
 	defer rows.Close()
 
-	var images []*domain.ProductImage
+	var products []*domain.Product
 	for rows.Next() {
-		img := &domain.ProductImage{}
-		if err := rows.Scan(
-			&img.ID, &img.ProductID, &img.URL, &img.DisplayOrder,
-			&img.Thumbnail200URL, &img.Thumbnail400URL, &img.Thumbnail800URL, &img.CreatedAt,
-		); err != nil {
-			return nil, err
+		var product domain.Product
+		err := rows.Scan(
+			&product.ID, &product.ShopID, &product.Name, &product.Description,
+			&product.Price, &product.CategoryID, pq.Array(&product.Tags),
+			&product.Weight, &product.Dimensions, &product.JANCode,
+			&product.StockCount, &product.Status, &product.IsPublic,
+			&product.IsDeleted, &product.CreatedAt, &product.UpdatedAt,
+			&product.DeletedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan product: %w", err)
 		}
-		images = append(images, img)
+		products = append(products, &product)
 	}
-	return images, rows.Err()
-}
 
-func (r *productRepository) DeleteImage(ctx context.Context, imageID uuid.UUID) error {
-	query := `DELETE FROM product_images WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, imageID)
-	return err
-}
-
-func (r *productRepository) CountImages(ctx context.Context, productID uuid.UUID) (int, error) {
-	query := `SELECT COUNT(*) FROM product_images WHERE product_id = $1`
-	var count int
-	err := r.db.QueryRowContext(ctx, query, productID).Scan(&count)
-	return count, err
-}
-
-func (r *productRepository) AddTag(ctx context.Context, tag *domain.ProductTag) error {
-	query := `INSERT INTO product_tags (id, product_id, tag_name, created_at) VALUES ($1, $2, $3, $4)`
-	_, err := r.db.ExecContext(ctx, query, tag.ID, tag.ProductID, tag.TagName, tag.CreatedAt)
-	return err
-}
-
-func (r *productRepository) GetTags(ctx context.Context, productID uuid.UUID) ([]*domain.ProductTag, error) {
-	query := `SELECT id, product_id, tag_name, created_at FROM product_tags WHERE product_id = $1`
-	rows, err := r.db.QueryContext(ctx, query, productID)
-	if err != nil {
-		return nil, err
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating products: %w", err)
 	}
-	defer rows.Close()
 
-	var tags []*domain.ProductTag
-	for rows.Next() {
-		tag := &domain.ProductTag{}
-		if err := rows.Scan(&tag.ID, &tag.ProductID, &tag.TagName, &tag.CreatedAt); err != nil {
-			return nil, err
-		}
-		tags = append(tags, tag)
-	}
-	return tags, rows.Err()
-}
-
-func (r *productRepository) DeleteTags(ctx context.Context, productID uuid.UUID) error {
-	query := `DELETE FROM product_tags WHERE product_id = $1`
-	_, err := r.db.ExecContext(ctx, query, productID)
-	return err
-}
-
-func (r *productRepository) CreateVariation(ctx context.Context, variation *domain.ProductVariation) error {
-	query := `
-		INSERT INTO product_variations (id, product_id, sku, attribute_name, attribute_value,
-		                               price, stock_quantity, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`
-	_, err := r.db.ExecContext(ctx, query,
-		variation.ID, variation.ProductID, variation.SKU, variation.AttributeName,
-		variation.AttributeValue, variation.Price, variation.StockQuantity,
-		variation.CreatedAt, variation.UpdatedAt,
-	)
-	return err
-}
-
-func (r *productRepository) GetVariations(ctx context.Context, productID uuid.UUID) ([]*domain.ProductVariation, error) {
-	query := `
-		SELECT id, product_id, sku, attribute_name, attribute_value, price, stock_quantity,
-		       created_at, updated_at
-		FROM product_variations WHERE product_id = $1
-	`
-	rows, err := r.db.QueryContext(ctx, query, productID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var variations []*domain.ProductVariation
-	for rows.Next() {
-		v := &domain.ProductVariation{}
-		if err := rows.Scan(
-			&v.ID, &v.ProductID, &v.SKU, &v.AttributeName, &v.AttributeValue,
-			&v.Price, &v.StockQuantity, &v.CreatedAt, &v.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		variations = append(variations, v)
-	}
-	return variations, rows.Err()
-}
-
-func (r *productRepository) UpdateVariation(ctx context.Context, variation *domain.ProductVariation) error {
-	query := `
-		UPDATE product_variations SET price = $2, stock_quantity = $3, updated_at = $4
-		WHERE id = $1
-	`
-	_, err := r.db.ExecContext(ctx, query, variation.ID, variation.Price, variation.StockQuantity, variation.UpdatedAt)
-	return err
-}
-
-func (r *productRepository) DeleteVariations(ctx context.Context, productID uuid.UUID) error {
-	query := `DELETE FROM product_variations WHERE product_id = $1`
-	_, err := r.db.ExecContext(ctx, query, productID)
-	return err
+	return products, nil
 }

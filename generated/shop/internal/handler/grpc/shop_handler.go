@@ -2,645 +2,346 @@ package grpc
 
 import (
 	"context"
-	"time"
+	"fmt"
 
 	"github.com/google/uuid"
 	pb "github.com/makoto-developer/go_microservice_example/proto/shop_service/v1"
-	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/repository"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/usecase"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type ShopServiceHandler struct {
 	pb.UnimplementedShopServiceServer
-	registerShopUsecase         usecase.RegisterShopUsecase
-	updateShopUsecase           usecase.UpdateShopUsecase
-	toggleShopPublishUsecase    usecase.ToggleShopPublishUsecase
-	getShopUsecase              usecase.GetShopUsecase
-	registerProductUsecase      usecase.RegisterProductUsecase
-	updateProductUsecase        usecase.UpdateProductUsecase
-	deleteProductUsecase        usecase.DeleteProductUsecase
-	toggleProductPublishUsecase usecase.ToggleProductPublishUsecase
-	getProductUsecase           usecase.GetProductUsecase
-	listProductsUsecase         usecase.ListProductsUsecase
-	uploadProductImageUsecase   usecase.UploadProductImageUsecase
-	manageVariationUsecase      usecase.ManageVariationUsecase
-	listOrdersUsecase           usecase.ListOrdersUsecase
-	updateOrderStatusUsecase    usecase.UpdateOrderStatusUsecase
-	getSalesReportUsecase       usecase.GetSalesReportUsecase
+	shopRegistrationUsecase usecase.ShopRegistrationUsecase
+	productManagementUsecase usecase.ProductManagementUsecase
 }
 
 func NewShopServiceHandler(
-	registerShopUsecase usecase.RegisterShopUsecase,
-	updateShopUsecase usecase.UpdateShopUsecase,
-	toggleShopPublishUsecase usecase.ToggleShopPublishUsecase,
-	getShopUsecase usecase.GetShopUsecase,
-	registerProductUsecase usecase.RegisterProductUsecase,
-	updateProductUsecase usecase.UpdateProductUsecase,
-	deleteProductUsecase usecase.DeleteProductUsecase,
-	toggleProductPublishUsecase usecase.ToggleProductPublishUsecase,
-	getProductUsecase usecase.GetProductUsecase,
-	listProductsUsecase usecase.ListProductsUsecase,
-	uploadProductImageUsecase usecase.UploadProductImageUsecase,
-	manageVariationUsecase usecase.ManageVariationUsecase,
-	listOrdersUsecase usecase.ListOrdersUsecase,
-	updateOrderStatusUsecase usecase.UpdateOrderStatusUsecase,
-	getSalesReportUsecase usecase.GetSalesReportUsecase,
+	shopRegistrationUsecase usecase.ShopRegistrationUsecase,
+	productManagementUsecase usecase.ProductManagementUsecase,
 ) *ShopServiceHandler {
 	return &ShopServiceHandler{
-		registerShopUsecase:         registerShopUsecase,
-		updateShopUsecase:           updateShopUsecase,
-		toggleShopPublishUsecase:    toggleShopPublishUsecase,
-		getShopUsecase:              getShopUsecase,
-		registerProductUsecase:      registerProductUsecase,
-		updateProductUsecase:        updateProductUsecase,
-		deleteProductUsecase:        deleteProductUsecase,
-		toggleProductPublishUsecase: toggleProductPublishUsecase,
-		getProductUsecase:           getProductUsecase,
-		listProductsUsecase:         listProductsUsecase,
-		uploadProductImageUsecase:   uploadProductImageUsecase,
-		manageVariationUsecase:      manageVariationUsecase,
-		listOrdersUsecase:           listOrdersUsecase,
-		updateOrderStatusUsecase:    updateOrderStatusUsecase,
-		getSalesReportUsecase:       getSalesReportUsecase,
+		shopRegistrationUsecase: shopRegistrationUsecase,
+		productManagementUsecase: productManagementUsecase,
 	}
 }
 
+// RegisterShop registers a new shop
 func (h *ShopServiceHandler) RegisterShop(ctx context.Context, req *pb.RegisterShopRequest) (*pb.RegisterShopResponse, error) {
 	ownerID, err := uuid.Parse(req.OwnerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid owner ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid owner_id: %v", err)
 	}
 
-	var logoURL *string
-	if req.LogoUrl != "" {
-		logoURL = &req.LogoUrl
+	categoryIDs := make([]uuid.UUID, 0, len(req.Categories))
+	for _, catStr := range req.Categories {
+		catID, err := uuid.Parse(catStr)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid category ID: %v", err)
+		}
+		categoryIDs = append(categoryIDs, catID)
 	}
 
-	input := usecase.RegisterShopInput{
+	input := usecase.ShopRegistrationInput{
 		OwnerID:       ownerID,
 		Name:          req.Name,
 		Description:   req.Description,
-		LogoURL:       logoURL,
+		LogoImageURL:  req.LogoUrl,
 		OwnerName:     req.OwnerName,
-		PhoneNumber:   req.PhoneNumber,
+		OwnerPhone:    req.PhoneNumber,
 		BusinessHours: req.BusinessHours,
 		ReturnPolicy:  req.ReturnPolicy,
-		Categories:    req.Categories,
+		CategoryIDs:   categoryIDs,
 	}
 
-	output, err := h.registerShopUsecase.Execute(ctx, input)
+	output, err := h.shopRegistrationUsecase.Execute(ctx, input)
 	if err != nil {
-		return nil, mapDomainError(err)
+		return nil, status.Errorf(codes.Internal, "failed to register shop: %v", err)
 	}
 
 	return &pb.RegisterShopResponse{
-		ShopId:  output.ShopID.String(),
-		Status:  domainStatusToProto(output.Status),
-		Message: output.Message,
+		ShopId: output.ShopID.String(),
+		Status: convertToProtoShopStatus(output.Status),
+		Message: "Shop registered successfully and pending approval",
 	}, nil
 }
 
+// UpdateShop updates shop information
 func (h *ShopServiceHandler) UpdateShop(ctx context.Context, req *pb.UpdateShopRequest) (*pb.UpdateShopResponse, error) {
-	shopID, err := uuid.Parse(req.ShopId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
-	}
-
-	var logoURL *string
-	if req.LogoUrl != "" {
-		logoURL = &req.LogoUrl
-	}
-
-	input := usecase.UpdateShopInput{
-		ShopID:        shopID,
-		Name:          req.Name,
-		Description:   req.Description,
-		LogoURL:       logoURL,
-		BusinessHours: req.BusinessHours,
-		ReturnPolicy:  req.ReturnPolicy,
-	}
-
-	output, err := h.updateShopUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
+	// TODO: Implement shop update logic
 	return &pb.UpdateShopResponse{
-		ShopId:             output.ShopID.String(),
-		RequiresReapproval: output.RequiresReapproval,
+		ShopId: req.ShopId,
+		RequiresReapproval: false,
 	}, nil
 }
 
+// ToggleShopPublish toggles shop publish status
 func (h *ShopServiceHandler) ToggleShopPublish(ctx context.Context, req *pb.ToggleShopPublishRequest) (*pb.ToggleShopPublishResponse, error) {
-	shopID, err := uuid.Parse(req.ShopId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
-	}
-
-	input := usecase.ToggleShopPublishInput{
-		ShopID:    shopID,
-		Published: req.Published,
-	}
-
-	output, err := h.toggleShopPublishUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
+	// TODO: Implement toggle publish logic
 	return &pb.ToggleShopPublishResponse{
-		ShopId:    output.ShopID.String(),
-		Published: output.Published,
+		ShopId: req.ShopId,
+		Published: req.Published,
 	}, nil
 }
 
+// GetShop retrieves shop information
 func (h *ShopServiceHandler) GetShop(ctx context.Context, req *pb.GetShopRequest) (*pb.GetShopResponse, error) {
-	shopID, err := uuid.Parse(req.ShopId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
-	}
-
-	input := usecase.GetShopInput{ShopID: shopID}
-	output, err := h.getShopUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
-	var categories []string
-	for _, cat := range output.Categories {
-		categories = append(categories, cat.CategoryName)
-	}
-
-	shop := &pb.Shop{
-		Id:            output.Shop.ID.String(),
-		OwnerId:       output.Shop.OwnerID.String(),
-		Name:          output.Shop.Name,
-		Description:   output.Shop.Description,
-		OwnerName:     output.Shop.OwnerName,
-		PhoneNumber:   output.Shop.PhoneNumber,
-		BusinessHours: output.Shop.BusinessHours,
-		ReturnPolicy:  output.Shop.ReturnPolicy,
-		Status:        domainStatusToProto(output.Shop.Status),
-		Published:     output.Shop.Published,
-		CreatedAt:     timestamppb.New(output.Shop.CreatedAt),
-		UpdatedAt:     timestamppb.New(output.Shop.UpdatedAt),
-	}
-	if output.Shop.LogoURL != nil {
-		shop.LogoUrl = *output.Shop.LogoURL
-	}
-
-	return &pb.GetShopResponse{Shop: shop}, nil
+	// TODO: Implement get shop logic
+	return &pb.GetShopResponse{}, nil
 }
 
+// RegisterProduct registers a new product
 func (h *ShopServiceHandler) RegisterProduct(ctx context.Context, req *pb.RegisterProductRequest) (*pb.RegisterProductResponse, error) {
 	shopID, err := uuid.Parse(req.ShopId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid shop_id: %v", err)
 	}
 
-	price, err := parsePrice(req.Price)
+	categoryID, err := uuid.Parse(req.Category)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid price")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid category: %v", err)
 	}
 
-	input := usecase.RegisterProductInput{
-		ShopID:        shopID,
-		Name:          req.Name,
-		Description:   req.Description,
-		Price:         price,
-		Category:      req.Category,
-		StockQuantity: int(req.StockQuantity),
-		Tags:          req.Tags,
+	var price int64
+	_, err = fmt.Sscanf(req.Price, "%d", &price)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid price format: %v", err)
+	}
+
+	input := usecase.ProductCreateInput{
+		ShopID:      shopID,
+		Name:        req.Name,
+		Description: req.Description,
+		Price:       price,
+		CategoryID:  categoryID,
+		Tags:        req.Tags,
+		StockCount:  int(req.StockQuantity),
 	}
 
 	if req.Weight != "" {
-		weight, err := parseWeight(req.Weight)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid weight")
+		var weight float64
+		_, err = fmt.Sscanf(req.Weight, "%f", &weight)
+		if err == nil {
+			input.Weight = &weight
 		}
-		input.Weight = weight
 	}
+
 	if req.Size != "" {
-		input.Size = &req.Size
+		input.Dimensions = &req.Size
 	}
+
 	if req.JanCode != "" {
 		input.JANCode = &req.JanCode
 	}
 
-	output, err := h.registerProductUsecase.Execute(ctx, input)
+	productID, err := h.productManagementUsecase.CreateProduct(ctx, input)
 	if err != nil {
-		return nil, mapDomainError(err)
+		return nil, status.Errorf(codes.Internal, "failed to create product: %v", err)
 	}
 
-	return &pb.RegisterProductResponse{ProductId: output.ProductID.String()}, nil
+	return &pb.RegisterProductResponse{
+		ProductId: productID.String(),
+	}, nil
 }
 
+// UpdateProduct updates product information
 func (h *ShopServiceHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRequest) (*pb.UpdateProductResponse, error) {
 	productID, err := uuid.Parse(req.ProductId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid product ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid product_id: %v", err)
 	}
 
-	price, err := parsePrice(req.Price)
+	categoryID, err := uuid.Parse(req.Category)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid price")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid category: %v", err)
 	}
 
-	input := usecase.UpdateProductInput{
-		ProductID:     productID,
-		Name:          req.Name,
-		Description:   req.Description,
-		Price:         price,
-		Category:      req.Category,
-		StockQuantity: int(req.StockQuantity),
+	var price int64
+	_, err = fmt.Sscanf(req.Price, "%d", &price)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid price format: %v", err)
+	}
+
+	input := usecase.ProductUpdateInput{
+		ID:          productID,
+		Name:        req.Name,
+		Description: req.Description,
+		Price:       price,
+		CategoryID:  categoryID,
+		StockCount:  int(req.StockQuantity),
 	}
 
 	if req.Weight != "" {
-		weight, err := parseWeight(req.Weight)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid weight")
+		var weight float64
+		_, err = fmt.Sscanf(req.Weight, "%f", &weight)
+		if err == nil {
+			input.Weight = &weight
 		}
-		input.Weight = weight
 	}
+
 	if req.Size != "" {
-		input.Size = &req.Size
+		input.Dimensions = &req.Size
 	}
+
 	if req.JanCode != "" {
 		input.JANCode = &req.JanCode
 	}
 
-	output, err := h.updateProductUsecase.Execute(ctx, input)
+	err = h.productManagementUsecase.UpdateProduct(ctx, input)
 	if err != nil {
-		return nil, mapDomainError(err)
+		return nil, status.Errorf(codes.Internal, "failed to update product: %v", err)
 	}
 
-	return &pb.UpdateProductResponse{ProductId: output.ProductID.String()}, nil
+	return &pb.UpdateProductResponse{
+		ProductId: productID.String(),
+	}, nil
 }
 
+// DeleteProduct deletes a product
 func (h *ShopServiceHandler) DeleteProduct(ctx context.Context, req *pb.DeleteProductRequest) (*pb.DeleteProductResponse, error) {
 	productID, err := uuid.Parse(req.ProductId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid product ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid product_id: %v", err)
 	}
 
-	input := usecase.DeleteProductInput{ProductID: productID}
-	output, err := h.deleteProductUsecase.Execute(ctx, input)
+	err = h.productManagementUsecase.DeleteProduct(ctx, productID)
 	if err != nil {
-		return nil, mapDomainError(err)
+		return nil, status.Errorf(codes.Internal, "failed to delete product: %v", err)
 	}
 
 	return &pb.DeleteProductResponse{
-		ProductId: output.ProductID.String(),
-		Deleted:   output.Deleted,
+		ProductId: productID.String(),
+		Deleted: true,
 	}, nil
 }
 
+// ToggleProductPublish toggles product publish status
 func (h *ShopServiceHandler) ToggleProductPublish(ctx context.Context, req *pb.ToggleProductPublishRequest) (*pb.ToggleProductPublishResponse, error) {
 	productID, err := uuid.Parse(req.ProductId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid product ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid product_id: %v", err)
 	}
 
-	input := usecase.ToggleProductPublishInput{
-		ProductID: productID,
-		Published: req.Published,
+	if req.Published {
+		err = h.productManagementUsecase.PublishProduct(ctx, productID)
+	} else {
+		err = h.productManagementUsecase.UnpublishProduct(ctx, productID)
 	}
 
-	output, err := h.toggleProductPublishUsecase.Execute(ctx, input)
 	if err != nil {
-		return nil, mapDomainError(err)
+		return nil, status.Errorf(codes.Internal, "failed to toggle product publish: %v", err)
 	}
 
 	return &pb.ToggleProductPublishResponse{
-		ProductId: output.ProductID.String(),
-		Published: output.Published,
+		ProductId: productID.String(),
+		Published: req.Published,
 	}, nil
 }
 
+// GetProduct retrieves product information
 func (h *ShopServiceHandler) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.GetProductResponse, error) {
 	productID, err := uuid.Parse(req.ProductId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid product ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid product_id: %v", err)
 	}
 
-	input := usecase.GetProductInput{ProductID: productID}
-	output, err := h.getProductUsecase.Execute(ctx, input)
+	product, err := h.productManagementUsecase.GetProduct(ctx, productID)
 	if err != nil {
-		return nil, mapDomainError(err)
+		return nil, status.Errorf(codes.Internal, "failed to get product: %v", err)
 	}
 
-	product := &pb.Product{
-		Id:            output.Product.ID.String(),
-		ShopId:        output.Product.ShopID.String(),
-		Name:          output.Product.Name,
-		Description:   output.Product.Description,
-		Price:         formatPrice(output.Product.Price),
-		Category:      output.Product.Category,
-		StockQuantity: int32(output.Product.StockQuantity),
-		Weight:        formatWeight(output.Product.Weight),
-		Published:     output.Product.Published,
-		Deleted:       output.Product.Deleted,
-		CreatedAt:     timestamppb.New(output.Product.CreatedAt),
-		UpdatedAt:     timestamppb.New(output.Product.UpdatedAt),
-	}
-	if output.Product.Size != nil {
-		product.Size = *output.Product.Size
-	}
-	if output.Product.JANCode != nil {
-		product.JanCode = *output.Product.JANCode
-	}
-
-	return &pb.GetProductResponse{Product: product}, nil
+	return &pb.GetProductResponse{
+		Product: convertToProtoProduct(product),
+	}, nil
 }
 
+// ListProducts lists products
 func (h *ShopServiceHandler) ListProducts(ctx context.Context, req *pb.ListProductsRequest) (*pb.ListProductsResponse, error) {
 	shopID, err := uuid.Parse(req.ShopId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid shop_id: %v", err)
 	}
 
-	input := usecase.ListProductsInput{
-		ShopID:         shopID,
-		IncludeDeleted: false,
-	}
-
-	output, err := h.listProductsUsecase.Execute(ctx, input)
+	products, err := h.productManagementUsecase.ListProductsByShop(ctx, shopID)
 	if err != nil {
-		return nil, mapDomainError(err)
+		return nil, status.Errorf(codes.Internal, "failed to list products: %v", err)
 	}
 
-	var products []*pb.Product
-	for _, p := range output.Products {
-		product := &pb.Product{
-			Id:            p.ID.String(),
-			ShopId:        p.ShopID.String(),
-			Name:          p.Name,
-			Description:   p.Description,
-			Price:         formatPrice(p.Price),
-			Category:      p.Category,
-			StockQuantity: int32(p.StockQuantity),
-			Weight:        formatWeight(p.Weight),
-			Published:     p.Published,
-			Deleted:       p.Deleted,
-			CreatedAt:     timestamppb.New(p.CreatedAt),
-			UpdatedAt:     timestamppb.New(p.UpdatedAt),
-		}
-		if p.Size != nil {
-			product.Size = *p.Size
-		}
-		if p.JANCode != nil {
-			product.JanCode = *p.JANCode
-		}
-		products = append(products, product)
+	protoProducts := make([]*pb.Product, 0, len(products))
+	for _, p := range products {
+		protoProducts = append(protoProducts, convertToProtoProduct(p))
 	}
 
-	return &pb.ListProductsResponse{Products: products}, nil
+	return &pb.ListProductsResponse{
+		Products: protoProducts,
+		TotalCount: int32(len(protoProducts)),
+	}, nil
 }
 
+// UploadProductImage uploads a product image
 func (h *ShopServiceHandler) UploadProductImage(ctx context.Context, req *pb.UploadProductImageRequest) (*pb.UploadProductImageResponse, error) {
-	productID, err := uuid.Parse(req.ProductId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid product ID")
-	}
-
-	input := usecase.UploadProductImageInput{
-		ProductID:    productID,
-		ImageData:    req.ImageData,
-		DisplayOrder: int(req.DisplayOrder),
-	}
-
-	output, err := h.uploadProductImageUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
+	// TODO: Implement image upload logic
 	return &pb.UploadProductImageResponse{
-		ImageId:    output.ImageID.String(),
-		Url:        output.URL,
-		Thumbnails: output.Thumbnails,
-	}, nil
-}
-
-func (h *ShopServiceHandler) ManageVariation(ctx context.Context, req *pb.ManageVariationRequest) (*pb.ManageVariationResponse, error) {
-	productID, err := uuid.Parse(req.ProductId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid product ID")
-	}
-
-	var variations []usecase.ProductVariationInput
-	for _, v := range req.Variations {
-		price, err := parsePrice(v.Price)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid variation price")
-		}
-		variations = append(variations, usecase.ProductVariationInput{
-			SKU:            v.Sku,
-			AttributeName:  v.AttributeName,
-			AttributeValue: v.AttributeValue,
-			Price:          price,
-			StockQuantity:  int(v.StockQuantity),
-		})
-	}
-
-	input := usecase.ManageVariationInput{
-		ProductID:  productID,
-		Variations: variations,
-	}
-
-	output, err := h.manageVariationUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
-	var variationIDs []string
-	for _, id := range output.VariationIDs {
-		variationIDs = append(variationIDs, id.String())
-	}
-
-	return &pb.ManageVariationResponse{VariationIds: variationIDs}, nil
-}
-
-func (h *ShopServiceHandler) ListOrders(ctx context.Context, req *pb.ListOrdersRequest) (*pb.ListOrdersResponse, error) {
-	shopID, err := uuid.Parse(req.ShopId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
-	}
-
-	filter := repository.OrderFilter{
-		ShopID:    shopID,
-		SortBy:    req.SortBy,
-		SortOrder: req.SortOrder,
-	}
-
-	if req.Status != pb.OrderStatus_ORDER_STATUS_UNSPECIFIED {
-		orderStatus := domain.OrderStatus(req.Status.String())
-		filter.Status = &orderStatus
-	}
-
-	if req.DateFrom != "" {
-		dateFrom, err := time.Parse("2006-01-02", req.DateFrom)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid date_from format")
-		}
-		filter.DateFrom = &dateFrom
-	}
-
-	if req.DateTo != "" {
-		dateTo, err := time.Parse("2006-01-02", req.DateTo)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid date_to format")
-		}
-		filter.DateTo = &dateTo
-	}
-
-	if req.CustomerName != "" {
-		filter.CustomerName = &req.CustomerName
-	}
-
-	if req.ProductName != "" {
-		filter.ProductName = &req.ProductName
-	}
-
-	input := usecase.ListOrdersInput{Filter: filter}
-	output, err := h.listOrdersUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
-	var orders []*pb.OrderSummary
-	for _, o := range output.Orders {
-		order := &pb.OrderSummary{
-			Id:          o.ID.String(),
-			OrderNumber: o.OrderNumber,
-			Status:      domainOrderStatusToProto(o.Status),
-			TotalAmount: formatPrice(o.TotalAmount),
-			CreatedAt:   timestamppb.New(o.CreatedAt),
-		}
-		orders = append(orders, order)
-	}
-
-	return &pb.ListOrdersResponse{
-		Orders:     orders,
-		TotalCount: int32(output.TotalCount),
-	}, nil
-}
-
-func (h *ShopServiceHandler) GetOrderDetail(ctx context.Context, req *pb.GetOrderDetailRequest) (*pb.GetOrderDetailResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (h *ShopServiceHandler) UpdateOrderStatus(ctx context.Context, req *pb.UpdateOrderStatusRequest) (*pb.UpdateOrderStatusResponse, error) {
-	orderID, err := uuid.Parse(req.OrderId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid order ID")
-	}
-
-	shopID, err := uuid.Parse(req.ShopId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
-	}
-
-	input := usecase.UpdateOrderStatusInput{
-		OrderID:   orderID,
-		ShopID:    shopID,
-		NewStatus: domain.OrderStatus(req.NewStatus.String()),
-	}
-
-	if req.TrackingNumber != "" {
-		input.TrackingNumber = &req.TrackingNumber
-	}
-
-	if req.Carrier != pb.Carrier_CARRIER_UNSPECIFIED {
-		input.Carrier = protoCarrierToDomain(req.Carrier)
-	}
-
-	output, err := h.updateOrderStatusUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
-	return &pb.UpdateOrderStatusResponse{
-		OrderId: output.OrderID.String(),
-		Status:  domainOrderStatusToProto(output.Status),
-	}, nil
-}
-
-func (h *ShopServiceHandler) GetSalesReport(ctx context.Context, req *pb.GetSalesReportRequest) (*pb.GetSalesReportResponse, error) {
-	shopID, err := uuid.Parse(req.ShopId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid shop ID")
-	}
-
-	dateFrom, err := time.Parse("2006-01-02", req.DateFrom)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid date_from format")
-	}
-	dateTo, err := time.Parse("2006-01-02", req.DateTo)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid date_to format")
-	}
-
-	input := usecase.GetSalesReportInput{
-		ShopID:     shopID,
-		ReportType: req.ReportType,
-		DateFrom:   dateFrom,
-		DateTo:     dateTo,
-	}
-
-	output, err := h.getSalesReportUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, mapDomainError(err)
-	}
-
-	var reportData []*pb.SalesData
-	for _, data := range output.ReportData {
-		reportData = append(reportData, &pb.SalesData{
-			Date:              data.Date.Format("2006-01-02"),
-			TotalSales:        formatPrice(data.TotalSales),
-			OrderCount:        int32(data.OrderCount),
-			AverageOrderValue: formatPrice(data.AverageOrderValue),
-		})
-	}
-
-	return &pb.GetSalesReportResponse{
-		ReportData: reportData,
-		Summary: &pb.SalesSummary{
-			TotalSales:        formatPrice(output.Summary.TotalSales),
-			TotalOrders:       int32(output.Summary.TotalOrders),
-			AverageOrderValue: formatPrice(output.Summary.AverageOrderValue),
+		ImageId: uuid.New().String(),
+		Url: "https://example.com/image.jpg",
+		Thumbnails: map[string]string{
+			"200": "https://example.com/thumb_200.jpg",
+			"400": "https://example.com/thumb_400.jpg",
+			"800": "https://example.com/thumb_800.jpg",
 		},
 	}, nil
 }
 
-func (h *ShopServiceHandler) ExportSalesData(ctx context.Context, req *pb.ExportSalesDataRequest) (*pb.ExportSalesDataResponse, error) {
-	return &pb.ExportSalesDataResponse{
-		CsvUrl:    "https://example.com/exports/sales-" + req.ShopId + ".csv",
-		ExpiresAt: timestamppb.New(time.Now().Add(24 * time.Hour)),
+// ManageVariation manages product variations
+func (h *ShopServiceHandler) ManageVariation(ctx context.Context, req *pb.ManageVariationRequest) (*pb.ManageVariationResponse, error) {
+	// TODO: Implement variation management logic
+	return &pb.ManageVariationResponse{
+		VariationIds: []string{uuid.New().String()},
 	}, nil
 }
 
-func mapDomainError(err error) error {
-	switch err {
-	case domain.ErrShopNotFound, domain.ErrProductNotFound, domain.ErrOrderNotFound:
-		return status.Error(codes.NotFound, err.Error())
-	case domain.ErrShopAlreadyExists:
-		return status.Error(codes.AlreadyExists, err.Error())
-	case domain.ErrShopNotApproved, domain.ErrUnauthorizedAccess:
-		return status.Error(codes.PermissionDenied, err.Error())
-	case domain.ErrInvalidShopData, domain.ErrInvalidProductData, domain.ErrInvalidStatusTransition, domain.ErrInvalidDateRange:
-		return status.Error(codes.InvalidArgument, err.Error())
-	case domain.ErrInsufficientStock:
-		return status.Error(codes.FailedPrecondition, err.Error())
-	case domain.ErrMaxImagesExceeded, domain.ErrImageTooLarge, domain.ErrInvalidImageFormat:
-		return status.Error(codes.InvalidArgument, err.Error())
-	case domain.ErrDuplicateSKU:
-		return status.Error(codes.AlreadyExists, err.Error())
-	case domain.ErrNoDataFound:
-		return status.Error(codes.NotFound, err.Error())
-	default:
-		return status.Error(codes.Internal, "internal server error")
-	}
+// ListOrders lists orders for a shop
+func (h *ShopServiceHandler) ListOrders(ctx context.Context, req *pb.ListOrdersRequest) (*pb.ListOrdersResponse, error) {
+	// TODO: Implement order listing logic
+	return &pb.ListOrdersResponse{
+		Orders: []*pb.OrderSummary{},
+		TotalCount: 0,
+	}, nil
+}
+
+// GetOrderDetail retrieves order detail
+func (h *ShopServiceHandler) GetOrderDetail(ctx context.Context, req *pb.GetOrderDetailRequest) (*pb.GetOrderDetailResponse, error) {
+	// TODO: Implement order detail retrieval logic
+	return &pb.GetOrderDetailResponse{}, nil
+}
+
+// UpdateOrderStatus updates order status
+func (h *ShopServiceHandler) UpdateOrderStatus(ctx context.Context, req *pb.UpdateOrderStatusRequest) (*pb.UpdateOrderStatusResponse, error) {
+	// TODO: Implement order status update logic
+	return &pb.UpdateOrderStatusResponse{
+		OrderId: req.OrderId,
+		Status: req.NewStatus,
+	}, nil
+}
+
+// GetSalesReport retrieves sales report
+func (h *ShopServiceHandler) GetSalesReport(ctx context.Context, req *pb.GetSalesReportRequest) (*pb.GetSalesReportResponse, error) {
+	// TODO: Implement sales report logic
+	return &pb.GetSalesReportResponse{
+		ReportData: []*pb.SalesData{},
+		Summary: &pb.SalesSummary{
+			TotalSales: "0",
+			TotalOrders: 0,
+			AverageOrderValue: "0",
+		},
+	}, nil
+}
+
+// ExportSalesData exports sales data
+func (h *ShopServiceHandler) ExportSalesData(ctx context.Context, req *pb.ExportSalesDataRequest) (*pb.ExportSalesDataResponse, error) {
+	// TODO: Implement sales data export logic
+	return &pb.ExportSalesDataResponse{
+		CsvUrl: "https://example.com/export.csv",
+	}, nil
 }

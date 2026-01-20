@@ -3,131 +3,180 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/repository"
 )
 
 type shopRepository struct {
 	db *sql.DB
 }
 
-func NewShopRepository(db *sql.DB) repository.ShopRepository {
+// NewShopRepository creates a new shop repository
+func NewShopRepository(db *sql.DB) *shopRepository {
 	return &shopRepository{db: db}
 }
 
 func (r *shopRepository) Create(ctx context.Context, shop *domain.Shop) error {
 	query := `
-		INSERT INTO shops (id, owner_id, name, description, logo_url, owner_name, phone_number,
-		                   business_hours, return_policy, status, published, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	`
+		INSERT INTO shops (
+			id, owner_id, name, description, logo_image_url,
+			owner_name, owner_phone, business_hours, return_policy,
+			status, is_public, created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+		)`
+
 	_, err := r.db.ExecContext(ctx, query,
-		shop.ID, shop.OwnerID, shop.Name, shop.Description, shop.LogoURL, shop.OwnerName,
-		shop.PhoneNumber, shop.BusinessHours, shop.ReturnPolicy, shop.Status, shop.Published,
-		shop.CreatedAt, shop.UpdatedAt,
+		shop.ID, shop.OwnerID, shop.Name, shop.Description, shop.LogoImageURL,
+		shop.OwnerName, shop.OwnerPhone, shop.BusinessHours, shop.ReturnPolicy,
+		shop.Status, shop.IsPublic, shop.CreatedAt, shop.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create shop: %w", err)
+	}
+
+	return nil
 }
 
 func (r *shopRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Shop, error) {
 	query := `
-		SELECT id, owner_id, name, description, logo_url, owner_name, phone_number,
-		       business_hours, return_policy, status, published, created_at, updated_at
-		FROM shops WHERE id = $1
-	`
-	shop := &domain.Shop{}
+		SELECT id, owner_id, name, description, logo_image_url,
+			   owner_name, owner_phone, business_hours, return_policy,
+			   status, is_public, created_at, updated_at, approved_at, approved_by
+		FROM shops
+		WHERE id = $1`
+
+	var shop domain.Shop
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&shop.ID, &shop.OwnerID, &shop.Name, &shop.Description, &shop.LogoURL, &shop.OwnerName,
-		&shop.PhoneNumber, &shop.BusinessHours, &shop.ReturnPolicy, &shop.Status, &shop.Published,
-		&shop.CreatedAt, &shop.UpdatedAt,
+		&shop.ID, &shop.OwnerID, &shop.Name, &shop.Description, &shop.LogoImageURL,
+		&shop.OwnerName, &shop.OwnerPhone, &shop.BusinessHours, &shop.ReturnPolicy,
+		&shop.Status, &shop.IsPublic, &shop.CreatedAt, &shop.UpdatedAt,
+		&shop.ApprovedAt, &shop.ApprovedBy,
 	)
 	if err == sql.ErrNoRows {
-		return nil, domain.ErrShopNotFound
+		return nil, fmt.Errorf("shop not found: %s", id)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get shop: %w", err)
 	}
-	return shop, nil
+
+	return &shop, nil
 }
 
-func (r *shopRepository) GetByOwnerID(ctx context.Context, ownerID uuid.UUID) (*domain.Shop, error) {
+func (r *shopRepository) GetByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]*domain.Shop, error) {
 	query := `
-		SELECT id, owner_id, name, description, logo_url, owner_name, phone_number,
-		       business_hours, return_policy, status, published, created_at, updated_at
-		FROM shops WHERE owner_id = $1
-	`
-	shop := &domain.Shop{}
-	err := r.db.QueryRowContext(ctx, query, ownerID).Scan(
-		&shop.ID, &shop.OwnerID, &shop.Name, &shop.Description, &shop.LogoURL, &shop.OwnerName,
-		&shop.PhoneNumber, &shop.BusinessHours, &shop.ReturnPolicy, &shop.Status, &shop.Published,
-		&shop.CreatedAt, &shop.UpdatedAt,
-	)
-	if err == sql.ErrNoRows {
-		return nil, domain.ErrShopNotFound
-	}
+		SELECT id, owner_id, name, description, logo_image_url,
+			   owner_name, owner_phone, business_hours, return_policy,
+			   status, is_public, created_at, updated_at, approved_at, approved_by
+		FROM shops
+		WHERE owner_id = $1
+		ORDER BY created_at DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, ownerID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get shops by owner: %w", err)
 	}
-	return shop, nil
+	defer rows.Close()
+
+	var shops []*domain.Shop
+	for rows.Next() {
+		var shop domain.Shop
+		err := rows.Scan(
+			&shop.ID, &shop.OwnerID, &shop.Name, &shop.Description, &shop.LogoImageURL,
+			&shop.OwnerName, &shop.OwnerPhone, &shop.BusinessHours, &shop.ReturnPolicy,
+			&shop.Status, &shop.IsPublic, &shop.CreatedAt, &shop.UpdatedAt,
+			&shop.ApprovedAt, &shop.ApprovedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan shop: %w", err)
+		}
+		shops = append(shops, &shop)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating shops: %w", err)
+	}
+
+	return shops, nil
 }
 
 func (r *shopRepository) Update(ctx context.Context, shop *domain.Shop) error {
 	query := `
-		UPDATE shops SET name = $2, description = $3, logo_url = $4, owner_name = $5,
-		                phone_number = $6, business_hours = $7, return_policy = $8, updated_at = $9
-		WHERE id = $1
-	`
+		UPDATE shops
+		SET name = $2, description = $3, logo_image_url = $4,
+			owner_name = $5, owner_phone = $6, business_hours = $7,
+			return_policy = $8, updated_at = $9
+		WHERE id = $1`
+
 	_, err := r.db.ExecContext(ctx, query,
-		shop.ID, shop.Name, shop.Description, shop.LogoURL, shop.OwnerName,
-		shop.PhoneNumber, shop.BusinessHours, shop.ReturnPolicy, shop.UpdatedAt,
+		shop.ID, shop.Name, shop.Description, shop.LogoImageURL,
+		shop.OwnerName, shop.OwnerPhone, shop.BusinessHours,
+		shop.ReturnPolicy, shop.UpdatedAt,
 	)
-	return err
-}
-
-func (r *shopRepository) UpdateStatus(ctx context.Context, shopID uuid.UUID, status domain.ShopStatus) error {
-	query := `UPDATE shops SET status = $2, updated_at = NOW() WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, shopID, status)
-	return err
-}
-
-func (r *shopRepository) UpdatePublished(ctx context.Context, shopID uuid.UUID, published bool) error {
-	query := `UPDATE shops SET published = $2, updated_at = NOW() WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, shopID, published)
-	return err
-}
-
-func (r *shopRepository) AddCategory(ctx context.Context, category *domain.ShopCategory) error {
-	query := `
-		INSERT INTO shop_categories (id, shop_id, category_name, created_at)
-		VALUES ($1, $2, $3, $4)
-	`
-	_, err := r.db.ExecContext(ctx, query, category.ID, category.ShopID, category.CategoryName, category.CreatedAt)
-	return err
-}
-
-func (r *shopRepository) GetCategories(ctx context.Context, shopID uuid.UUID) ([]*domain.ShopCategory, error) {
-	query := `SELECT id, shop_id, category_name, created_at FROM shop_categories WHERE shop_id = $1`
-	rows, err := r.db.QueryContext(ctx, query, shopID)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to update shop: %w", err)
+	}
+
+	return nil
+}
+
+func (r *shopRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.ShopStatus) error {
+	query := `UPDATE shops SET status = $2, updated_at = NOW() WHERE id = $1`
+
+	_, err := r.db.ExecContext(ctx, query, id, status)
+	if err != nil {
+		return fmt.Errorf("failed to update shop status: %w", err)
+	}
+
+	return nil
+}
+
+func (r *shopRepository) UpdateIsPublic(ctx context.Context, id uuid.UUID, isPublic bool) error {
+	query := `UPDATE shops SET is_public = $2, updated_at = NOW() WHERE id = $1`
+
+	_, err := r.db.ExecContext(ctx, query, id, isPublic)
+	if err != nil {
+		return fmt.Errorf("failed to update shop is_public: %w", err)
+	}
+
+	return nil
+}
+
+func (r *shopRepository) List(ctx context.Context, limit, offset int) ([]*domain.Shop, error) {
+	query := `
+		SELECT id, owner_id, name, description, logo_image_url,
+			   owner_name, owner_phone, business_hours, return_policy,
+			   status, is_public, created_at, updated_at, approved_at, approved_by
+		FROM shops
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`
+
+	rows, err := r.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list shops: %w", err)
 	}
 	defer rows.Close()
 
-	var categories []*domain.ShopCategory
+	var shops []*domain.Shop
 	for rows.Next() {
-		cat := &domain.ShopCategory{}
-		if err := rows.Scan(&cat.ID, &cat.ShopID, &cat.CategoryName, &cat.CreatedAt); err != nil {
-			return nil, err
+		var shop domain.Shop
+		err := rows.Scan(
+			&shop.ID, &shop.OwnerID, &shop.Name, &shop.Description, &shop.LogoImageURL,
+			&shop.OwnerName, &shop.OwnerPhone, &shop.BusinessHours, &shop.ReturnPolicy,
+			&shop.Status, &shop.IsPublic, &shop.CreatedAt, &shop.UpdatedAt,
+			&shop.ApprovedAt, &shop.ApprovedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan shop: %w", err)
 		}
-		categories = append(categories, cat)
+		shops = append(shops, &shop)
 	}
-	return categories, rows.Err()
-}
 
-func (r *shopRepository) DeleteCategories(ctx context.Context, shopID uuid.UUID) error {
-	query := `DELETE FROM shop_categories WHERE shop_id = $1`
-	_, err := r.db.ExecContext(ctx, query, shopID)
-	return err
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating shops: %w", err)
+	}
+
+	return shops, nil
 }

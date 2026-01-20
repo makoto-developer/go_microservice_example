@@ -48,7 +48,7 @@ func (u *updateAddressUsecase) Execute(ctx context.Context, input UpdateAddressI
 		return UpdateAddressOutput{}, domain.ErrAddressNotFound
 	}
 
-	address.AddressName = input.AddressName
+	address.Label = input.AddressName
 	address.PostalCode = input.PostalCode
 	address.Prefecture = input.Prefecture
 	address.City = input.City

@@ -23,7 +23,7 @@ type DatabaseConfig struct {
 	SSLMode  string
 }
 
-func Load() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	return &Config{
 		Server: ServerConfig{
 			Port: getEnv("CUSTOMER_SERVICE_PORT", "50053"),
@@ -39,17 +39,15 @@ func Load() (*Config, error) {
 	}, nil
 }
 
-func (c *Config) GetDatabaseDSN() string {
-	return fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		c.Database.Host, c.Database.Port, c.Database.User, c.Database.Password,
-		c.Database.DBName, c.Database.SSLMode,
-	)
+func (c *DatabaseConfig) ConnectionString() string {
+	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)
 }
 
 func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
-	return defaultValue
+	return value
 }

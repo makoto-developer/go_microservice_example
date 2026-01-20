@@ -42,9 +42,12 @@ func (u *updateCustomerProfileUsecase) Execute(ctx context.Context, input Update
 
 	customer.FirstName = input.FirstName
 	customer.LastName = input.LastName
-	customer.Phone = input.Phone
+	customer.PhoneNumber = input.Phone
 	customer.BirthDate = input.BirthDate
-	customer.Gender = input.Gender
+	if input.Gender != nil {
+		genderStr := string(*input.Gender)
+		customer.Gender = &genderStr
+	}
 	customer.UpdatedAt = time.Now()
 
 	if err := u.customerRepo.Update(ctx, customer); err != nil {

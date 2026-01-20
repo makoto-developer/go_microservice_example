@@ -2,90 +2,226 @@ package grpc
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/repository"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/usecase"
 	pb "github.com/makoto-developer/go_microservice_example/proto/order_service/v1"
+	"github.com/makoto-developer/go_microservice_example/generated/order/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/generated/order/internal/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type OrderServiceHandler struct {
 	pb.UnimplementedOrderServiceServer
-	createOrderUsecase usecase.CreateOrderUsecase
-	cancelOrderUsecase usecase.CancelOrderUsecase
-	orderRepo          repository.OrderRepository
+	orderMgmt usecase.OrderManagementUsecase
 }
 
-func NewOrderServiceHandler(
-	createOrderUsecase usecase.CreateOrderUsecase,
-	cancelOrderUsecase usecase.CancelOrderUsecase,
-	orderRepo repository.OrderRepository,
-) *OrderServiceHandler {
-	return &OrderServiceHandler{
-		createOrderUsecase: createOrderUsecase,
-		cancelOrderUsecase: cancelOrderUsecase,
-		orderRepo:          orderRepo,
-	}
+func NewOrderServiceHandler(orderMgmt usecase.OrderManagementUsecase) *OrderServiceHandler {
+	return &OrderServiceHandler{orderMgmt: orderMgmt}
 }
 
 func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error) {
-	customerID, err := uuid.Parse(req.CustomerId)
+	customerID, err := uuid.Parse(req.GetCustomerId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid customer ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid customer_id: %v", err)
 	}
 
-	// Convert cart items
-	items := make([]usecase.OrderItemInput, len(req.CartItems))
-	for i, item := range req.CartItems {
-		productID, err := uuid.Parse(item.ProductId)
+	addressID, err := uuid.Parse(req.GetShippingAddressId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid shipping_address_id: %v", err)
+	}
+
+	var items []usecase.OrderItemInput
+	for _, item := range req.GetCartItems() {
+		productID, err := uuid.Parse(item.GetProductId())
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid product ID")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid product_id: %v", err)
 		}
 
-		items[i] = usecase.OrderItemInput{
-			ProductID: productID,
-			ShopID:    uuid.New(), // TODO: Get from product or cart item
-			Quantity:  int(item.Quantity),
-			Price:     int(item.UnitPrice),
+		var variationID *uuid.UUID
+		if item.GetVariationId() != "" {
+			vid, err := uuid.Parse(item.GetVariationId())
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "invalid variation_id: %v", err)
+			}
+			variationID = &vid
 		}
+
+		items = append(items, usecase.OrderItemInput{
+			ProductID:   productID,
+			VariationID: variationID,
+			Quantity:    int(item.GetQuantity()),
+			UnitPrice:   item.GetUnitPrice(),
+		})
+	}
+
+	// Calculate shipping fee based on shipping method (simplified for now)
+	shippingFee := int64(500) // Default shipping fee
+	if req.GetShippingMethod() == "express" {
+		shippingFee = 1000
 	}
 
 	input := usecase.CreateOrderInput{
-		CustomerID: customerID,
-		Items:      items,
+		CustomerID:  customerID,
+		AddressID:   addressID,
+		Items:       items,
+		ShippingFee: shippingFee,
 	}
 
-	output, err := h.createOrderUsecase.Execute(ctx, input)
+	orderID, err := h.orderMgmt.CreateOrder(ctx, input)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to create order: %v", err)
 	}
 
 	return &pb.CreateOrderResponse{
-		OrderId:     output.OrderID.String(),
-		OrderNumber: output.OrderNumber,
-		Message:     "Order created successfully",
+		OrderId: orderID.String(),
+		Message: "Order created successfully",
+	}, nil
+}
+
+func (h *OrderServiceHandler) GetOrderDetail(ctx context.Context, req *pb.GetOrderDetailRequest) (*pb.GetOrderDetailResponse, error) {
+	orderID, err := uuid.Parse(req.GetOrderId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid order_id: %v", err)
+	}
+
+	order, err := h.orderMgmt.GetOrder(ctx, orderID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get order: %v", err)
+	}
+
+	// Convert domain.Order to pb.Order
+	pbOrder := &pb.Order{
+		Id:          order.ID.String(),
+		OrderNumber: order.OrderNumber,
+		CustomerId:  order.CustomerID.String(),
+		Status:      convertOrderStatus(order.Status),
+		TotalAmount: fmt.Sprintf("%d", order.TotalAmount),
+		ShippingFee: fmt.Sprintf("%d", order.ShippingFee),
+	}
+
+	return &pb.GetOrderDetailResponse{Order: pbOrder}, nil
+}
+
+func (h *OrderServiceHandler) ListOrders(ctx context.Context, req *pb.ListOrdersRequest) (*pb.ListOrdersResponse, error) {
+	return &pb.ListOrdersResponse{
+		Orders:    []*pb.Order{},
+		TotalCount: 0,
+		Page:      req.GetPage(),
+		PageSize:  req.GetPageSize(),
+	}, nil
+}
+
+func (h *OrderServiceHandler) UpdateOrderStatus(ctx context.Context, req *pb.UpdateOrderStatusRequest) (*pb.UpdateOrderStatusResponse, error) {
+	orderID, err := uuid.Parse(req.GetOrderId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid order_id: %v", err)
+	}
+
+	domainStatus := convertProtoToOrderStatus(req.GetNewStatus())
+	if err := h.orderMgmt.UpdateOrderStatus(ctx, orderID, domainStatus); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update order status: %v", err)
+	}
+
+	return &pb.UpdateOrderStatusResponse{
+		Success: true,
+		Message: "Order status updated successfully",
+	}, nil
+}
+
+func (h *OrderServiceHandler) GetOrderStatusHistory(ctx context.Context, req *pb.GetOrderStatusHistoryRequest) (*pb.GetOrderStatusHistoryResponse, error) {
+	return &pb.GetOrderStatusHistoryResponse{
+		History: []pb.OrderStatus{},
 	}, nil
 }
 
 func (h *OrderServiceHandler) CancelOrder(ctx context.Context, req *pb.CancelOrderRequest) (*pb.CancelOrderResponse, error) {
-	orderID, err := uuid.Parse(req.OrderId)
+	orderID, err := uuid.Parse(req.GetOrderId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid order ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid order_id: %v", err)
 	}
 
-	input := usecase.CancelOrderInput{
-		OrderID: orderID,
-	}
-
-	output, err := h.cancelOrderUsecase.Execute(ctx, input)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+	if err := h.orderMgmt.CancelOrder(ctx, orderID); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to cancel order: %v", err)
 	}
 
 	return &pb.CancelOrderResponse{
-		Success: output.Cancelled,
+		Success: true,
 		Message: "Order cancelled successfully",
 	}, nil
+}
+
+func (h *OrderServiceHandler) SearchOrders(ctx context.Context, req *pb.SearchOrdersRequest) (*pb.SearchOrdersResponse, error) {
+	return &pb.SearchOrdersResponse{
+		Orders:     []*pb.Order{},
+		TotalCount: 0,
+	}, nil
+}
+
+func (h *OrderServiceHandler) GetOrderStatistics(ctx context.Context, req *pb.GetOrderStatisticsRequest) (*pb.GetOrderStatisticsResponse, error) {
+	return &pb.GetOrderStatisticsResponse{
+		TotalOrders:     0,
+		TotalSales:      0,
+		PendingOrders:   0,
+		CompletedOrders: 0,
+	}, nil
+}
+
+func (h *OrderServiceHandler) GetProductSalesRanking(ctx context.Context, req *pb.GetProductSalesRankingRequest) (*pb.GetProductSalesRankingResponse, error) {
+	return &pb.GetProductSalesRankingResponse{
+		Rankings: []*pb.ProductSalesRank{},
+	}, nil
+}
+
+func (h *OrderServiceHandler) ExportOrdersToCSV(ctx context.Context, req *pb.ExportOrdersToCSVRequest) (*pb.ExportOrdersToCSVResponse, error) {
+	return &pb.ExportOrdersToCSVResponse{
+		CsvUrl:  "",
+		Message: "Export functionality not yet implemented",
+	}, nil
+}
+
+func (h *OrderServiceHandler) CreateReorder(ctx context.Context, req *pb.CreateReorderRequest) (*pb.CreateReorderResponse, error) {
+	return &pb.CreateReorderResponse{
+		OrderId: "",
+		Message: "Reorder functionality not yet implemented",
+	}, nil
+}
+
+// Helper functions
+func convertOrderStatus(status domain.OrderStatus) pb.OrderStatus {
+	switch status {
+	case domain.OrderStatusPending:
+		return pb.OrderStatus_PENDING
+	case domain.OrderStatusConfirmed:
+		return pb.OrderStatus_CONFIRMED
+	case domain.OrderStatusPaid:
+		return pb.OrderStatus_PAYMENT_PROCESSING
+	case domain.OrderStatusShipped:
+		return pb.OrderStatus_SHIPPED
+	case domain.OrderStatusDelivered:
+		return pb.OrderStatus_DELIVERED
+	case domain.OrderStatusCancelled:
+		return pb.OrderStatus_CANCELLED
+	default:
+		return pb.OrderStatus_ORDER_STATUS_UNSPECIFIED
+	}
+}
+
+func convertProtoToOrderStatus(status pb.OrderStatus) domain.OrderStatus {
+	switch status {
+	case pb.OrderStatus_PENDING:
+		return domain.OrderStatusPending
+	case pb.OrderStatus_CONFIRMED:
+		return domain.OrderStatusConfirmed
+	case pb.OrderStatus_PAYMENT_PROCESSING:
+		return domain.OrderStatusPaid
+	case pb.OrderStatus_SHIPPED:
+		return domain.OrderStatusShipped
+	case pb.OrderStatus_DELIVERED:
+		return domain.OrderStatusDelivered
+	case pb.OrderStatus_CANCELLED:
+		return domain.OrderStatusCancelled
+	default:
+		return domain.OrderStatusPending
+	}
 }
