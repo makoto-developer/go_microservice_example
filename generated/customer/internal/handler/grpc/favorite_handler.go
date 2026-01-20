@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/customer-service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/proto/customer_service/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -35,10 +35,9 @@ func (h *CustomerServiceHandler) AddToFavorite(ctx context.Context, req *pb.AddT
 	return &pb.AddToFavoriteResponse{
 		Message: "Product added to favorites successfully",
 		Favorite: &pb.Favorite{
-			Id:              output.FavoriteID.String(),
-			CustomerId:      customerID.String(),
-			ProductId:       productID.String(),
-			NotifyOnRestock: req.NotifyOnRestock,
+			Id:         output.FavoriteID.String(),
+			CustomerId: customerID.String(),
+			ProductId:  productID.String(),
 		},
 	}, nil
 }
@@ -58,11 +57,10 @@ func (h *CustomerServiceHandler) GetFavorites(ctx context.Context, req *pb.GetFa
 	var favorites []*pb.Favorite
 	for _, fav := range output.Favorites {
 		favorites = append(favorites, &pb.Favorite{
-			Id:              fav.ID.String(),
-			CustomerId:      fav.CustomerID.String(),
-			ProductId:       fav.ProductID.String(),
-			NotifyOnRestock: fav.NotifyOnRestock,
-			CreatedAt:       timestampProto(fav.CreatedAt),
+			Id:         fav.ID.String(),
+			CustomerId: fav.CustomerID.String(),
+			ProductId:  fav.ProductID.String(),
+			CreatedAt:  timestampProto(fav.CreatedAt),
 		})
 	}
 

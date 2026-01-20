@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
-	pb "github.com/makoto-developer/go_microservice_example/proto/customer-service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/proto/customer_service/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

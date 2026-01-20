@@ -38,7 +38,7 @@ func NewReserveStockUsecase(inventoryRepo repository.InventoryRepository) Reserv
 }
 
 func (u *reserveStockUsecaseImpl) Execute(ctx context.Context, input ReserveStockInput) (ReserveStockOutput, error) {
-	inventory, err := u.inventoryRepo.GetByProductAndShop(ctx, input.ProductID, input.ShopID)
+	inventory, err := u.inventoryRepo.GetByProductID(ctx, input.ProductID, nil)
 	if err != nil {
 		return ReserveStockOutput{}, err
 	}
@@ -47,7 +47,7 @@ func (u *reserveStockUsecaseImpl) Execute(ctx context.Context, input ReserveStoc
 		return ReserveStockOutput{}, ErrInsufficientStock
 	}
 
-	err = u.inventoryRepo.Reserve(ctx, inventory.ID, input.Quantity, input.OrderID)
+	err = u.inventoryRepo.Reserve(ctx, inventory.ID, input.Quantity)
 	if err != nil {
 		return ReserveStockOutput{}, err
 	}

@@ -8,7 +8,7 @@ import (
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	pb "github.com/makoto-developer/go_microservice_example/proto/inventory_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/proto/inventory-service/v1"
 	"github.com/makoto-developer/go_microservice_example/generated/inventory/config"
 	grpchandler "github.com/makoto-developer/go_microservice_example/generated/inventory/internal/handler/grpc"
 	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/repository/postgres"

@@ -35,13 +35,63 @@ func main() {
 
 	log.Println("Successfully connected to database")
 
+	// Initialize repositories
 	customerRepo := postgres.NewCustomerRepository(db)
 	addressRepo := postgres.NewAddressRepository(db)
+	cartRepo := postgres.NewCartRepository(db)
+	favoriteRepo := postgres.NewFavoriteRepository(db)
+	paymentMethodRepo := postgres.NewPaymentMethodRepository(db)
+	reviewRepo := postgres.NewReviewRepository(db)
 
-	customerMgmt := usecase.NewCustomerManagementUsecase(customerRepo)
-	addressMgmt := usecase.NewAddressManagementUsecase(addressRepo)
+	// Initialize profile usecases
+	getProfileUsecase := usecase.NewGetCustomerProfileUsecase(customerRepo)
+	updateProfileUsecase := usecase.NewUpdateCustomerProfileUsecase(customerRepo)
 
-	handler := grpchandler.NewCustomerServiceHandler(customerMgmt, addressMgmt)
+	// Initialize address usecases
+	registerAddressUsecase := usecase.NewRegisterAddressUsecase(customerRepo, addressRepo)
+	updateAddressUsecase := usecase.NewUpdateAddressUsecase(addressRepo)
+	deleteAddressUsecase := usecase.NewDeleteAddressUsecase(addressRepo)
+
+	// Initialize cart usecases
+	addToCartUsecase := usecase.NewAddToCartUsecase(cartRepo)
+	getCartUsecase := usecase.NewGetCartUsecase(cartRepo)
+	updateCartItemQuantityUsecase := usecase.NewUpdateCartItemQuantityUsecase(cartRepo)
+	removeFromCartUsecase := usecase.NewRemoveFromCartUsecase(cartRepo)
+	mergeGuestCartUsecase := usecase.NewMergeGuestCartUsecase(cartRepo)
+
+	// Initialize favorite usecases
+	addToFavoriteUsecase := usecase.NewAddToFavoriteUsecase(favoriteRepo)
+	listFavoritesUsecase := usecase.NewListFavoritesUsecase(favoriteRepo)
+	removeFromFavoriteUsecase := usecase.NewRemoveFromFavoriteUsecase(favoriteRepo)
+
+	// Initialize payment method usecases
+	addPaymentMethodUsecase := usecase.NewAddPaymentMethodUsecase(paymentMethodRepo)
+	deletePaymentMethodUsecase := usecase.NewDeletePaymentMethodUsecase(paymentMethodRepo)
+
+	// Initialize review usecases
+	createReviewUsecase := usecase.NewCreateReviewUsecase(reviewRepo)
+	updateReviewUsecase := usecase.NewUpdateReviewUsecase(reviewRepo)
+
+	// Initialize handler with all usecases
+	handler := grpchandler.NewCustomerServiceHandler(
+		getProfileUsecase,
+		updateProfileUsecase,
+		registerAddressUsecase,
+		updateAddressUsecase,
+		deleteAddressUsecase,
+		addToCartUsecase,
+		getCartUsecase,
+		updateCartItemQuantityUsecase,
+		removeFromCartUsecase,
+		mergeGuestCartUsecase,
+		addToFavoriteUsecase,
+		listFavoritesUsecase,
+		removeFromFavoriteUsecase,
+		addPaymentMethodUsecase,
+		deletePaymentMethodUsecase,
+		createReviewUsecase,
+		updateReviewUsecase,
+	)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {
@@ -50,7 +100,6 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterCustomerServiceServer(grpcServer, handler)
-
 	reflection.Register(grpcServer)
 
 	log.Printf("Customer Service is running on port %s", cfg.Server.Port)

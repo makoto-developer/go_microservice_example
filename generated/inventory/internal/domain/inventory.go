@@ -19,3 +19,7 @@ type Inventory struct {
 func (i *Inventory) AvailableQuantity() int {
 	return i.Quantity - i.ReservedQuantity
 }
+
+func (i *Inventory) CanReserve(quantity int) bool {
+	return i.AvailableQuantity() >= quantity
+}

@@ -34,7 +34,7 @@ func NewCheckStockUsecase(inventoryRepo repository.InventoryRepository) CheckSto
 }
 
 func (u *checkStockUsecaseImpl) Execute(ctx context.Context, input CheckStockInput) (CheckStockOutput, error) {
-	inventory, err := u.inventoryRepo.GetByProductAndShop(ctx, input.ProductID, input.ShopID)
+	inventory, err := u.inventoryRepo.GetByProductID(ctx, input.ProductID, nil)
 	if err != nil {
 		return CheckStockOutput{}, err
 	}

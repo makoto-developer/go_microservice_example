@@ -5,7 +5,7 @@ import (
 
 	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
 	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/customer-service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/proto/customer_service/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
