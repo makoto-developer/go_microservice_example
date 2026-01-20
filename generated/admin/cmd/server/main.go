@@ -10,8 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/inventory/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/generated/admin/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/generated/admin/internal/handler/grpc"
+	pb "github.com/makoto-developer/go_microservice_example/proto/admin_service/v1"
 )
 
 func main() {
@@ -20,7 +21,6 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Database connection (optional for now)
 	db, err := sql.Open("postgres", cfg.GetDatabaseDSN())
 	if err != nil {
 		log.Printf("Warning: Failed to connect to database: %v", err)
@@ -35,8 +35,7 @@ func main() {
 		}
 	}
 
-	// Initialize handler with mock implementation
-	_ = grpchandler.NewInventoryServiceHandler()
+	handler := grpchandler.NewAdminServiceHandler()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {
@@ -44,11 +43,10 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
-	// Note: Proto registration is temporarily disabled due to namespace conflict
-	// Full implementation requires resolving inventory-service vs inventory_service namespace conflict
+	pb.RegisterAdminServiceServer(grpcServer, handler)
 	reflection.Register(grpcServer)
 
-	log.Printf("🚀 Inventory Service gRPC server listening on port %s (mock mode)", cfg.Server.Port)
+	log.Printf("🚀 Admin Service gRPC server listening on port %s", cfg.Server.Port)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
