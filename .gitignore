@@ -1,34 +1,23 @@
-# Binaries for programs and plugins
-bin/
+# Binaries
 *.exe
-*.exe~
 *.dll
 *.so
 *.dylib
+auth-server
+shop-server
+*-server
 
-# Test binary, built with `go test -c`
+# Test binaries
 *.test
 
-# Output of the go coverage tool
+# Output of go coverage tool
 *.out
-coverage.out
-coverage.html
-
-# Go workspace file
-go.work
 
 # Dependency directories
 vendor/
 
-# MPS Generated Code (オプション: コミットしない場合)
-#generated/
-
-# MPS Cache
-mps-workspace/.mps/
-mps-workspace/build/
-
-# Protocol Buffers Generated Code (再生成可能な場合)
-# gen/
+# Go workspace file
+go.work
 
 # IDE
 .idea/
@@ -41,33 +30,48 @@ mps-workspace/build/
 .DS_Store
 Thumbs.db
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
 # Logs
 *.log
-logs/
+terminal*.log
 
-# Temporary files
-tmp/
-temp/
+# 古いディレクトリ（削除予定）
+auth-service/
+shop-service/
+customer-service/
+inventory-service/
+order-service/
+payment-service/
+shipping-service/
+notification-service/
+review-service/
+chat-service/
+search-service/
+admin-service/
+generated/
+proto/
+scripts/
+bin/
+config/
+mock/
+test-client/
+services/
+
+# ビルド成果物（build/で管理）
+/build/bin/*
+!/build/bin/.gitkeep
+/build/proto/*
+!/build/proto/.gitkeep
+
+# 環境変数
+.env
+.env.local
+
+# Docker
+docker-compose.yml.backup
+docker-compose.new.yml
+
+# 一時ファイル
 *.tmp
-
-# Build artifacts
-dist/
-build/
-
-# Docker volumes (local data)
-# Note: Named volumes managed by Docker are not in the repository
-# but if you mount local directories, add them here
-docker-volumes/
-
-# Docker logs
-*.log
-docker-compose.override.yml
-
-# AI
-.serena
-
+*.bak
+memo.md
+task.md

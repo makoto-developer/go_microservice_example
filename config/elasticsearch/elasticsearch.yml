@@ -1,6 +1,0 @@
-# Elasticsearch Configuration
-cluster.name: "shop-mall-cluster"
-network.host: 0.0.0.0
-
-# Analysis plugins
-# kuromoji plugin will be installed via elasticsearch-init container

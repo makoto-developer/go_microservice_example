@@ -8,7 +8,7 @@
 # ========================================
 # Variables
 # ========================================
-COMPOSE := docker-compose
+COMPOSE := docker-compose -f infrastructure/docker/docker-compose.yml
 PROJECT_ROOT := $(shell pwd)
 WEB_DIR := $(PROJECT_ROOT)/web/shop_mall_web
 
