@@ -9,12 +9,12 @@ import (
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	
+
 	"github.com/makoto-developer/go_microservice_example/generated/auth/config"
 	grpchandler "github.com/makoto-developer/go_microservice_example/generated/auth/internal/handler/grpc"
 	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/repository/postgres"
 	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/auth_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/generated/auth/proto/auth_service/v1"
 )
 
 func main() {
@@ -37,9 +37,11 @@ func main() {
 	
 	userRepo := postgres.NewUserRepository(db)
 	jwtService := usecase.NewJWTService(cfg.JWTAccessSecret, cfg.JWTRefreshSecret)
+	emailService := usecase.NewEmailService()
 	registrationUsecase := usecase.NewUserRegistrationUsecase(userRepo, jwtService)
 	loginUsecase := usecase.NewUserLoginUsecase(userRepo, jwtService)
-	authHandler := grpchandler.NewAuthServiceHandler(registrationUsecase, loginUsecase, jwtService)
+	passwordResetUsecase := usecase.NewPasswordResetUsecase(userRepo, emailService)
+	authHandler := grpchandler.NewAuthServiceHandler(registrationUsecase, loginUsecase, jwtService, passwordResetUsecase)
 	
 	grpcServer := grpc.NewServer()
 	pb.RegisterAuthServiceServer(grpcServer, authHandler)

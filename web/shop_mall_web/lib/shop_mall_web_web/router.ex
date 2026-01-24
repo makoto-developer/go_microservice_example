@@ -19,6 +19,8 @@ defmodule ShopMallWebWeb.Router do
 
     get "/", PageController, :home
     live "/auth", AuthLive
+    live "/auth/password-reset", PasswordResetLive
+    live "/auth/reset-password", PasswordResetConfirmLive
 
     # Customer routes
     live "/dashboard", DashboardLive

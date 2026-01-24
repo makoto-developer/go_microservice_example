@@ -160,6 +160,17 @@ defmodule ShopMallWebWeb.AuthLive do
           </button>
         </form>
 
+        <%= if @mode == :login do %>
+          <div class="mt-4 text-center">
+            <.link
+              href="/auth/password-reset"
+              class="text-sm text-blue-600 hover:text-blue-800"
+            >
+              パスワードを忘れた方はこちら
+            </.link>
+          </div>
+        <% end %>
+
         <div class="mt-6 text-center">
           <button
             phx-click="toggle_mode"

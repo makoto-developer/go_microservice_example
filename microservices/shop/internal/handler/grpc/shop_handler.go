@@ -258,6 +258,14 @@ func (h *ShopServiceHandler) GetProduct(ctx context.Context, req *pb.GetProductR
 
 // ListProducts lists products
 func (h *ShopServiceHandler) ListProducts(ctx context.Context, req *pb.ListProductsRequest) (*pb.ListProductsResponse, error) {
+	// shop_idが空の場合は空のリストを返す（将来的には全商品を返す実装に変更可能）
+	if req.ShopId == "" {
+		return &pb.ListProductsResponse{
+			Products:   []*pb.Product{},
+			TotalCount: 0,
+		}, nil
+	}
+
 	shopID, err := uuid.Parse(req.ShopId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid shop_id: %v", err)
@@ -274,7 +282,7 @@ func (h *ShopServiceHandler) ListProducts(ctx context.Context, req *pb.ListProdu
 	}
 
 	return &pb.ListProductsResponse{
-		Products: protoProducts,
+		Products:   protoProducts,
 		TotalCount: int32(len(protoProducts)),
 	}, nil
 }

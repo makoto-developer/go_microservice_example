@@ -5,28 +5,31 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	
-	pb "github.com/makoto-developer/go_microservice_example/proto/auth_service/v1"
+
+	pb "github.com/makoto-developer/go_microservice_example/generated/auth/proto/auth_service/v1"
 	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/domain"
 	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/usecase"
 )
 
 type AuthServiceHandler struct {
 	pb.UnimplementedAuthServiceServer
-	registrationUsecase *usecase.UserRegistrationUsecase
-	loginUsecase        *usecase.UserLoginUsecase
-	jwtService          *usecase.JWTService
+	registrationUsecase  *usecase.UserRegistrationUsecase
+	loginUsecase         *usecase.UserLoginUsecase
+	jwtService           *usecase.JWTService
+	passwordResetUsecase *usecase.PasswordResetUsecase
 }
 
 func NewAuthServiceHandler(
 	registrationUsecase *usecase.UserRegistrationUsecase,
 	loginUsecase *usecase.UserLoginUsecase,
 	jwtService *usecase.JWTService,
+	passwordResetUsecase *usecase.PasswordResetUsecase,
 ) *AuthServiceHandler {
 	return &AuthServiceHandler{
-		registrationUsecase: registrationUsecase,
-		loginUsecase:        loginUsecase,
-		jwtService:          jwtService,
+		registrationUsecase:  registrationUsecase,
+		loginUsecase:         loginUsecase,
+		jwtService:           jwtService,
+		passwordResetUsecase: passwordResetUsecase,
 	}
 }
 
@@ -131,10 +134,19 @@ func (h *AuthServiceHandler) VerifyEmail(ctx context.Context, req *pb.EmailVerif
 }
 
 func (h *AuthServiceHandler) RequestPasswordReset(ctx context.Context, req *pb.PasswordResetRequestRequest) (*pb.PasswordResetResponse, error) {
+	err := h.passwordResetUsecase.RequestPasswordReset(ctx, req.Email)
+	if err != nil {
+		// セキュリティ上、エラー詳細は返さない
+		return &pb.PasswordResetResponse{Success: true, Message: "If the email exists, a password reset link has been sent"}, nil
+	}
 	return &pb.PasswordResetResponse{Success: true, Message: "Password reset email sent"}, nil
 }
 
 func (h *AuthServiceHandler) ResetPassword(ctx context.Context, req *pb.PasswordResetRequest) (*pb.ResetPasswordResponse, error) {
+	err := h.passwordResetUsecase.ResetPassword(ctx, req.Token, req.NewPassword)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Invalid or expired reset token")
+	}
 	return &pb.ResetPasswordResponse{Success: true, Message: "Password reset successfully"}, nil
 }
 

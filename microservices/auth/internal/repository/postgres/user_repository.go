@@ -142,3 +142,29 @@ func (r *userRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, p
 	_, err := r.db.ExecContext(ctx, query, userID, passwordHash, time.Now())
 	return err
 }
+
+func (r *userRepository) FindByPasswordResetToken(ctx context.Context, token string) (*domain.User, error) {
+	query := `
+		SELECT
+			id, email, password_hash, role, email_verified,
+			email_verification_token, email_verification_expires_at,
+			password_reset_token, password_reset_expires_at,
+			created_at, updated_at
+		FROM users
+		WHERE password_reset_token = $1
+	`
+
+	user := &domain.User{}
+	err := r.db.QueryRowContext(ctx, query, token).Scan(
+		&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.EmailVerified,
+		&user.EmailVerificationToken, &user.EmailVerificationExpiresAt,
+		&user.PasswordResetToken, &user.PasswordResetExpiresAt,
+		&user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return user, err
+}
