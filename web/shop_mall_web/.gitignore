@@ -34,6 +34,21 @@ shop_mall_web-*.tar
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
+/node_modules/
+package-lock.json
+
+# Logs
+*.log
+phoenix.log
+
+# Playwright/E2E Testing
+/test-results/
+/playwright-report/
+.last-run.json
+
+# OS files
+.DS_Store
+Thumbs.db
 
 # AI
 .claude
