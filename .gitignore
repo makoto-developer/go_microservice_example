@@ -75,3 +75,34 @@ docker-compose.new.yml
 *.bak
 memo.md
 task.md
+
+# AI (既にコミット済みのため、git rm --cached が必要)
+# .claude
+# .serena
+
+# Task
+task*.md
+
+# Elixir/Phoenix
+_build/
+deps/
+*.beam
+*.ez
+/priv/static/assets/
+/priv/static/cache_manifest.json
+erl_crash.dump
+
+# Node.js (重要: 既にnode_modulesがコミット済み、git rm -r --cached が必要)
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Playwright/テスト
+test-results/
+playwright-report/
+.last-run.json
+
+# 環境変数 (既存の.envに加えて)
+.env.new
+.env.*.local
+
