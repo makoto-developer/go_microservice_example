@@ -76,9 +76,9 @@ docker-compose.new.yml
 memo.md
 task.md
 
-# AI (既にコミット済みのため、git rm --cached が必要)
-# .claude
-# .serena
+# AI - 個人設定のみ除外、プロジェクト設定はコミット
+.claude/settings.local.json
+.serena/settings.local.json
 
 # Task
 task*.md
