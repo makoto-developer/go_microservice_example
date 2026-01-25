@@ -575,6 +575,42 @@ defmodule ShopService.V1.GetShopResponse do
   field :shop, 1, type: ShopService.V1.Shop
 end
 
+defmodule ShopService.V1.ListShopsRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shop_service.v1.ListShopsRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field :published_only, 1, type: :bool, json_name: "publishedOnly"
+  field :limit, 2, type: :int32
+  field :offset, 3, type: :int32
+end
+
+defmodule ShopService.V1.ListShopsResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shop_service.v1.ListShopsResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field :shops, 1, repeated: true, type: ShopService.V1.Shop
+  field :total_count, 2, type: :int32, json_name: "totalCount"
+end
+
+defmodule ShopService.V1.GetShopsByOwnerRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shop_service.v1.GetShopsByOwnerRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field :owner_id, 1, type: :string, json_name: "ownerId"
+end
+
 defmodule ShopService.V1.RegisterProductResponse do
   @moduledoc false
 
@@ -758,6 +794,10 @@ defmodule ShopService.V1.ShopService.Service do
       ShopService.V1.ToggleShopPublishResponse
 
   rpc :GetShop, ShopService.V1.GetShopRequest, ShopService.V1.GetShopResponse
+
+  rpc :ListShops, ShopService.V1.ListShopsRequest, ShopService.V1.ListShopsResponse
+
+  rpc :GetShopsByOwner, ShopService.V1.GetShopsByOwnerRequest, ShopService.V1.ListShopsResponse
 
   rpc :RegisterProduct,
       ShopService.V1.RegisterProductRequest,

@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	pb "github.com/makoto-developer/go_microservice_example/proto/shop_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/generated/shop/proto/shop_service/v1"
+	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/repository"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/usecase"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,17 +14,20 @@ import (
 
 type ShopServiceHandler struct {
 	pb.UnimplementedShopServiceServer
-	shopRegistrationUsecase usecase.ShopRegistrationUsecase
+	shopRegistrationUsecase  usecase.ShopRegistrationUsecase
 	productManagementUsecase usecase.ProductManagementUsecase
+	shopRepo                 repository.ShopRepository
 }
 
 func NewShopServiceHandler(
 	shopRegistrationUsecase usecase.ShopRegistrationUsecase,
 	productManagementUsecase usecase.ProductManagementUsecase,
+	shopRepo repository.ShopRepository,
 ) *ShopServiceHandler {
 	return &ShopServiceHandler{
-		shopRegistrationUsecase: shopRegistrationUsecase,
+		shopRegistrationUsecase:  shopRegistrationUsecase,
 		productManagementUsecase: productManagementUsecase,
+		shopRepo:                 shopRepo,
 	}
 }
 
@@ -87,8 +91,73 @@ func (h *ShopServiceHandler) ToggleShopPublish(ctx context.Context, req *pb.Togg
 
 // GetShop retrieves shop information
 func (h *ShopServiceHandler) GetShop(ctx context.Context, req *pb.GetShopRequest) (*pb.GetShopResponse, error) {
-	// TODO: Implement get shop logic
-	return &pb.GetShopResponse{}, nil
+	shopID, err := uuid.Parse(req.ShopId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid shop_id: %v", err)
+	}
+
+	shop, err := h.shopRepo.GetByID(ctx, shopID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "shop not found: %v", err)
+	}
+
+	return &pb.GetShopResponse{
+		Shop: convertToProtoShop(shop),
+	}, nil
+}
+
+// ListShops lists all public shops
+func (h *ShopServiceHandler) ListShops(ctx context.Context, req *pb.ListShopsRequest) (*pb.ListShopsResponse, error) {
+	limit := int(req.Limit)
+	if limit <= 0 {
+		limit = 100
+	}
+	offset := int(req.Offset)
+	if offset < 0 {
+		offset = 0
+	}
+
+	shops, err := h.shopRepo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list shops: %v", err)
+	}
+
+	// 公開ショップのみフィルタリング
+	protoShops := make([]*pb.Shop, 0, len(shops))
+	for _, shop := range shops {
+		if req.PublishedOnly && !shop.IsPublic {
+			continue
+		}
+		protoShops = append(protoShops, convertToProtoShop(shop))
+	}
+
+	return &pb.ListShopsResponse{
+		Shops:      protoShops,
+		TotalCount: int32(len(protoShops)),
+	}, nil
+}
+
+// GetShopsByOwner retrieves shops by owner ID
+func (h *ShopServiceHandler) GetShopsByOwner(ctx context.Context, req *pb.GetShopsByOwnerRequest) (*pb.ListShopsResponse, error) {
+	ownerID, err := uuid.Parse(req.OwnerId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid owner_id: %v", err)
+	}
+
+	shops, err := h.shopRepo.GetByOwnerID(ctx, ownerID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get shops: %v", err)
+	}
+
+	protoShops := make([]*pb.Shop, 0, len(shops))
+	for _, shop := range shops {
+		protoShops = append(protoShops, convertToProtoShop(shop))
+	}
+
+	return &pb.ListShopsResponse{
+		Shops:      protoShops,
+		TotalCount: int32(len(protoShops)),
+	}, nil
 }
 
 // RegisterProduct registers a new product

@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pb "github.com/makoto-developer/go_microservice_example/proto/shop_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/generated/shop/proto/shop_service/v1"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/config"
 	grpchandler "github.com/makoto-developer/go_microservice_example/generated/shop/internal/handler/grpc"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/repository/postgres"
@@ -57,6 +57,7 @@ func main() {
 	handler := grpchandler.NewShopServiceHandler(
 		shopRegistrationUsecase,
 		productManagementUsecase,
+		shopRepo,
 	)
 
 	// Create gRPC server

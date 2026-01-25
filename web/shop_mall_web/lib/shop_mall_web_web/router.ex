@@ -28,10 +28,16 @@ defmodule ShopMallWebWeb.Router do
     live "/products/:id", ProductDetailLive
 
     # Owner routes
+    live "/owner/auth", Owner.AuthLive
+    live "/owner/shop/register", Owner.ShopRegisterLive
     live "/owner/dashboard", Owner.DashboardLive
     live "/owner/products", Owner.ProductListLive
     live "/owner/products/new", Owner.ProductFormLive
     live "/owner/products/:id/edit", Owner.ProductFormLive
+
+    # Shop listing (for customers)
+    live "/shops", ShopListLive
+    live "/shops/:id", ShopDetailLive
   end
 
   # Other scopes may use custom stacks.

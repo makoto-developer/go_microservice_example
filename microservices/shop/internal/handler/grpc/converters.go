@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	pb "github.com/makoto-developer/go_microservice_example/proto/shop_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/generated/shop/proto/shop_service/v1"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/domain"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"fmt"
@@ -19,6 +19,27 @@ func convertToProtoShopStatus(status domain.ShopStatus) pb.ShopStatus {
 	default:
 		return pb.ShopStatus_SHOP_STATUS_UNSPECIFIED
 	}
+}
+
+// convertToProtoShop converts domain Shop to proto Shop
+func convertToProtoShop(s *domain.Shop) *pb.Shop {
+	shop := &pb.Shop{
+		Id:            s.ID.String(),
+		OwnerId:       s.OwnerID.String(),
+		Name:          s.Name,
+		Description:   s.Description,
+		LogoUrl:       s.LogoImageURL,
+		OwnerName:     s.OwnerName,
+		PhoneNumber:   s.OwnerPhone,
+		BusinessHours: s.BusinessHours,
+		ReturnPolicy:  s.ReturnPolicy,
+		Status:        convertToProtoShopStatus(s.Status),
+		Published:     s.IsPublic,
+		CreatedAt:     timestamppb.New(s.CreatedAt),
+		UpdatedAt:     timestamppb.New(s.UpdatedAt),
+	}
+
+	return shop
 }
 
 // convertToProtoProduct converts domain Product to proto Product

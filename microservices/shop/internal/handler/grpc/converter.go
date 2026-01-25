@@ -3,7 +3,7 @@ package grpc
 import (
 	"strconv"
 
-	pb "github.com/makoto-developer/go_microservice_example/proto/shop_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/generated/shop/proto/shop_service/v1"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/domain"
 )
 
