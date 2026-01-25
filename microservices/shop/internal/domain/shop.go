@@ -12,13 +12,13 @@ type Shop struct {
 	OwnerID        uuid.UUID  `db:"owner_id" json:"owner_id"`
 	Name           string     `db:"name" json:"name"`
 	Description    string     `db:"description" json:"description"`
-	LogoImageURL   string     `db:"logo_image_url" json:"logo_image_url"`
+	LogoURL        string     `db:"logo_url" json:"logo_url"`
 	OwnerName      string     `db:"owner_name" json:"owner_name"`
-	OwnerPhone     string     `db:"owner_phone" json:"owner_phone"`
+	PhoneNumber    string     `db:"phone_number" json:"phone_number"`
 	BusinessHours  string     `db:"business_hours" json:"business_hours"`
 	ReturnPolicy   string     `db:"return_policy" json:"return_policy"`
 	Status         ShopStatus `db:"status" json:"status"`
-	IsPublic       bool       `db:"is_public" json:"is_public"`
+	Published      bool       `db:"published" json:"published"`
 	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
 	ApprovedAt     *time.Time `db:"approved_at" json:"approved_at,omitempty"`

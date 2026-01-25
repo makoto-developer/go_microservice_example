@@ -39,7 +39,7 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
       phone_number: params["phone_number"],
       business_hours: params["business_hours"],
       return_policy: params["return_policy"],
-      categories: parse_categories(params["categories"] || "")
+      categories: []  # カテゴリー機能は後で実装
     }
 
     case call_shop_service(request) do
@@ -73,7 +73,7 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
 
   defp get_shop_channel do
     host = System.get_env("SHOP_SERVICE_HOST", "localhost")
-    port = String.to_integer(System.get_env("SHOP_SERVICE_PORT", "22003"))
+    port = String.to_integer(System.get_env("SHOP_SERVICE_PORT", "22101"))
 
     {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
     channel

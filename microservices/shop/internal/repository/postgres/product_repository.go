@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"github.com/makoto-developer/go_microservice_example/generated/shop/internal/domain"
 )
 
@@ -22,19 +21,19 @@ func NewProductRepository(db *sql.DB) *productRepository {
 func (r *productRepository) Create(ctx context.Context, product *domain.Product) error {
 	query := `
 		INSERT INTO products (
-			id, shop_id, name, description, price, category_id,
-			tags, weight, dimensions, jan_code, stock_count,
-			status, is_public, is_deleted, created_at, updated_at
+			id, shop_id, name, description, price, category,
+			weight, size, jan_code, stock_quantity,
+			published, deleted, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
 		)`
 
 	_, err := r.db.ExecContext(ctx, query,
 		product.ID, product.ShopID, product.Name, product.Description,
-		product.Price, product.CategoryID, pq.Array(product.Tags),
-		product.Weight, product.Dimensions, product.JANCode,
-		product.StockCount, product.Status, product.IsPublic,
-		product.IsDeleted, product.CreatedAt, product.UpdatedAt,
+		product.Price, product.Category,
+		product.Weight, product.Size, product.JANCode,
+		product.StockQuantity, product.Published,
+		product.Deleted, product.CreatedAt, product.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create product: %w", err)
@@ -45,20 +44,19 @@ func (r *productRepository) Create(ctx context.Context, product *domain.Product)
 
 func (r *productRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
 	query := `
-		SELECT id, shop_id, name, description, price, category_id,
-			   tags, weight, dimensions, jan_code, stock_count,
-			   status, is_public, is_deleted, created_at, updated_at, deleted_at
+		SELECT id, shop_id, name, description, price, category,
+			   weight, size, jan_code, stock_quantity,
+			   published, deleted, created_at, updated_at
 		FROM products
 		WHERE id = $1`
 
 	var product domain.Product
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&product.ID, &product.ShopID, &product.Name, &product.Description,
-		&product.Price, &product.CategoryID, pq.Array(&product.Tags),
-		&product.Weight, &product.Dimensions, &product.JANCode,
-		&product.StockCount, &product.Status, &product.IsPublic,
-		&product.IsDeleted, &product.CreatedAt, &product.UpdatedAt,
-		&product.DeletedAt,
+		&product.Price, &product.Category,
+		&product.Weight, &product.Size, &product.JANCode,
+		&product.StockQuantity, &product.Published,
+		&product.Deleted, &product.CreatedAt, &product.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("product not found: %s", id)
@@ -72,14 +70,14 @@ func (r *productRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 
 func (r *productRepository) GetByShopID(ctx context.Context, shopID uuid.UUID, includeDeleted bool) ([]*domain.Product, error) {
 	query := `
-		SELECT id, shop_id, name, description, price, category_id,
-			   tags, weight, dimensions, jan_code, stock_count,
-			   status, is_public, is_deleted, created_at, updated_at, deleted_at
+		SELECT id, shop_id, name, description, price, category,
+			   weight, size, jan_code, stock_quantity,
+			   published, deleted, created_at, updated_at
 		FROM products
 		WHERE shop_id = $1`
 
 	if !includeDeleted {
-		query += " AND is_deleted = FALSE"
+		query += " AND deleted = FALSE"
 	}
 
 	query += " ORDER BY created_at DESC"
@@ -95,11 +93,10 @@ func (r *productRepository) GetByShopID(ctx context.Context, shopID uuid.UUID, i
 		var product domain.Product
 		err := rows.Scan(
 			&product.ID, &product.ShopID, &product.Name, &product.Description,
-			&product.Price, &product.CategoryID, pq.Array(&product.Tags),
-			&product.Weight, &product.Dimensions, &product.JANCode,
-			&product.StockCount, &product.Status, &product.IsPublic,
-			&product.IsDeleted, &product.CreatedAt, &product.UpdatedAt,
-			&product.DeletedAt,
+			&product.Price, &product.Category,
+			&product.Weight, &product.Size, &product.JANCode,
+			&product.StockQuantity, &product.Published,
+			&product.Deleted, &product.CreatedAt, &product.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan product: %w", err)
@@ -117,15 +114,15 @@ func (r *productRepository) GetByShopID(ctx context.Context, shopID uuid.UUID, i
 func (r *productRepository) Update(ctx context.Context, product *domain.Product) error {
 	query := `
 		UPDATE products
-		SET name = $2, description = $3, price = $4, category_id = $5,
-			tags = $6, weight = $7, dimensions = $8, jan_code = $9,
-			stock_count = $10, updated_at = $11
+		SET name = $2, description = $3, price = $4, category = $5,
+			weight = $6, size = $7, jan_code = $8,
+			stock_quantity = $9, updated_at = $10
 		WHERE id = $1`
 
 	_, err := r.db.ExecContext(ctx, query,
 		product.ID, product.Name, product.Description, product.Price,
-		product.CategoryID, pq.Array(product.Tags), product.Weight,
-		product.Dimensions, product.JANCode, product.StockCount,
+		product.Category, product.Weight,
+		product.Size, product.JANCode, product.StockQuantity,
 		product.UpdatedAt,
 	)
 	if err != nil {
@@ -138,7 +135,7 @@ func (r *productRepository) Update(ctx context.Context, product *domain.Product)
 func (r *productRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `
 		UPDATE products
-		SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW()
+		SET deleted = TRUE, updated_at = NOW()
 		WHERE id = $1`
 
 	_, err := r.db.ExecContext(ctx, query, id)
@@ -161,18 +158,18 @@ func (r *productRepository) UpdateStatus(ctx context.Context, id uuid.UUID, stat
 }
 
 func (r *productRepository) UpdateIsPublic(ctx context.Context, id uuid.UUID, isPublic bool) error {
-	query := `UPDATE products SET is_public = $2, updated_at = NOW() WHERE id = $1`
+	query := `UPDATE products SET published = $2, updated_at = NOW() WHERE id = $1`
 
 	_, err := r.db.ExecContext(ctx, query, id, isPublic)
 	if err != nil {
-		return fmt.Errorf("failed to update product is_public: %w", err)
+		return fmt.Errorf("failed to update product published: %w", err)
 	}
 
 	return nil
 }
 
 func (r *productRepository) UpdateStock(ctx context.Context, id uuid.UUID, stockCount int) error {
-	query := `UPDATE products SET stock_count = $2, updated_at = NOW() WHERE id = $1`
+	query := `UPDATE products SET stock_quantity = $2, updated_at = NOW() WHERE id = $1`
 
 	_, err := r.db.ExecContext(ctx, query, id, stockCount)
 	if err != nil {
@@ -184,11 +181,11 @@ func (r *productRepository) UpdateStock(ctx context.Context, id uuid.UUID, stock
 
 func (r *productRepository) List(ctx context.Context, limit, offset int) ([]*domain.Product, error) {
 	query := `
-		SELECT id, shop_id, name, description, price, category_id,
-			   tags, weight, dimensions, jan_code, stock_count,
-			   status, is_public, is_deleted, created_at, updated_at, deleted_at
+		SELECT id, shop_id, name, description, price, category,
+			   weight, size, jan_code, stock_quantity,
+			   published, deleted, created_at, updated_at
 		FROM products
-		WHERE is_deleted = FALSE
+		WHERE deleted = FALSE
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
 
@@ -203,11 +200,10 @@ func (r *productRepository) List(ctx context.Context, limit, offset int) ([]*dom
 		var product domain.Product
 		err := rows.Scan(
 			&product.ID, &product.ShopID, &product.Name, &product.Description,
-			&product.Price, &product.CategoryID, pq.Array(&product.Tags),
-			&product.Weight, &product.Dimensions, &product.JANCode,
-			&product.StockCount, &product.Status, &product.IsPublic,
-			&product.IsDeleted, &product.CreatedAt, &product.UpdatedAt,
-			&product.DeletedAt,
+			&product.Price, &product.Category,
+			&product.Weight, &product.Size, &product.JANCode,
+			&product.StockQuantity, &product.Published,
+			&product.Deleted, &product.CreatedAt, &product.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan product: %w", err)

@@ -52,8 +52,9 @@ defmodule ShopMallWebWeb.PasswordResetLive do
 
   defp get_auth_channel do
     host = System.get_env("AUTH_SERVICE_HOST", "localhost")
-    port = String.to_integer(System.get_env("AUTH_SERVICE_PORT", "22000"))
+    port = String.to_integer(System.get_env("AUTH_SERVICE_PORT", "22100"))
 
+    # No TLS for development (default is insecure)
     {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
     channel
   end

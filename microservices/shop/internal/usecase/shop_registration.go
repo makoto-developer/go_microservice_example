@@ -15,9 +15,9 @@ type ShopRegistrationInput struct {
 	OwnerID       uuid.UUID
 	Name          string
 	Description   string
-	LogoImageURL  string
+	LogoURL       string
 	OwnerName     string
-	OwnerPhone    string
+	PhoneNumber   string
 	BusinessHours string
 	ReturnPolicy  string
 	CategoryIDs   []uuid.UUID
@@ -62,13 +62,13 @@ func (u *shopRegistrationUsecase) Execute(ctx context.Context, input ShopRegistr
 		OwnerID:       input.OwnerID,
 		Name:          input.Name,
 		Description:   input.Description,
-		LogoImageURL:  input.LogoImageURL,
+		LogoURL:       input.LogoURL,
 		OwnerName:     input.OwnerName,
-		OwnerPhone:    input.OwnerPhone,
+		PhoneNumber:   input.PhoneNumber,
 		BusinessHours: input.BusinessHours,
 		ReturnPolicy:  input.ReturnPolicy,
 		Status:        domain.ShopStatusPendingApproval,
-		IsPublic:      false,
+		Published:     false,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
@@ -100,7 +100,7 @@ func (u *shopRegistrationUsecase) validateInput(input ShopRegistrationInput) err
 	if input.OwnerName == "" {
 		return fmt.Errorf("owner name is required")
 	}
-	if input.OwnerPhone == "" {
+	if input.PhoneNumber == "" {
 		return fmt.Errorf("owner phone is required")
 	}
 	return nil

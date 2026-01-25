@@ -12,30 +12,28 @@ import (
 
 // ProductCreateInput represents the input for product creation
 type ProductCreateInput struct {
-	ShopID      uuid.UUID
-	Name        string
-	Description string
-	Price       int64
-	CategoryID  uuid.UUID
-	Tags        []string
-	Weight      *float64
-	Dimensions  *string
-	JANCode     *string
-	StockCount  int
+	ShopID        uuid.UUID
+	Name          string
+	Description   string
+	Price         string
+	Category      string
+	Weight        *float64
+	Size          *string
+	JANCode       *string
+	StockQuantity int
 }
 
 // ProductUpdateInput represents the input for product update
 type ProductUpdateInput struct {
-	ID          uuid.UUID
-	Name        string
-	Description string
-	Price       int64
-	CategoryID  uuid.UUID
-	Tags        []string
-	Weight      *float64
-	Dimensions  *string
-	JANCode     *string
-	StockCount  int
+	ID            uuid.UUID
+	Name          string
+	Description   string
+	Price         string
+	Category      string
+	Weight        *float64
+	Size          *string
+	JANCode       *string
+	StockQuantity int
 }
 
 // ProductManagementUsecase handles product management operations
@@ -84,22 +82,21 @@ func (u *productManagementUsecase) CreateProduct(ctx context.Context, input Prod
 
 	// Create product
 	product := &domain.Product{
-		ID:          uuid.New(),
-		ShopID:      input.ShopID,
-		Name:        input.Name,
-		Description: input.Description,
-		Price:       input.Price,
-		CategoryID:  input.CategoryID,
-		Tags:        input.Tags,
-		Weight:      input.Weight,
-		Dimensions:  input.Dimensions,
-		JANCode:     input.JANCode,
-		StockCount:  input.StockCount,
-		Status:      domain.ProductStatusDraft,
-		IsPublic:    false,
-		IsDeleted:   false,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:            uuid.New(),
+		ShopID:        input.ShopID,
+		Name:          input.Name,
+		Description:   input.Description,
+		Price:         input.Price,
+		Category:      input.Category,
+		Weight:        input.Weight,
+		Size:          input.Size,
+		JANCode:       input.JANCode,
+		StockQuantity: input.StockQuantity,
+		Status:        domain.ProductStatusDraft,
+		Published:     false,
+		Deleted:       false,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	if err := u.productRepo.Create(ctx, product); err != nil {
@@ -125,12 +122,11 @@ func (u *productManagementUsecase) UpdateProduct(ctx context.Context, input Prod
 	product.Name = input.Name
 	product.Description = input.Description
 	product.Price = input.Price
-	product.CategoryID = input.CategoryID
-	product.Tags = input.Tags
+	product.Category = input.Category
 	product.Weight = input.Weight
-	product.Dimensions = input.Dimensions
+	product.Size = input.Size
 	product.JANCode = input.JANCode
-	product.StockCount = input.StockCount
+	product.StockQuantity = input.StockQuantity
 	product.UpdatedAt = time.Now()
 
 	if err := u.productRepo.Update(ctx, product); err != nil {
@@ -194,10 +190,10 @@ func (u *productManagementUsecase) validateCreateInput(input ProductCreateInput)
 	if input.Name == "" {
 		return fmt.Errorf("product name is required")
 	}
-	if input.Price <= 0 {
-		return fmt.Errorf("product price must be greater than 0")
+	if input.Price == "" {
+		return fmt.Errorf("product price is required")
 	}
-	if input.StockCount < 0 {
+	if input.StockQuantity < 0 {
 		return fmt.Errorf("stock count cannot be negative")
 	}
 	return nil
@@ -207,10 +203,10 @@ func (u *productManagementUsecase) validateUpdateInput(input ProductUpdateInput)
 	if input.Name == "" {
 		return fmt.Errorf("product name is required")
 	}
-	if input.Price <= 0 {
-		return fmt.Errorf("product price must be greater than 0")
+	if input.Price == "" {
+		return fmt.Errorf("product price is required")
 	}
-	if input.StockCount < 0 {
+	if input.StockQuantity < 0 {
 		return fmt.Errorf("stock count cannot be negative")
 	}
 	return nil

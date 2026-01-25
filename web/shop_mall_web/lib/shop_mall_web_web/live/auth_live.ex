@@ -25,6 +25,9 @@ defmodule ShopMallWebWeb.AuthLive do
 
   @impl true
   def handle_event("submit", %{"email" => email, "password" => password}, socket) do
+    IO.puts("=== AUTH EVENT: submit received ===")
+    IO.inspect(%{email: email, password: String.length(password), mode: socket.assigns.mode})
+
     case socket.assigns.mode do
       :login -> handle_login(socket, email, password)
       :register -> handle_register(socket, email, password)
@@ -32,19 +35,27 @@ defmodule ShopMallWebWeb.AuthLive do
   end
 
   defp handle_login(socket, email, password) do
+    IO.puts("=== HANDLE LOGIN called ===")
+    IO.inspect(%{email: email})
+
     request = %UserLoginRequest{
       email: email,
       password: password
     }
 
+    IO.puts("=== Calling auth service for login ===")
     case call_auth_service(:login, request) do
       {:ok, response} ->
+        IO.puts("=== Login SUCCESS ===")
+        IO.inspect(response)
         {:noreply,
          socket
          |> put_flash(:info, "ログイン成功！")
          |> push_navigate(to: "/dashboard")}
 
       {:error, reason} ->
+        IO.puts("=== Login FAILED ===")
+        IO.inspect(reason)
         {:noreply,
          socket
          |> assign(:error, "ログイン失敗: #{inspect(reason)}")
@@ -98,8 +109,9 @@ defmodule ShopMallWebWeb.AuthLive do
   defp get_auth_channel do
     # Auth Service の接続先（Docker ネットワーク内 or localhost）
     host = System.get_env("AUTH_SERVICE_HOST", "localhost")
-    port = String.to_integer(System.get_env("AUTH_SERVICE_PORT", "20100"))
+    port = String.to_integer(System.get_env("AUTH_SERVICE_PORT", "22100"))
 
+    # No TLS for development (default is insecure)
     {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
     channel
   end

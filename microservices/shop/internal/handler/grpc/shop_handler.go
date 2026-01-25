@@ -51,9 +51,9 @@ func (h *ShopServiceHandler) RegisterShop(ctx context.Context, req *pb.RegisterS
 		OwnerID:       ownerID,
 		Name:          req.Name,
 		Description:   req.Description,
-		LogoImageURL:  req.LogoUrl,
+		LogoURL:       req.LogoUrl,
 		OwnerName:     req.OwnerName,
-		OwnerPhone:    req.PhoneNumber,
+		PhoneNumber:   req.PhoneNumber,
 		BusinessHours: req.BusinessHours,
 		ReturnPolicy:  req.ReturnPolicy,
 		CategoryIDs:   categoryIDs,
@@ -125,7 +125,7 @@ func (h *ShopServiceHandler) ListShops(ctx context.Context, req *pb.ListShopsReq
 	// 公開ショップのみフィルタリング
 	protoShops := make([]*pb.Shop, 0, len(shops))
 	for _, shop := range shops {
-		if req.PublishedOnly && !shop.IsPublic {
+		if req.PublishedOnly && !shop.Published {
 			continue
 		}
 		protoShops = append(protoShops, convertToProtoShop(shop))
@@ -167,25 +167,13 @@ func (h *ShopServiceHandler) RegisterProduct(ctx context.Context, req *pb.Regist
 		return nil, status.Errorf(codes.InvalidArgument, "invalid shop_id: %v", err)
 	}
 
-	categoryID, err := uuid.Parse(req.Category)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid category: %v", err)
-	}
-
-	var price int64
-	_, err = fmt.Sscanf(req.Price, "%d", &price)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid price format: %v", err)
-	}
-
 	input := usecase.ProductCreateInput{
-		ShopID:      shopID,
-		Name:        req.Name,
-		Description: req.Description,
-		Price:       price,
-		CategoryID:  categoryID,
-		Tags:        req.Tags,
-		StockCount:  int(req.StockQuantity),
+		ShopID:        shopID,
+		Name:          req.Name,
+		Description:   req.Description,
+		Price:         req.Price,
+		Category:      req.Category,
+		StockQuantity: int(req.StockQuantity),
 	}
 
 	if req.Weight != "" {
@@ -197,7 +185,7 @@ func (h *ShopServiceHandler) RegisterProduct(ctx context.Context, req *pb.Regist
 	}
 
 	if req.Size != "" {
-		input.Dimensions = &req.Size
+		input.Size = &req.Size
 	}
 
 	if req.JanCode != "" {
@@ -221,24 +209,13 @@ func (h *ShopServiceHandler) UpdateProduct(ctx context.Context, req *pb.UpdatePr
 		return nil, status.Errorf(codes.InvalidArgument, "invalid product_id: %v", err)
 	}
 
-	categoryID, err := uuid.Parse(req.Category)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid category: %v", err)
-	}
-
-	var price int64
-	_, err = fmt.Sscanf(req.Price, "%d", &price)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid price format: %v", err)
-	}
-
 	input := usecase.ProductUpdateInput{
-		ID:          productID,
-		Name:        req.Name,
-		Description: req.Description,
-		Price:       price,
-		CategoryID:  categoryID,
-		StockCount:  int(req.StockQuantity),
+		ID:            productID,
+		Name:          req.Name,
+		Description:   req.Description,
+		Price:         req.Price,
+		Category:      req.Category,
+		StockQuantity: int(req.StockQuantity),
 	}
 
 	if req.Weight != "" {
@@ -250,7 +227,7 @@ func (h *ShopServiceHandler) UpdateProduct(ctx context.Context, req *pb.UpdatePr
 	}
 
 	if req.Size != "" {
-		input.Dimensions = &req.Size
+		input.Size = &req.Size
 	}
 
 	if req.JanCode != "" {
