@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package customer_auth.v1;
+
+option go_package = "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/customer_auth/v1;customer_authv1";
+
+// CustomerAuthService handles authentication for customers
+service CustomerAuthService {
+  // Register registers a new customer
+  rpc Register(CustomerRegisterRequest) returns (CustomerRegisterResponse);
+
+  // Login authenticates a customer
+  rpc Login(CustomerLoginRequest) returns (CustomerLoginResponse);
+
+  // Logout logs out a customer
+  rpc Logout(CustomerLogoutRequest) returns (CustomerLogoutResponse);
+
+  // VerifyEmail verifies customer's email address
+  rpc VerifyEmail(CustomerVerifyEmailRequest) returns (CustomerVerifyEmailResponse);
+
+  // RequestPasswordReset initiates password reset process
+  rpc RequestPasswordReset(CustomerRequestPasswordResetRequest) returns (CustomerRequestPasswordResetResponse);
+
+  // ResetPassword resets customer's password
+  rpc ResetPassword(CustomerResetPasswordRequest) returns (CustomerResetPasswordResponse);
+
+  // RefreshToken refreshes access token
+  rpc RefreshToken(CustomerRefreshTokenRequest) returns (CustomerRefreshTokenResponse);
+}
+
+// Register
+message CustomerRegisterRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message CustomerRegisterResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+// Login
+message CustomerLoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message CustomerLoginResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+// Logout
+message CustomerLogoutRequest {
+  string refresh_token = 1;
+}
+
+message CustomerLogoutResponse {
+  bool success = 1;
+}
+
+// VerifyEmail
+message CustomerVerifyEmailRequest {
+  string token = 1;
+}
+
+message CustomerVerifyEmailResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// RequestPasswordReset
+message CustomerRequestPasswordResetRequest {
+  string email = 1;
+}
+
+message CustomerRequestPasswordResetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ResetPassword
+message CustomerResetPasswordRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+message CustomerResetPasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// RefreshToken
+message CustomerRefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message CustomerRefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}

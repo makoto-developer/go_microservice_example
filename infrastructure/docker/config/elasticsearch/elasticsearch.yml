@@ -1,0 +1,15 @@
+cluster.name: "shop-mall-cluster"
+network.host: 0.0.0.0
+
+# Discovery
+discovery.type: single-node
+
+# Security
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+
+# Monitoring
+xpack.monitoring.collection.enabled: true
+
+# Index defaults
+action.auto_create_index: true

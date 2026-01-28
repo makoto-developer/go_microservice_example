@@ -1,108 +1,328 @@
+# ============================================
+# Go Microservice Example - .gitignore
+# ============================================
+
+# ============================================
+# Go
+# ============================================
+
 # Binaries
 *.exe
+*.exe~
 *.dll
 *.so
 *.dylib
-auth-server
-shop-server
-*-server
-
-# Test binaries
 *.test
 
-# Output of go coverage tool
-*.out
-
-# Dependency directories
-vendor/
-
-# Go workspace file
-go.work
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-terminal*.log
-
-# 古いディレクトリ（削除予定）
-auth-service/
-shop-service/
-customer-service/
-inventory-service/
-order-service/
-payment-service/
-shipping-service/
-notification-service/
-review-service/
-chat-service/
-search-service/
-admin-service/
-generated/
-proto/
-scripts/
-bin/
-config/
-mock/
-test-client/
-services/
-
-# ビルド成果物（build/で管理）
+# Build outputs
 /build/bin/*
 !/build/bin/.gitkeep
 /build/proto/*
 !/build/proto/.gitkeep
 
-# 環境変数
-.env
-.env.local
+# Service binaries
+auth-server
+shop-server
+customer-service
+inventory-service
+order-server
+payment-server
+notification-service
+review-service
+shipping
+chat-service
+search-service
+admin-service
+*-server
+*-service
 
-# Docker
-docker-compose.yml.backup
-docker-compose.new.yml
+# Coverage
+*.out
+coverage.txt
+coverage.html
+*.coverprofile
 
-# 一時ファイル
-*.tmp
-*.bak
-memo.md
-task.md
+# Go workspace
+go.work
+go.work.sum
 
-# AI - 個人設定のみ除外、プロジェクト設定はコミット
-.claude/settings.local.json
-.serena/settings.local.json
+# Dependency directories
+vendor/
 
-# Task
-task*.md
-
+# ============================================
 # Elixir/Phoenix
+# ============================================
+
+# Build artifacts
 _build/
 deps/
 *.beam
 *.ez
+
+# Static assets
 /priv/static/assets/
 /priv/static/cache_manifest.json
+
+# Crash dumps
 erl_crash.dump
 
-# Node.js (重要: 既にnode_modulesがコミット済み、git rm -r --cached が必要)
+# Phoenix secrets
+/config/*.secret.exs
+/config/prod.secret.exs
+
+# ============================================
+# Node.js/JavaScript
+# ============================================
+
 node_modules/
 npm-debug.log
+yarn-debug.log
+yarn-error.log
 package-lock.json
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 
-# Playwright/テスト
+# ============================================
+# Database
+# ============================================
+
+# PostgreSQL
+*.sql
+*.dump
+pgdata/
+postgres-data/
+
+# Redis
+dump.rdb
+appendonly.aof
+redis-data/
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# ============================================
+# Docker
+# ============================================
+
+docker-compose.override.yml
+docker-compose.yml.backup
+docker-compose.new.yml
+.dockerignore.local
+
+# ============================================
+# Environment & Config
+# ============================================
+
+.env
+.env.*
+!.env.example
+!.env.sample
+.env.local
+.env.*.local
+.env.new
+
+# ============================================
+# Logs
+# ============================================
+
+*.log
+logs/
+*.log.*
+terminal*.log
+
+# Service logs
+/tmp/*.log
+auth-server.log
+shop-server.log
+
+# ============================================
+# Testing
+# ============================================
+
+# Test outputs
 test-results/
 playwright-report/
 .last-run.json
 
-# 環境変数 (既存の.envに加えて)
-.env.new
-.env.*.local
+# Test binaries
+*.test
 
+# ============================================
+# IDE & Editors
+# ============================================
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# ============================================
+# OS
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================
+# MPS (JetBrains MPS)
+# ============================================
+
+# MPS build outputs (if any)
+mps-workspace/.mps/
+mps-workspace/classes_gen/
+mps-workspace/source_gen.caches/
+
+# MPS user preferences
+mps-workspace/.mps/.mps.project.prefs
+
+# ============================================
+# AI Tools
+# ============================================
+
+# Claude - ローカル設定のみ除外、プロジェクト設定はコミット
+.claude/settings.local.json
+.claude/*.local.json
+
+# Serena - ローカル設定のみ除外
+.serena/settings.local.json
+.serena/*.local.json
+
+# ============================================
+# Temporary & Cache
+# ============================================
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.cache
+*.pid
+
+# Task management (個人用メモ)
+task*.md
+memo.md
+TODO.local.md
+notes.local.md
+
+# ============================================
+# Generated Code (Optional)
+# ============================================
+
+# コメントアウト: 生成コードをコミットする場合
+# generated/
+
+# Proto files (コミットする場合はコメントアウト)
+# proto/
+
+# ============================================
+# Project Specific
+# ============================================
+
+# 古いディレクトリ構成（削除予定）
+# auth-service/
+# shop-service/
+# services/
+# mock/
+# test-client/
+
+# ============================================
+# Security
+# ============================================
+
+# Credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+credentials.json
+secrets.yml
+secrets.yaml
+
+# API keys
+.apikeys
+*.apikey
+
+# ============================================
+# Documentation (Draft)
+# ============================================
+
+# ドラフトのみ除外、完成版はコミット
+*-draft.md
+*-wip.md
+*.draft.*
+
+# ============================================
+# Monitoring & Profiling
+# ============================================
+
+# CPU/Memory profiles
+*.prof
+*.pprof
+cpu.prof
+mem.prof
+
+# Trace files
+*.trace
+
+# ============================================
+# Misc
+# ============================================
+
+# Compressed files (unless intentional)
+# *.zip
+# *.tar
+# *.tar.gz
+# *.tgz
+
+# Lock files (依存関係は各言語で管理)
+# Gemfile.lock
+# poetry.lock

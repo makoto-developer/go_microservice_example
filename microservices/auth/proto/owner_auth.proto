@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package owner_auth.v1;
+
+option go_package = "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/owner_auth/v1;owner_authv1";
+
+// OwnerAuthService handles authentication for shop owners
+service OwnerAuthService {
+  // Register registers a new shop owner
+  rpc Register(OwnerRegisterRequest) returns (OwnerRegisterResponse);
+
+  // Login authenticates a shop owner
+  rpc Login(OwnerLoginRequest) returns (OwnerLoginResponse);
+
+  // Logout logs out a shop owner
+  rpc Logout(OwnerLogoutRequest) returns (OwnerLogoutResponse);
+
+  // VerifyEmail verifies owner's email address
+  rpc VerifyEmail(OwnerVerifyEmailRequest) returns (OwnerVerifyEmailResponse);
+
+  // RequestPasswordReset initiates password reset process
+  rpc RequestPasswordReset(OwnerRequestPasswordResetRequest) returns (OwnerRequestPasswordResetResponse);
+
+  // ResetPassword resets owner's password
+  rpc ResetPassword(OwnerResetPasswordRequest) returns (OwnerResetPasswordResponse);
+
+  // RefreshToken refreshes access token
+  rpc RefreshToken(OwnerRefreshTokenRequest) returns (OwnerRefreshTokenResponse);
+
+  // GetBusinessVerificationStatus gets business verification status
+  rpc GetBusinessVerificationStatus(OwnerGetBusinessVerificationStatusRequest) returns (OwnerGetBusinessVerificationStatusResponse);
+}
+
+// Register
+message OwnerRegisterRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message OwnerRegisterResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  string business_verification_status = 4; // pending, approved, rejected
+}
+
+// Login
+message OwnerLoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message OwnerLoginResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  bool business_verified = 4;
+  string business_verification_status = 5;
+}
+
+// Logout
+message OwnerLogoutRequest {
+  string refresh_token = 1;
+}
+
+message OwnerLogoutResponse {
+  bool success = 1;
+}
+
+// VerifyEmail
+message OwnerVerifyEmailRequest {
+  string token = 1;
+}
+
+message OwnerVerifyEmailResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// RequestPasswordReset
+message OwnerRequestPasswordResetRequest {
+  string email = 1;
+}
+
+message OwnerRequestPasswordResetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ResetPassword
+message OwnerResetPasswordRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+message OwnerResetPasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// RefreshToken
+message OwnerRefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message OwnerRefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+// GetBusinessVerificationStatus
+message OwnerGetBusinessVerificationStatusRequest {
+  string user_id = 1;
+}
+
+message OwnerGetBusinessVerificationStatusResponse {
+  bool business_verified = 1;
+  string business_verification_status = 2; // pending, approved, rejected
+}
