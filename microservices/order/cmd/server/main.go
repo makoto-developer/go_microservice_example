@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"log"
 	"net"
+
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	pb "github.com/makoto-developer/go_microservice_example/proto/order_service/v1"
-	"github.com/makoto-developer/go_microservice_example/generated/order/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/order/internal/handler/grpc"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/repository/postgres"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/usecase"
+
+	"github.com/makoto-developer/go_microservice_example/microservices/order/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/order/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/repository/postgres"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/order/proto"
 )
 
 func main() {
@@ -31,7 +33,7 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
-	log.Println("Successfully connected to database")
+	log.Printf("✅ Successfully connected to Order database at %s:%s", cfg.Database.Host, cfg.Database.Port)
 
 	orderRepo := postgres.NewOrderRepository(db)
 	orderItemRepo := postgres.NewOrderItemRepository(db)
@@ -47,7 +49,8 @@ func main() {
 	pb.RegisterOrderServiceServer(grpcServer, handler)
 	reflection.Register(grpcServer)
 
-	log.Printf("Order Service is running on port %s", cfg.Server.Port)
+	log.Printf("✅ Order Service is running on port %s", cfg.Server.Port)
+	log.Printf("🎯 Database per Service architecture is active!")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}

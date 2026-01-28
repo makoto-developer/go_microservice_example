@@ -92,12 +92,20 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
 
   @impl true
   def handle_event("save", %{"product" => product_params}, socket) do
+    IO.puts("=== SAVE EVENT RECEIVED ===")
+    IO.inspect(product_params, label: "Product Params")
+
     name = product_params["name"] || ""
     description = product_params["description"] || ""
     price = product_params["price"] || "0"
     stock_quantity = String.to_integer(product_params["stock_quantity"] || "0")
     category = product_params["category"] || ""
     published = product_params["published"] == "true"
+
+    IO.puts("=== PRODUCT DATA ===")
+    IO.puts("Shop ID: #{socket.assigns.shop_id}")
+    IO.puts("Name: #{name}")
+    IO.puts("Published: #{published}")
 
     case socket.assigns.mode do
       :new ->
@@ -114,10 +122,16 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
           tags: []
         }
 
+        IO.puts("=== CALLING REGISTER PRODUCT ===")
+
         case call_shop_service(:register_product, request) do
           {:ok, response} ->
+            IO.puts("=== REGISTER PRODUCT SUCCESS ===")
+            IO.inspect(response, label: "Response")
+
             # 公開設定が有効な場合、ToggleProductPublishを呼ぶ
             if published do
+              IO.puts("=== CALLING TOGGLE PUBLISH ===")
               toggle_request = %ToggleProductPublishRequest{
                 product_id: response.product_id
               }
@@ -131,6 +145,9 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
              |> push_navigate(to: "/owner/products")}
 
           {:error, reason} ->
+            IO.puts("=== REGISTER PRODUCT ERROR ===")
+            IO.inspect(reason, label: "Error")
+
             {:noreply,
              socket
              |> put_flash(:error, "登録に失敗しました: #{inspect(reason)}")}
@@ -174,42 +191,56 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
   end
 
   defp call_shop_service(:get_product, request) do
-    channel = get_shop_channel()
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.get_product(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
 
-    case Stub.get_product(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_shop_service(:register_product, request) do
-    channel = get_shop_channel()
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.register_product(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
 
-    case Stub.register_product(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_shop_service(:update_product, request) do
-    channel = get_shop_channel()
-
-    case Stub.update_product(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.update_product(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_shop_service(:toggle_product_publish, request) do
-    channel = get_shop_channel()
-
-    case Stub.toggle_product_publish(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.toggle_product_publish(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
@@ -217,8 +248,10 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
     host = System.get_env("SHOP_SERVICE_HOST", "localhost")
     port = String.to_integer(System.get_env("SHOP_SERVICE_PORT", "22101"))
 
-    {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
-    channel
+    case GRPC.Stub.connect("#{host}:#{port}") do
+      {:ok, channel} -> {:ok, channel}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @impl true
@@ -397,7 +430,8 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                   </.link>
                   <button
                     type="submit"
-                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    phx-disable-with="処理中..."
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     <%= if @mode == :new, do: "登録", else: "更新" %>
                   </button>

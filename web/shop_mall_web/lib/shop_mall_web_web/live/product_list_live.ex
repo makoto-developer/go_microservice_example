@@ -58,22 +58,28 @@ defmodule ShopMallWebWeb.ProductListLive do
   end
 
   defp call_shop_service(:list_products, request) do
-    channel = get_shop_channel()
-
-    case Stub.list_products(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, "接続エラー: #{inspect(error)}"}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.list_products(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, "接続エラー: #{inspect(error)}"}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_shop_service(:get_shop, request) do
-    channel = get_shop_channel()
-
-    case Stub.get_shop(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.get_shop(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
@@ -81,8 +87,10 @@ defmodule ShopMallWebWeb.ProductListLive do
     host = System.get_env("SHOP_SERVICE_HOST", "localhost")
     port = String.to_integer(System.get_env("SHOP_SERVICE_PORT", "22101"))
 
-    {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
-    channel
+    case GRPC.Stub.connect("#{host}:#{port}") do
+      {:ok, channel} -> {:ok, channel}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp format_price(price) when is_binary(price) do

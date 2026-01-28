@@ -269,10 +269,20 @@ func (h *ShopServiceHandler) ToggleProductPublish(ctx context.Context, req *pb.T
 		return nil, status.Errorf(codes.InvalidArgument, "invalid product_id: %v", err)
 	}
 
-	if req.Published {
-		err = h.productManagementUsecase.PublishProduct(ctx, productID)
-	} else {
+	// Get current product state
+	product, err := h.productManagementUsecase.GetProduct(ctx, productID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "product not found: %v", err)
+	}
+
+	// Toggle the published state
+	var newPublishedState bool
+	if product.Published {
 		err = h.productManagementUsecase.UnpublishProduct(ctx, productID)
+		newPublishedState = false
+	} else {
+		err = h.productManagementUsecase.PublishProduct(ctx, productID)
+		newPublishedState = true
 	}
 
 	if err != nil {
@@ -281,7 +291,7 @@ func (h *ShopServiceHandler) ToggleProductPublish(ctx context.Context, req *pb.T
 
 	return &pb.ToggleProductPublishResponse{
 		ProductId: productID.String(),
-		Published: req.Published,
+		Published: newPublishedState,
 	}, nil
 }
 

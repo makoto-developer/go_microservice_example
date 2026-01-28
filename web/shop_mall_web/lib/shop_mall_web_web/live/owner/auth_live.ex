@@ -79,22 +79,28 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
   end
 
   defp call_auth_service(:login, request) do
-    channel = get_auth_channel()
-
-    case Stub.login(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, "接続エラー: #{inspect(error)}"}
+    case get_auth_channel() do
+      {:ok, channel} ->
+        case Stub.login(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, "接続エラー: #{inspect(error)}"}
+        end
+      {:error, reason} ->
+        {:error, "Auth Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_auth_service(:register, request) do
-    channel = get_auth_channel()
-
-    case Stub.register(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, "接続エラー: #{inspect(error)}"}
+    case get_auth_channel() do
+      {:ok, channel} ->
+        case Stub.register(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, "接続エラー: #{inspect(error)}"}
+        end
+      {:error, reason} ->
+        {:error, "Auth Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
@@ -103,8 +109,10 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
     port = String.to_integer(System.get_env("AUTH_SERVICE_PORT", "22100"))
 
     # No TLS for development (default is insecure)
-    {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
-    channel
+    case GRPC.Stub.connect("#{host}:#{port}") do
+      {:ok, channel} -> {:ok, channel}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @impl true

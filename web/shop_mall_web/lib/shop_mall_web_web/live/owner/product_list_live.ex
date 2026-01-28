@@ -76,10 +76,16 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
 
   @impl true
   def handle_event("toggle_publish", %{"product-id" => product_id}, socket) do
+    IO.puts("=== TOGGLE PUBLISH EVENT RECEIVED ===")
+    IO.inspect(product_id, label: "Product ID")
+
     request = %ToggleProductPublishRequest{product_id: product_id}
 
     case call_shop_service(:toggle_product_publish, request) do
-      {:ok, _response} ->
+      {:ok, response} ->
+        IO.puts("=== TOGGLE PUBLISH SUCCESS ===")
+        IO.inspect(response, label: "Response")
+
         {:noreply,
          socket
          |> put_flash(:info, "公開状態を変更しました")
@@ -87,6 +93,9 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
          |> load_data()}
 
       {:error, reason} ->
+        IO.puts("=== TOGGLE PUBLISH ERROR ===")
+        IO.inspect(reason, label: "Error")
+
         {:noreply,
          socket
          |> put_flash(:error, "変更に失敗しました: #{inspect(reason)}")}
@@ -94,42 +103,54 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
   end
 
   defp call_shop_service(:get_shop, request) do
-    channel = get_shop_channel()
-
-    case Stub.get_shop(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.get_shop(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_shop_service(:list_products, request) do
-    channel = get_shop_channel()
-
-    case Stub.list_products(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.list_products(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_shop_service(:delete_product, request) do
-    channel = get_shop_channel()
-
-    case Stub.delete_product(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.delete_product(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
   defp call_shop_service(:toggle_product_publish, request) do
-    channel = get_shop_channel()
-
-    case Stub.toggle_product_publish(channel, request) do
-      {:ok, response} -> {:ok, response}
-      {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
-      error -> {:error, error}
+    case get_shop_channel() do
+      {:ok, channel} ->
+        case Stub.toggle_product_publish(channel, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
+          error -> {:error, error}
+        end
+      {:error, reason} ->
+        {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
   end
 
@@ -137,8 +158,10 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
     host = System.get_env("SHOP_SERVICE_HOST", "localhost")
     port = String.to_integer(System.get_env("SHOP_SERVICE_PORT", "22101"))
 
-    {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
-    channel
+    case GRPC.Stub.connect("#{host}:#{port}") do
+      {:ok, channel} -> {:ok, channel}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp format_price(price) when is_binary(price) do
