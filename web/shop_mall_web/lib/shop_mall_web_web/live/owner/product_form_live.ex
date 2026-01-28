@@ -215,7 +215,7 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
 
   defp get_shop_channel do
     host = System.get_env("SHOP_SERVICE_HOST", "localhost")
-    port = String.to_integer(System.get_env("SHOP_SERVICE_PORT", "20101"))
+    port = String.to_integer(System.get_env("SHOP_SERVICE_PORT", "22101"))
 
     {:ok, channel} = GRPC.Stub.connect("#{host}:#{port}")
     channel

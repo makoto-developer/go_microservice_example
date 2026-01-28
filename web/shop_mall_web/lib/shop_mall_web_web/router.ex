@@ -38,6 +38,12 @@ defmodule ShopMallWebWeb.Router do
     # Shop listing (for customers)
     live "/shops", ShopListLive
     live "/shops/:id", ShopDetailLive
+
+    # Admin routes (temporarily disabled - Proto files not generated)
+    # live "/admin", Admin.DashboardLive
+    # live "/admin/shops/pending", Admin.ShopApprovalLive
+    # live "/admin/users", Admin.UserListLive
+    # live "/admin/audit-logs", Admin.AuditLogLive
   end
 
   # Other scopes may use custom stacks.

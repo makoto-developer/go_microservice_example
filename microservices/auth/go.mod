@@ -1,4 +1,4 @@
-module github.com/makoto-developer/go_microservice_example/generated/auth
+module github.com/makoto-developer/go_microservice_example/microservices/auth
 
 go 1.25
 
