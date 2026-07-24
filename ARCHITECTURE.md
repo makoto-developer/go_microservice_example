@@ -1,6 +1,6 @@
 # go_microservice_example アーキテクチャレポート
 
-> strata 0.1.0 により生成(2026-07-24T14:44:21.586Z)。
+> strata 0.1.0 により生成(2026-07-24T14:45:37.813Z)。
 > 静的解析のため、メッセージキュー等の動的連携は含まれない。
 
 ## サービス間依存図
@@ -33,6 +33,20 @@ graph LR
   s6 -->|"2"| s5
   s6 -->|"2"| s10
 ```
+
+## サービス間の呼び出し詳細
+
+| 呼び出し元 | 呼び出し先 | 使用している RPC |
+|---|---|---|
+| shop_mall_web | shop | ShopService.DeleteProduct, ShopService.GetProduct, ShopService.GetShop, ShopService.ListOrders, ShopService.ListProducts, ShopService.ListShops, ShopService.RegisterProduct, ShopService.RegisterShop, ShopService.ToggleProductPublish, ShopService.UpdateProduct |
+| shop_mall_web | payment | PaymentService.ConfirmCODPayment, PaymentService.CreateRefund, PaymentService.GetPaymentDetail, PaymentService.GetPaymentStatus, PaymentService.GetRefundStatus, PaymentService.ListPayments |
+| shop_mall_web | auth | AuthService.Login, AuthService.Register, AuthService.RequestPasswordReset, AuthService.ResetPassword |
+| order | payment | PaymentService.ConfirmPayment, PaymentService.CreateCODPayment, PaymentService.CreatePaymentIntent, PaymentService.CreateRefund |
+| shipping | payment | PaymentService.ConfirmCODPayment, PaymentService.ListPayments |
+| shop_mall_web | shipping | ShippingService.GetShipmentByOrder, ShippingService.RegisterTrackingNumber, ShippingService.UpdateShipmentStatus |
+| shop_mall_web | order | OrderService.CancelOrder, OrderService.CreateOrder, OrderService.ListOrders |
+| order | notification | NotificationService.SendEmail |
+| order | shipping | ShippingService.CreateShipment |
 
 ## サービス別サマリ
 
