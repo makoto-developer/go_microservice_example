@@ -9,6 +9,17 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Payment  PaymentServiceConfig
+	Shipping ShippingServiceConfig
+}
+
+// ShippingServiceConfig は配送サービス(shipping)への接続先。
+type ShippingServiceConfig struct {
+	Host string
+	Port string
+}
+
+func (c *ShippingServiceConfig) Address() string {
+	return c.Host + ":" + c.Port
 }
 
 // PaymentServiceConfig は決済サービス(payment)への接続先。
@@ -50,6 +61,10 @@ func LoadConfig() (*Config, error) {
 		Payment: PaymentServiceConfig{
 			Host: getEnv("PAYMENT_SERVICE_HOST", "localhost"),
 			Port: getEnv("PAYMENT_SERVICE_PORT", "50056"),
+		},
+		Shipping: ShippingServiceConfig{
+			Host: getEnv("SHIPPING_SERVICE_HOST", "localhost"),
+			Port: getEnv("SHIPPING_SERVICE_PORT", "50057"),
 		},
 	}, nil
 }

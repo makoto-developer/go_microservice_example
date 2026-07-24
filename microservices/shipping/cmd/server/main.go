@@ -12,12 +12,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/config"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/domain"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/shipping/internal/handler/grpc"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/repository"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/shipping_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/config"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/client"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/domain"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/shipping/proto"
 )
 
 // mockShipmentRepository is a simple in-memory repository for testing
@@ -105,10 +106,22 @@ func main() {
 	// Initialize usecases
 	createShipmentUsecase := usecase.NewCreateShipmentUsecase(shipmentRepo)
 
+	// 決済サービスへの接続(配達完了時の代引き集金確定に使う)
+	paymentAddr := fmt.Sprintf("%s:%s", cfg.Payment.Host, cfg.Payment.Port)
+	paymentClient, err := client.NewPaymentClient(paymentAddr)
+	if err != nil {
+		log.Printf("Warning: payment client unavailable (%v). COD confirmation disabled.", err)
+		paymentClient = nil
+	} else {
+		defer paymentClient.Close()
+		log.Printf("✅ Payment client configured for %s", paymentAddr)
+	}
+
 	// Initialize handler
 	handler := grpchandler.NewShippingServiceHandler(
 		createShipmentUsecase,
 		shipmentRepo,
+		paymentClient,
 	)
 
 	// Start gRPC server

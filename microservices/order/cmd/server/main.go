@@ -46,7 +46,16 @@ func main() {
 	defer paymentClient.Close()
 	log.Printf("💳 Payment Service: %s", cfg.Payment.Address())
 
-	orderMgmt := usecase.NewOrderManagementUsecase(orderRepo, orderItemRepo, paymentClient)
+	shippingClient, err := client.NewShippingClient(cfg.Shipping.Address())
+	if err != nil {
+		log.Printf("Warning: shipping client unavailable (%v). Shipment creation disabled.", err)
+		shippingClient = nil
+	} else {
+		defer shippingClient.Close()
+		log.Printf("📦 Shipping Service: %s", cfg.Shipping.Address())
+	}
+
+	orderMgmt := usecase.NewOrderManagementUsecaseWithShipping(orderRepo, orderItemRepo, paymentClient, shippingClient)
 	handler := grpchandler.NewOrderServiceHandler(orderMgmt)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))

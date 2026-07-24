@@ -7,6 +7,7 @@ import (
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/client"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/repository"
+	"log"
 	"time"
 )
 
@@ -44,9 +45,10 @@ type OrderManagementUsecase interface {
 }
 
 type orderManagementUsecase struct {
-	orderRepo     repository.OrderRepository
-	orderItemRepo repository.OrderItemRepository
-	paymentClient client.PaymentClient
+	orderRepo      repository.OrderRepository
+	orderItemRepo  repository.OrderItemRepository
+	paymentClient  client.PaymentClient
+	shippingClient client.ShippingClient // nil の場合は出荷起票をスキップ
 }
 
 func NewOrderManagementUsecase(
@@ -58,6 +60,21 @@ func NewOrderManagementUsecase(
 		orderRepo:     orderRepo,
 		orderItemRepo: orderItemRepo,
 		paymentClient: paymentClient,
+	}
+}
+
+// NewOrderManagementUsecaseWithShipping は出荷起票(shipping サービス連携)込みで組み立てる。
+func NewOrderManagementUsecaseWithShipping(
+	orderRepo repository.OrderRepository,
+	orderItemRepo repository.OrderItemRepository,
+	paymentClient client.PaymentClient,
+	shippingClient client.ShippingClient,
+) OrderManagementUsecase {
+	return &orderManagementUsecase{
+		orderRepo:      orderRepo,
+		orderItemRepo:  orderItemRepo,
+		paymentClient:  paymentClient,
+		shippingClient: shippingClient,
 	}
 }
 
@@ -114,6 +131,17 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 
 		if err := u.orderRepo.UpdateStatus(ctx, order.ID, nextStatus); err != nil {
 			return uuid.Nil, fmt.Errorf("payment succeeded but failed to update order status: %w", err)
+		}
+	}
+
+	// 出荷の起票(shipping サービス)。失敗しても注文は成立させる(出荷はバックオフィスで再起票できる)
+	if u.shippingClient != nil {
+		if _, err := u.shippingClient.CreateShipment(ctx, client.CreateShipmentInput{
+			OrderID:         order.ID.String(),
+			CustomerID:      input.CustomerID.String(),
+			ShippingAddress: input.AddressID.String(), // 住所解決は未実装のため ID をそのまま渡す
+		}); err != nil {
+			log.Printf("shipment creation failed for order %s (will be re-created manually): %v", order.ID, err)
 		}
 	}
 

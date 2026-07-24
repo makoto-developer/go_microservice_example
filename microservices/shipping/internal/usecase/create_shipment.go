@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/repository"
 )
 
 type CreateShipmentInput struct {

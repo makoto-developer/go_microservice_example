@@ -1,6 +1,6 @@
 # go_microservice_example アーキテクチャレポート
 
-> strata 0.1.0 により生成(2026-07-24T14:19:18.988Z)。
+> strata 0.1.0 により生成(2026-07-24T14:28:09.127Z)。
 > 静的解析のため、メッセージキュー等の動的連携は含まれない。
 
 ## サービス間依存図
@@ -27,7 +27,9 @@ graph LR
   s13 -->|"6"| s7
   s13 -->|"6"| s1
   s6 -->|"5"| s7
+  s10 -->|"3"| s7
   s13 -->|"3"| s6
+  s6 -->|"2"| s10
 ```
 
 ## サービス別サマリ
@@ -40,10 +42,10 @@ graph LR
 | customer | 5,180 | 24 | 0 | 0 | 24 |
 | dsl-generator | 3,196 | 0 | 0 | 0 | 0 |
 | payment | 2,088 | 9 | 9 | 0 | 0 |
-| order | 1,779 | 11 | 3 | 0 | 8 |
+| order | 1,941 | 11 | 3 | 0 | 8 |
+| shipping | 1,342 | 9 | 1 | 4 | 4 |
 | inventory | 1,230 | 14 | 0 | 0 | 14 |
 | admin | 788 | 28 | 0 | 0 | 28 |
-| shipping | 775 | 0 | 0 | 0 | 0 |
 | review | 656 | 19 | 0 | 0 | 19 |
 | notification | 583 | 13 | 0 | 0 | 13 |
 | chat | 577 | 13 | 0 | 0 | 13 |
@@ -62,6 +64,7 @@ graph LR
 - **order**: OrderService.CreateReorder, OrderService.ExportOrdersToCSV, OrderService.GetOrderDetail, OrderService.GetOrderStatistics, OrderService.GetOrderStatusHistory, OrderService.GetProductSalesRanking, OrderService.SearchOrders, OrderService.UpdateOrderStatus
 - **review**: ReviewService.ApproveReview, ReviewService.DeleteReview, ReviewService.DeleteReviewByAdmin, ReviewService.DeleteShopReply, ReviewService.GetMyReviews, ReviewService.GetPendingReviews, ReviewService.GetProductRating, ReviewService.GetReviewDetail, ReviewService.GetReviewReports, ReviewService.GetReviewsByProduct, ReviewService.MarkReviewHelpful, ReviewService.PostReview, ReviewService.PostShopReply, ReviewService.RejectReview, ReviewService.ReportReview, ReviewService.ResolveReviewReport, ReviewService.UnmarkReviewHelpful, ReviewService.UpdateReview, ReviewService.UpdateShopReply
 - **search**: SearchService.ClearAllSearchHistory, SearchService.DeleteProductIndex, SearchService.DeleteSearchHistory, SearchService.DeleteShopIndex, SearchService.GetPopularKeywords, SearchService.GetSearchAnalytics, SearchService.GetSearchHistory, SearchService.GetSearchSuggestions, SearchService.GetTrendingKeywords, SearchService.IndexProduct, SearchService.IndexShop, SearchService.RecordSearchHistory, SearchService.SearchProducts, SearchService.SearchShops, SearchService.UpdateProductIndex
+- **shipping**: ShippingService.GetShipmentDetail, ShippingService.NormalizeAddress, ShippingService.SyncCarrierTracking, ShippingService.ValidateAddress
 - **shop**: ShopService.ExportSalesData, ShopService.GetOrderDetail, ShopService.GetSalesReport, ShopService.GetShopsByOwner, ShopService.ManageVariation, ShopService.ToggleShopPublish, ShopService.UpdateOrderStatus, ShopService.UpdateShop, ShopService.UploadProductImage
 
 ## 循環依存

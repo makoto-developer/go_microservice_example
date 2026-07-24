@@ -5,7 +5,8 @@ go 1.25
 require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
-	github.com/makoto-developer/go_microservice_example/microservices/payment v0.0.0-00010101000000-000000000000
+	github.com/makoto-developer/go_microservice_example/microservices/payment v0.0.0
+	github.com/makoto-developer/go_microservice_example/microservices/shipping v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.5
 )
@@ -18,3 +19,5 @@ require (
 )
 
 replace github.com/makoto-developer/go_microservice_example/microservices/payment => ../payment
+
+replace github.com/makoto-developer/go_microservice_example/microservices/shipping => ../shipping

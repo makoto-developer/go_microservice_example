@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/domain"
 )
 
 type ShipmentRepository interface {

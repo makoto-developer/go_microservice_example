@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/shipping/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/shipping/internal/usecase"
 )
 
 type mockShipmentRepository struct {

@@ -106,6 +106,21 @@ func (c *fakePaymentClient) RefundByOrder(_ context.Context, orderID string, rea
 
 func (c *fakePaymentClient) Close() error { return nil }
 
+type fakeShippingClient struct {
+	created []client.CreateShipmentInput
+	err     error
+}
+
+func (c *fakeShippingClient) CreateShipment(_ context.Context, in client.CreateShipmentInput) (string, error) {
+	c.created = append(c.created, in)
+	if c.err != nil {
+		return "", c.err
+	}
+	return "shipment_test", nil
+}
+
+func (c *fakeShippingClient) Close() error { return nil }
+
 func testInput() CreateOrderInput {
 	return CreateOrderInput{
 		CustomerID:      uuid.New(),
@@ -247,6 +262,57 @@ func TestCancelOrder_RefundFailureKeepsOrder(t *testing.T) {
 	// 返金に失敗したらキャンセルしない(返金漏れ防止)
 	if _, ok := orderRepo.lastStatus(orderID); ok {
 		t.Error("order should not be cancelled when refund fails")
+	}
+}
+
+func TestCreateOrder_CreatesShipmentAfterPayment(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	payment := &fakePaymentClient{}
+	shipping := &fakeShippingClient{}
+	u := NewOrderManagementUsecaseWithShipping(orderRepo, itemRepo, payment, shipping)
+
+	orderID, err := u.CreateOrder(context.Background(), testInput())
+	if err != nil {
+		t.Fatalf("CreateOrder returned error: %v", err)
+	}
+	if len(shipping.created) != 1 {
+		t.Fatalf("expected 1 shipment, got %d", len(shipping.created))
+	}
+	if shipping.created[0].OrderID != orderID.String() {
+		t.Errorf("shipment order id = %s, want %s", shipping.created[0].OrderID, orderID)
+	}
+}
+
+func TestCreateOrder_ShipmentFailureDoesNotFailOrder(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	payment := &fakePaymentClient{}
+	shipping := &fakeShippingClient{err: errors.New("shipping down")}
+	u := NewOrderManagementUsecaseWithShipping(orderRepo, itemRepo, payment, shipping)
+
+	orderID, err := u.CreateOrder(context.Background(), testInput())
+	if err != nil {
+		t.Fatalf("order should succeed even if shipment creation fails: %v", err)
+	}
+	// 決済成功後の状態は維持される
+	if status, ok := orderRepo.lastStatus(orderID); !ok || status != domain.OrderStatusPaid {
+		t.Errorf("order status = %v (ok=%v), want %v", status, ok, domain.OrderStatusPaid)
+	}
+}
+
+func TestCreateOrder_PaymentFailureSkipsShipment(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	payment := &fakePaymentClient{err: errors.New("card declined")}
+	shipping := &fakeShippingClient{}
+	u := NewOrderManagementUsecaseWithShipping(orderRepo, itemRepo, payment, shipping)
+
+	if _, err := u.CreateOrder(context.Background(), testInput()); err == nil {
+		t.Fatal("expected error when payment fails")
+	}
+	if len(shipping.created) != 0 {
+		t.Errorf("shipment should not be created when payment fails, got %d", len(shipping.created))
 	}
 }
 
