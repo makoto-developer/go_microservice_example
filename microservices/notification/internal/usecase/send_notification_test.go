@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/notification/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/notification/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/notification/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/notification/internal/usecase"
 )
 
 type mockNotificationRepository struct {

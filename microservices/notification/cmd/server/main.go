@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/makoto-developer/go_microservice_example/generated/notification/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/notification/internal/handler/grpc"
-	pb "github.com/makoto-developer/go_microservice_example/proto/notification_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/notification/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/notification/internal/handler/grpc"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/notification/proto"
 )
 
 func main() {

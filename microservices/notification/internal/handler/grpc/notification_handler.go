@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 
-	pb "github.com/makoto-developer/go_microservice_example/proto/notification_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/notification/proto"
 )
 
 type NotificationServiceHandler struct {

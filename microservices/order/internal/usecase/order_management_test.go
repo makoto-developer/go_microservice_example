@@ -121,6 +121,23 @@ func (c *fakeShippingClient) CreateShipment(_ context.Context, in client.CreateS
 
 func (c *fakeShippingClient) Close() error { return nil }
 
+type fakeNotificationClient struct {
+	confirmed []client.OrderNotificationInput
+	cancelled []client.OrderNotificationInput
+}
+
+func (c *fakeNotificationClient) NotifyOrderConfirmed(_ context.Context, in client.OrderNotificationInput) error {
+	c.confirmed = append(c.confirmed, in)
+	return nil
+}
+
+func (c *fakeNotificationClient) NotifyOrderCancelled(_ context.Context, in client.OrderNotificationInput) error {
+	c.cancelled = append(c.cancelled, in)
+	return nil
+}
+
+func (c *fakeNotificationClient) Close() error { return nil }
+
 func testInput() CreateOrderInput {
 	return CreateOrderInput{
 		CustomerID:      uuid.New(),
@@ -313,6 +330,62 @@ func TestCreateOrder_PaymentFailureSkipsShipment(t *testing.T) {
 	}
 	if len(shipping.created) != 0 {
 		t.Errorf("shipment should not be created when payment fails, got %d", len(shipping.created))
+	}
+}
+
+func TestCreateOrder_SendsConfirmationEmail(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	notification := &fakeNotificationClient{}
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification)
+
+	input := testInput()
+	input.CustomerEmail = "customer@example.com"
+	if _, err := u.CreateOrder(context.Background(), input); err != nil {
+		t.Fatalf("CreateOrder: %v", err)
+	}
+
+	if len(notification.confirmed) != 1 {
+		t.Fatalf("expected 1 confirmation email, got %d", len(notification.confirmed))
+	}
+	sent := notification.confirmed[0]
+	if sent.CustomerEmail != "customer@example.com" {
+		t.Errorf("email to = %s, want customer@example.com", sent.CustomerEmail)
+	}
+	if sent.TotalAmount != 3000 {
+		t.Errorf("email total = %d, want 3000", sent.TotalAmount)
+	}
+}
+
+func TestCreateOrder_NoEmailSkipsNotification(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	notification := &fakeNotificationClient{}
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification)
+
+	if _, err := u.CreateOrder(context.Background(), testInput()); err != nil {
+		t.Fatalf("CreateOrder: %v", err)
+	}
+	if len(notification.confirmed) != 0 {
+		t.Errorf("no email expected without address, got %d", len(notification.confirmed))
+	}
+}
+
+func TestCancelOrder_SendsCancellationEmail(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	notification := &fakeNotificationClient{}
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification)
+
+	orderID, err := u.CreateOrder(context.Background(), testInput())
+	if err != nil {
+		t.Fatalf("CreateOrder: %v", err)
+	}
+	if err := u.CancelOrder(context.Background(), orderID); err != nil {
+		t.Fatalf("CancelOrder: %v", err)
+	}
+	if len(notification.cancelled) != 1 {
+		t.Fatalf("expected 1 cancellation email, got %d", len(notification.cancelled))
 	}
 }
 

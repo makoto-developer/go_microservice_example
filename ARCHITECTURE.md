@@ -1,6 +1,6 @@
 # go_microservice_example アーキテクチャレポート
 
-> strata 0.1.0 により生成(2026-07-24T14:38:23.953Z)。
+> strata 0.1.0 により生成(2026-07-24T14:44:21.586Z)。
 > 静的解析のため、メッセージキュー等の動的連携は含まれない。
 
 ## サービス間依存図
@@ -30,6 +30,7 @@ graph LR
   s10 -->|"3"| s7
   s13 -->|"3"| s10
   s13 -->|"3"| s6
+  s6 -->|"2"| s5
   s6 -->|"2"| s10
 ```
 
@@ -43,12 +44,12 @@ graph LR
 | customer | 5,180 | 24 | 0 | 0 | 24 |
 | dsl-generator | 3,196 | 0 | 0 | 0 | 0 |
 | payment | 2,332 | 9 | 9 | 0 | 0 |
-| order | 1,941 | 11 | 3 | 0 | 8 |
+| order | 2,163 | 11 | 3 | 0 | 8 |
 | shipping | 1,546 | 9 | 4 | 1 | 4 |
 | inventory | 1,230 | 14 | 0 | 0 | 14 |
 | admin | 788 | 28 | 0 | 0 | 28 |
 | review | 656 | 19 | 0 | 0 | 19 |
-| notification | 583 | 13 | 0 | 0 | 13 |
+| notification | 583 | 13 | 1 | 0 | 12 |
 | chat | 577 | 13 | 0 | 0 | 13 |
 | search | 548 | 15 | 0 | 0 | 15 |
 
@@ -61,7 +62,7 @@ graph LR
 - **chat**: ChatService.CreateChatRoom, ChatService.GetArchivedMessages, ChatService.GetChatRoomDetail, ChatService.GetChatRooms, ChatService.GetMessages, ChatService.GetUserPresence, ChatService.MarkMessagesAsRead, ChatService.SearchMessages, ChatService.SendMessage, ChatService.UpdatePresence, ChatService.UpdateRoomStatus, ChatService.UploadChatFile, ChatService.UploadChatImage
 - **customer**: CustomerService.AddToCart, CustomerService.AddToFavorite, CustomerService.DeleteAddress, CustomerService.DeletePaymentMethod, CustomerService.GetCart, CustomerService.GetFavorites, CustomerService.GetMyReviews, CustomerService.GetOrderDetail, CustomerService.GetOrderHistory, CustomerService.GetProfile, CustomerService.MergeGuestCart, CustomerService.PostReview, CustomerService.RegisterAddress, CustomerService.RegisterPaymentMethod, CustomerService.RemoveFromCart, CustomerService.RemoveFromFavorite, CustomerService.ReorderFromHistory, CustomerService.RequestOrderCancel, CustomerService.SearchPostalCode, CustomerService.UpdateAddress, CustomerService.UpdateCartItemQuantity, CustomerService.UpdateProfile, CustomerService.UpdateReview, CustomerService.UploadProfileImage
 - **inventory**: InventoryService.BulkGetInventory, InventoryService.BulkReserveStock, InventoryService.CheckStockAlert, InventoryService.ConfirmStock, InventoryService.GetInventory, InventoryService.GetInventoryByProduct, InventoryService.GetInventoryHistory, InventoryService.GetStockTakingHistory, InventoryService.RecordStockTaking, InventoryService.RegisterInventory, InventoryService.ReleaseExpiredReservations, InventoryService.ReleaseStock, InventoryService.ReserveStock, InventoryService.UpdateInventoryQuantity
-- **notification**: NotificationService.CreateEmailTemplate, NotificationService.GetNotificationHistory, NotificationService.GetNotificationPreference, NotificationService.PreviewEmailTemplate, NotificationService.RefreshDeviceToken, NotificationService.RegisterDeviceToken, NotificationService.ResendNotification, NotificationService.SendBulkEmail, NotificationService.SendEmail, NotificationService.SendPushNotification, NotificationService.UnregisterDeviceToken, NotificationService.UpdateEmailTemplate, NotificationService.UpdateNotificationPreference
+- **notification**: NotificationService.CreateEmailTemplate, NotificationService.GetNotificationHistory, NotificationService.GetNotificationPreference, NotificationService.PreviewEmailTemplate, NotificationService.RefreshDeviceToken, NotificationService.RegisterDeviceToken, NotificationService.ResendNotification, NotificationService.SendBulkEmail, NotificationService.SendPushNotification, NotificationService.UnregisterDeviceToken, NotificationService.UpdateEmailTemplate, NotificationService.UpdateNotificationPreference
 - **order**: OrderService.CreateReorder, OrderService.ExportOrdersToCSV, OrderService.GetOrderDetail, OrderService.GetOrderStatistics, OrderService.GetOrderStatusHistory, OrderService.GetProductSalesRanking, OrderService.SearchOrders, OrderService.UpdateOrderStatus
 - **review**: ReviewService.ApproveReview, ReviewService.DeleteReview, ReviewService.DeleteReviewByAdmin, ReviewService.DeleteShopReply, ReviewService.GetMyReviews, ReviewService.GetPendingReviews, ReviewService.GetProductRating, ReviewService.GetReviewDetail, ReviewService.GetReviewReports, ReviewService.GetReviewsByProduct, ReviewService.MarkReviewHelpful, ReviewService.PostReview, ReviewService.PostShopReply, ReviewService.RejectReview, ReviewService.ReportReview, ReviewService.ResolveReviewReport, ReviewService.UnmarkReviewHelpful, ReviewService.UpdateReview, ReviewService.UpdateShopReply
 - **search**: SearchService.ClearAllSearchHistory, SearchService.DeleteProductIndex, SearchService.DeleteSearchHistory, SearchService.DeleteShopIndex, SearchService.GetPopularKeywords, SearchService.GetSearchAnalytics, SearchService.GetSearchHistory, SearchService.GetSearchSuggestions, SearchService.GetTrendingKeywords, SearchService.IndexProduct, SearchService.IndexShop, SearchService.RecordSearchHistory, SearchService.SearchProducts, SearchService.SearchShops, SearchService.UpdateProductIndex

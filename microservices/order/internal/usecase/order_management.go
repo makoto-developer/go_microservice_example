@@ -21,6 +21,7 @@ const (
 
 type CreateOrderInput struct {
 	CustomerID      uuid.UUID
+	CustomerEmail   string // 通知メールの宛先(空なら通知スキップ)
 	AddressID       uuid.UUID
 	Items           []OrderItemInput
 	ShippingFee     int64
@@ -45,10 +46,11 @@ type OrderManagementUsecase interface {
 }
 
 type orderManagementUsecase struct {
-	orderRepo      repository.OrderRepository
-	orderItemRepo  repository.OrderItemRepository
-	paymentClient  client.PaymentClient
-	shippingClient client.ShippingClient // nil の場合は出荷起票をスキップ
+	orderRepo          repository.OrderRepository
+	orderItemRepo      repository.OrderItemRepository
+	paymentClient      client.PaymentClient
+	shippingClient     client.ShippingClient     // nil の場合は出荷起票をスキップ
+	notificationClient client.NotificationClient // nil の場合は通知をスキップ
 }
 
 func NewOrderManagementUsecase(
@@ -75,6 +77,23 @@ func NewOrderManagementUsecaseWithShipping(
 		orderItemRepo:  orderItemRepo,
 		paymentClient:  paymentClient,
 		shippingClient: shippingClient,
+	}
+}
+
+// NewOrderManagementUsecaseFull は決済・出荷・通知の全連携込みで組み立てる。
+func NewOrderManagementUsecaseFull(
+	orderRepo repository.OrderRepository,
+	orderItemRepo repository.OrderItemRepository,
+	paymentClient client.PaymentClient,
+	shippingClient client.ShippingClient,
+	notificationClient client.NotificationClient,
+) OrderManagementUsecase {
+	return &orderManagementUsecase{
+		orderRepo:          orderRepo,
+		orderItemRepo:      orderItemRepo,
+		paymentClient:      paymentClient,
+		shippingClient:     shippingClient,
+		notificationClient: notificationClient,
 	}
 }
 
@@ -145,6 +164,18 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 		}
 	}
 
+	// 注文確認メール(通知サービス)。失敗しても注文は成立させる
+	if u.notificationClient != nil && input.CustomerEmail != "" {
+		if err := u.notificationClient.NotifyOrderConfirmed(ctx, client.OrderNotificationInput{
+			CustomerID:    input.CustomerID.String(),
+			CustomerEmail: input.CustomerEmail,
+			OrderNumber:   order.OrderNumber,
+			TotalAmount:   totalAmount,
+		}); err != nil {
+			log.Printf("order confirmation email failed for order %s: %v", order.ID, err)
+		}
+	}
+
 	return order.ID, nil
 }
 
@@ -209,6 +240,19 @@ func (u *orderManagementUsecase) CancelOrder(ctx context.Context, orderID uuid.U
 
 	if err := u.orderRepo.UpdateStatus(ctx, orderID, domain.OrderStatusCancelled); err != nil {
 		return fmt.Errorf("failed to cancel order: %w", err)
+	}
+
+	// キャンセル確認メール(宛先が分かる場合のみ・best effort)
+	if u.notificationClient != nil {
+		if order, err := u.orderRepo.GetByID(ctx, orderID); err == nil && order != nil {
+			if err := u.notificationClient.NotifyOrderCancelled(ctx, client.OrderNotificationInput{
+				CustomerID:  order.CustomerID.String(),
+				OrderNumber: order.OrderNumber,
+				TotalAmount: order.TotalAmount,
+			}); err != nil {
+				log.Printf("order cancellation email failed for order %s: %v", orderID, err)
+			}
+		}
 	}
 	return nil
 }

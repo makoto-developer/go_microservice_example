@@ -55,7 +55,16 @@ func main() {
 		log.Printf("📦 Shipping Service: %s", cfg.Shipping.Address())
 	}
 
-	orderMgmt := usecase.NewOrderManagementUsecaseWithShipping(orderRepo, orderItemRepo, paymentClient, shippingClient)
+	notificationClient, err := client.NewNotificationClient(cfg.Notification.Address())
+	if err != nil {
+		log.Printf("Warning: notification client unavailable (%v). Emails disabled.", err)
+		notificationClient = nil
+	} else {
+		defer notificationClient.Close()
+		log.Printf("📧 Notification Service: %s", cfg.Notification.Address())
+	}
+
+	orderMgmt := usecase.NewOrderManagementUsecaseFull(orderRepo, orderItemRepo, paymentClient, shippingClient, notificationClient)
 	handler := grpchandler.NewOrderServiceHandler(orderMgmt)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))

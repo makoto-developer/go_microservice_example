@@ -70,6 +70,7 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrd
 
 	input := usecase.CreateOrderInput{
 		CustomerID:      customerID,
+		CustomerEmail:   req.GetCustomerEmail(),
 		AddressID:       addressID,
 		Items:           items,
 		ShippingFee:     shippingFee,

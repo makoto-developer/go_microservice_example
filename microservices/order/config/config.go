@@ -6,10 +6,21 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Payment  PaymentServiceConfig
-	Shipping ShippingServiceConfig
+	Server       ServerConfig
+	Database     DatabaseConfig
+	Payment      PaymentServiceConfig
+	Shipping     ShippingServiceConfig
+	Notification NotificationServiceConfig
+}
+
+// NotificationServiceConfig は通知サービス(notification)への接続先。
+type NotificationServiceConfig struct {
+	Host string
+	Port string
+}
+
+func (c *NotificationServiceConfig) Address() string {
+	return c.Host + ":" + c.Port
 }
 
 // ShippingServiceConfig は配送サービス(shipping)への接続先。
@@ -65,6 +76,10 @@ func LoadConfig() (*Config, error) {
 		Shipping: ShippingServiceConfig{
 			Host: getEnv("SHIPPING_SERVICE_HOST", "localhost"),
 			Port: getEnv("SHIPPING_SERVICE_PORT", "50057"),
+		},
+		Notification: NotificationServiceConfig{
+			Host: getEnv("NOTIFICATION_SERVICE_HOST", "localhost"),
+			Port: getEnv("NOTIFICATION_SERVICE_PORT", "20107"),
 		},
 	}, nil
 }
