@@ -212,6 +212,12 @@ defmodule ShopMallWebWeb.ProductDetailLive do
                 商品一覧
               </.link>
               <.link
+                navigate="/orders"
+                class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                注文履歴
+              </.link>
+              <.link
                 navigate="/auth"
                 class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >

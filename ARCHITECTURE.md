@@ -1,6 +1,6 @@
 # go_microservice_example アーキテクチャレポート
 
-> strata 0.1.0 により生成(2026-07-24T14:15:02.914Z)。
+> strata 0.1.0 により生成(2026-07-24T14:19:18.988Z)。
 > 静的解析のため、メッセージキュー等の動的連携は含まれない。
 
 ## サービス間依存図
@@ -27,7 +27,7 @@ graph LR
   s13 -->|"6"| s7
   s13 -->|"6"| s1
   s6 -->|"5"| s7
-  s13 -->|"1"| s6
+  s13 -->|"3"| s6
 ```
 
 ## サービス別サマリ
@@ -35,12 +35,12 @@ graph LR
 | サービス | 規模(LOC) | 公開RPC | 本番から呼ばれる | テストのみ | 未使用 |
 |---|---:|---:|---:|---:|---:|
 | auth | 5,858 | 24 | 4 | 9 | 11 |
+| shop_mall_web | 5,786 | 0 | 0 | 0 | 0 |
 | shop | 5,573 | 19 | 10 | 0 | 9 |
-| shop_mall_web | 5,486 | 0 | 0 | 0 | 0 |
 | customer | 5,180 | 24 | 0 | 0 | 24 |
 | dsl-generator | 3,196 | 0 | 0 | 0 | 0 |
 | payment | 2,088 | 9 | 9 | 0 | 0 |
-| order | 1,721 | 11 | 1 | 0 | 10 |
+| order | 1,779 | 11 | 3 | 0 | 8 |
 | inventory | 1,230 | 14 | 0 | 0 | 14 |
 | admin | 788 | 28 | 0 | 0 | 28 |
 | shipping | 775 | 0 | 0 | 0 | 0 |
@@ -59,7 +59,7 @@ graph LR
 - **customer**: CustomerService.AddToCart, CustomerService.AddToFavorite, CustomerService.DeleteAddress, CustomerService.DeletePaymentMethod, CustomerService.GetCart, CustomerService.GetFavorites, CustomerService.GetMyReviews, CustomerService.GetOrderDetail, CustomerService.GetOrderHistory, CustomerService.GetProfile, CustomerService.MergeGuestCart, CustomerService.PostReview, CustomerService.RegisterAddress, CustomerService.RegisterPaymentMethod, CustomerService.RemoveFromCart, CustomerService.RemoveFromFavorite, CustomerService.ReorderFromHistory, CustomerService.RequestOrderCancel, CustomerService.SearchPostalCode, CustomerService.UpdateAddress, CustomerService.UpdateCartItemQuantity, CustomerService.UpdateProfile, CustomerService.UpdateReview, CustomerService.UploadProfileImage
 - **inventory**: InventoryService.BulkGetInventory, InventoryService.BulkReserveStock, InventoryService.CheckStockAlert, InventoryService.ConfirmStock, InventoryService.GetInventory, InventoryService.GetInventoryByProduct, InventoryService.GetInventoryHistory, InventoryService.GetStockTakingHistory, InventoryService.RecordStockTaking, InventoryService.RegisterInventory, InventoryService.ReleaseExpiredReservations, InventoryService.ReleaseStock, InventoryService.ReserveStock, InventoryService.UpdateInventoryQuantity
 - **notification**: NotificationService.CreateEmailTemplate, NotificationService.GetNotificationHistory, NotificationService.GetNotificationPreference, NotificationService.PreviewEmailTemplate, NotificationService.RefreshDeviceToken, NotificationService.RegisterDeviceToken, NotificationService.ResendNotification, NotificationService.SendBulkEmail, NotificationService.SendEmail, NotificationService.SendPushNotification, NotificationService.UnregisterDeviceToken, NotificationService.UpdateEmailTemplate, NotificationService.UpdateNotificationPreference
-- **order**: OrderService.CancelOrder, OrderService.CreateReorder, OrderService.ExportOrdersToCSV, OrderService.GetOrderDetail, OrderService.GetOrderStatistics, OrderService.GetOrderStatusHistory, OrderService.GetProductSalesRanking, OrderService.ListOrders, OrderService.SearchOrders, OrderService.UpdateOrderStatus
+- **order**: OrderService.CreateReorder, OrderService.ExportOrdersToCSV, OrderService.GetOrderDetail, OrderService.GetOrderStatistics, OrderService.GetOrderStatusHistory, OrderService.GetProductSalesRanking, OrderService.SearchOrders, OrderService.UpdateOrderStatus
 - **review**: ReviewService.ApproveReview, ReviewService.DeleteReview, ReviewService.DeleteReviewByAdmin, ReviewService.DeleteShopReply, ReviewService.GetMyReviews, ReviewService.GetPendingReviews, ReviewService.GetProductRating, ReviewService.GetReviewDetail, ReviewService.GetReviewReports, ReviewService.GetReviewsByProduct, ReviewService.MarkReviewHelpful, ReviewService.PostReview, ReviewService.PostShopReply, ReviewService.RejectReview, ReviewService.ReportReview, ReviewService.ResolveReviewReport, ReviewService.UnmarkReviewHelpful, ReviewService.UpdateReview, ReviewService.UpdateShopReply
 - **search**: SearchService.ClearAllSearchHistory, SearchService.DeleteProductIndex, SearchService.DeleteSearchHistory, SearchService.DeleteShopIndex, SearchService.GetPopularKeywords, SearchService.GetSearchAnalytics, SearchService.GetSearchHistory, SearchService.GetSearchSuggestions, SearchService.GetTrendingKeywords, SearchService.IndexProduct, SearchService.IndexShop, SearchService.RecordSearchHistory, SearchService.SearchProducts, SearchService.SearchShops, SearchService.UpdateProductIndex
 - **shop**: ShopService.ExportSalesData, ShopService.GetOrderDetail, ShopService.GetSalesReport, ShopService.GetShopsByOwner, ShopService.ManageVariation, ShopService.ToggleShopPublish, ShopService.UpdateOrderStatus, ShopService.UpdateShop, ShopService.UploadProductImage

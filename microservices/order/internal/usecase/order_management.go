@@ -38,6 +38,7 @@ type OrderManagementUsecase interface {
 	CreateOrder(ctx context.Context, input CreateOrderInput) (uuid.UUID, error)
 	GetOrder(ctx context.Context, orderID uuid.UUID) (*domain.Order, error)
 	GetOrderItems(ctx context.Context, orderID uuid.UUID) ([]*domain.OrderItem, error)
+	ListOrdersByCustomer(ctx context.Context, customerID uuid.UUID) ([]*domain.Order, error)
 	CancelOrder(ctx context.Context, orderID uuid.UUID) error
 	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status domain.OrderStatus) error
 }
@@ -160,6 +161,14 @@ func (u *orderManagementUsecase) GetOrderItems(ctx context.Context, orderID uuid
 		return nil, fmt.Errorf("failed to get order items: %w", err)
 	}
 	return items, nil
+}
+
+func (u *orderManagementUsecase) ListOrdersByCustomer(ctx context.Context, customerID uuid.UUID) ([]*domain.Order, error) {
+	orders, err := u.orderRepo.GetByCustomerID(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list orders: %w", err)
+	}
+	return orders, nil
 }
 
 func (u *orderManagementUsecase) CancelOrder(ctx context.Context, orderID uuid.UUID) error {

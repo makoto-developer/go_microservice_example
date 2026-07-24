@@ -9,6 +9,7 @@ import (
 	pb "github.com/makoto-developer/go_microservice_example/microservices/order/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type OrderServiceHandler struct {
@@ -103,25 +104,32 @@ func (h *OrderServiceHandler) GetOrderDetail(ctx context.Context, req *pb.GetOrd
 		return nil, status.Errorf(codes.Internal, "failed to get order: %v", err)
 	}
 
-	// Convert domain.Order to pb.Order
-	pbOrder := &pb.Order{
-		Id:          order.ID.String(),
-		OrderNumber: order.OrderNumber,
-		CustomerId:  order.CustomerID.String(),
-		Status:      convertOrderStatus(order.Status),
-		TotalAmount: fmt.Sprintf("%d", order.TotalAmount),
-		ShippingFee: fmt.Sprintf("%d", order.ShippingFee),
-	}
-
-	return &pb.GetOrderDetailResponse{Order: pbOrder}, nil
+	return &pb.GetOrderDetailResponse{Order: orderToProto(order)}, nil
 }
 
+// ListOrders は顧客の注文一覧を返す(注文履歴画面用)。
+// shop_id 等でのサーバー側絞り込みはこのサンプルでは未対応。
 func (h *OrderServiceHandler) ListOrders(ctx context.Context, req *pb.ListOrdersRequest) (*pb.ListOrdersResponse, error) {
+	customerID, err := uuid.Parse(req.GetCustomerId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "customer_id is required: %v", err)
+	}
+
+	orders, err := h.orderMgmt.ListOrdersByCustomer(ctx, customerID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list orders: %v", err)
+	}
+
+	items := make([]*pb.Order, 0, len(orders))
+	for _, order := range orders {
+		items = append(items, orderToProto(order))
+	}
+
 	return &pb.ListOrdersResponse{
-		Orders:     []*pb.Order{},
-		TotalCount: 0,
-		Page:       req.GetPage(),
-		PageSize:   req.GetPageSize(),
+		Orders:     items,
+		TotalCount: int32(len(items)),
+		Page:       1,
+		PageSize:   int32(len(items)),
 	}, nil
 }
 
@@ -201,6 +209,21 @@ func (h *OrderServiceHandler) CreateReorder(ctx context.Context, req *pb.CreateR
 }
 
 // Helper functions
+func orderToProto(order *domain.Order) *pb.Order {
+	// 注: domain.Order は支払い方法を保持しないため payment_method は未設定のまま。
+	// 支払いの詳細は payment サービス側(ListPayments / GetPaymentDetail)が持つ
+	return &pb.Order{
+		Id:          order.ID.String(),
+		OrderNumber: order.OrderNumber,
+		CustomerId:  order.CustomerID.String(),
+		Status:      convertOrderStatus(order.Status),
+		TotalAmount: fmt.Sprintf("%d", order.TotalAmount),
+		ShippingFee: fmt.Sprintf("%d", order.ShippingFee),
+		CreatedAt:   timestamppb.New(order.CreatedAt),
+		UpdatedAt:   timestamppb.New(order.UpdatedAt),
+	}
+}
+
 func convertOrderStatus(status domain.OrderStatus) pb.OrderStatus {
 	switch status {
 	case domain.OrderStatusPending:

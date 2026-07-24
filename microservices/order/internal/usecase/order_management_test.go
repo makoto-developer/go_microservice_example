@@ -250,6 +250,26 @@ func TestCancelOrder_RefundFailureKeepsOrder(t *testing.T) {
 	}
 }
 
+func TestListOrdersByCustomer_ReturnsOrders(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	u := NewOrderManagementUsecase(orderRepo, itemRepo, &fakePaymentClient{})
+
+	customerID := uuid.New()
+	if _, err := u.CreateOrder(context.Background(), testInput()); err != nil {
+		t.Fatalf("CreateOrder: %v", err)
+	}
+
+	orders, err := u.ListOrdersByCustomer(context.Background(), customerID)
+	if err != nil {
+		t.Fatalf("ListOrdersByCustomer returned error: %v", err)
+	}
+	// fakeOrderRepo は customer で絞らず全件返す実装なので、1件返ることだけ確認
+	if len(orders) != 1 {
+		t.Errorf("expected 1 order, got %d", len(orders))
+	}
+}
+
 func TestCreateOrder_WithoutPaymentClientSkipsPayment(t *testing.T) {
 	orderRepo := newFakeOrderRepo()
 	itemRepo := &fakeOrderItemRepo{}

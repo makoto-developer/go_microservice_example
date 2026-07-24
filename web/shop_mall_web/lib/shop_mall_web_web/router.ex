@@ -26,6 +26,7 @@ defmodule ShopMallWebWeb.Router do
     live "/dashboard", DashboardLive
     live "/products", ProductListLive
     live "/products/:id", ProductDetailLive
+    live "/orders", OrderHistoryLive
 
     # Owner routes
     live "/owner/auth", Owner.AuthLive
