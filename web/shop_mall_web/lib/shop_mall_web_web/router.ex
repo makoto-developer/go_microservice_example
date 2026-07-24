@@ -18,6 +18,8 @@ defmodule ShopMallWebWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/session/establish", SessionController, :establish
+    get "/session/logout", SessionController, :logout
     live "/auth", AuthLive
     live "/auth/password-reset", PasswordResetLive
     live "/auth/reset-password", PasswordResetConfirmLive

@@ -48,12 +48,15 @@ defmodule ShopMallWebWeb.AuthLive do
     case call_auth_service(:login, request) do
       {:ok, response} ->
         IO.puts("=== Login SUCCESS ===")
-        IO.inspect(response)
+
+        # LiveView からはセッションに書けないため、署名付きトークンを
+        # SessionController に渡してクッキーセッションへ user_id を保存する
+        token = Phoenix.Token.sign(ShopMallWebWeb.Endpoint, "user session", response.user_id)
 
         {:noreply,
          socket
          |> put_flash(:info, "ログイン成功！")
-         |> push_navigate(to: "/dashboard")}
+         |> redirect(to: "/session/establish?token=#{token}")}
 
       {:error, reason} ->
         IO.puts("=== Login FAILED ===")
