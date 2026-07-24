@@ -20,7 +20,8 @@ type ShippingServiceHandler struct {
 	pb.UnimplementedShippingServiceServer
 	createShipmentUsecase usecase.CreateShipmentUsecase
 	shipmentRepo          repository.ShipmentRepository
-	paymentClient         client.PaymentClient // nil の場合は決済連携をスキップ
+	paymentClient         client.PaymentClient      // nil の場合は決済連携をスキップ
+	notificationClient    client.NotificationClient // nil の場合は通知をスキップ
 }
 
 func NewShippingServiceHandler(
@@ -33,6 +34,12 @@ func NewShippingServiceHandler(
 		shipmentRepo:          shipmentRepo,
 		paymentClient:         paymentClient,
 	}
+}
+
+// WithNotification は配達完了通知(notification サービス連携)を有効にする。
+func (h *ShippingServiceHandler) WithNotification(nc client.NotificationClient) *ShippingServiceHandler {
+	h.notificationClient = nc
+	return h
 }
 
 // CalculateShippingFee は配送料を見積もる(サンプルのため簡易テーブル)。
@@ -129,14 +136,24 @@ func (h *ShippingServiceHandler) UpdateShipmentStatus(ctx context.Context, req *
 	}
 
 	message := "Shipment status updated"
-	if newStatus == domain.ShipmentStatusDelivered && h.paymentClient != nil {
-		// 配達完了 = 代引きの集金完了。決済サービスに入金を確定させる
-		if err := h.paymentClient.ConfirmCODByOrder(ctx, shipment.OrderID.String()); err != nil {
-			// 集金確定の失敗で配送状態の更新は巻き戻さない(再送はバッチ想定)
-			log.Printf("COD confirmation failed for order %s: %v", shipment.OrderID, err)
-			message = "Shipment delivered, but COD confirmation failed (will retry)"
-		} else {
-			message = "Shipment delivered. COD payment (if any) confirmed."
+	if newStatus == domain.ShipmentStatusDelivered {
+		if h.paymentClient != nil {
+			// 配達完了 = 代引きの集金完了。決済サービスに入金を確定させる
+			if err := h.paymentClient.ConfirmCODByOrder(ctx, shipment.OrderID.String()); err != nil {
+				// 集金確定の失敗で配送状態の更新は巻き戻さない(再送はバッチ想定)
+				log.Printf("COD confirmation failed for order %s: %v", shipment.OrderID, err)
+				message = "Shipment delivered, but COD confirmation failed (will retry)"
+			} else {
+				message = "Shipment delivered. COD payment (if any) confirmed."
+			}
+		}
+		// 配達完了メール(best effort)
+		if h.notificationClient != nil {
+			if err := h.notificationClient.NotifyDelivered(
+				ctx, shipment.CustomerID.String(), shipment.OrderID.String(), shipment.TrackingNumber,
+			); err != nil {
+				log.Printf("delivery notification failed for order %s: %v", shipment.OrderID, err)
+			}
 		}
 	}
 

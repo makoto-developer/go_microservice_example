@@ -124,6 +124,16 @@ func main() {
 		paymentClient,
 	)
 
+	// 配達完了メール(通知サービス)
+	notificationAddr := fmt.Sprintf("%s:%s", cfg.Notification.Host, cfg.Notification.Port)
+	if notificationClient, err := client.NewNotificationClient(notificationAddr); err != nil {
+		log.Printf("Warning: notification client unavailable (%v). Delivery emails disabled.", err)
+	} else {
+		defer notificationClient.Close()
+		handler.WithNotification(notificationClient)
+		log.Printf("✉️ Notification Service: %s", notificationAddr)
+	}
+
 	// Start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {

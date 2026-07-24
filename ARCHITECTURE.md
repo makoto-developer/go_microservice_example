@@ -1,6 +1,6 @@
 # go_microservice_example アーキテクチャレポート
 
-> strata 0.1.0 により生成(2026-07-24T14:45:37.813Z)。
+> strata 0.1.0 により生成(2026-07-24T15:03:49.724Z)。
 > 静的解析のため、メッセージキュー等の動的連携は含まれない。
 
 ## サービス間依存図
@@ -32,6 +32,7 @@ graph LR
   s13 -->|"3"| s6
   s6 -->|"2"| s5
   s6 -->|"2"| s10
+  s10 -->|"2"| s5
 ```
 
 ## サービス間の呼び出し詳細
@@ -47,6 +48,7 @@ graph LR
 | shop_mall_web | order | OrderService.CancelOrder, OrderService.CreateOrder, OrderService.ListOrders |
 | order | notification | NotificationService.SendEmail |
 | order | shipping | ShippingService.CreateShipment |
+| shipping | notification | NotificationService.SendEmail |
 
 ## サービス別サマリ
 
@@ -59,7 +61,7 @@ graph LR
 | dsl-generator | 3,196 | 0 | 0 | 0 | 0 |
 | payment | 2,332 | 9 | 9 | 0 | 0 |
 | order | 2,163 | 11 | 3 | 0 | 8 |
-| shipping | 1,546 | 9 | 4 | 1 | 4 |
+| shipping | 1,689 | 9 | 4 | 1 | 4 |
 | inventory | 1,230 | 14 | 0 | 0 | 14 |
 | admin | 788 | 28 | 0 | 0 | 28 |
 | review | 656 | 19 | 0 | 0 | 19 |

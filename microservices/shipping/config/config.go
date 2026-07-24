@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Payment  PaymentConfig
+	Server       ServerConfig
+	Database     DatabaseConfig
+	Payment      PaymentConfig
+	Notification NotificationConfig
 }
 
 type ServerConfig struct {
@@ -22,6 +23,12 @@ type DatabaseConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+// NotificationConfig は通知サービスへの接続先(配達完了メールに使う)
+type NotificationConfig struct {
+	Host string
+	Port string
 }
 
 // PaymentConfig は決済サービスへの接続先(代引きの集金確定通知に使う)
@@ -46,6 +53,10 @@ func Load() (*Config, error) {
 		Payment: PaymentConfig{
 			Host: getEnv("PAYMENT_SERVICE_HOST", "localhost"),
 			Port: getEnv("PAYMENT_SERVICE_PORT", "50056"),
+		},
+		Notification: NotificationConfig{
+			Host: getEnv("NOTIFICATION_SERVICE_HOST", "localhost"),
+			Port: getEnv("NOTIFICATION_SERVICE_PORT", "20107"),
 		},
 	}, nil
 }
