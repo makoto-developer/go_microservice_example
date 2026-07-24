@@ -469,6 +469,8 @@ make test-e2e         # E2Eテスト（5-10分）
 | ドキュメント | 内容 |
 |------------|------|
 | [README.md](./README.md) | プロジェクト概要（このファイル） |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | サービス間依存とAPI使用状況（strata report で自動生成） |
+| [docs/payment-flow.md](./docs/payment-flow.md) | 決済フロー（カード/代引き・返金・配送連携） |
 | [QUICKSTART.md](./QUICKSTART.md) | 1分で起動するガイド |
 | [RUNNING_SERVICES_DASHBOARD.md](./RUNNING_SERVICES_DASHBOARD.md) | サービスダッシュボード |
 | [PROJECT_STATUS_FINAL.md](./PROJECT_STATUS_FINAL.md) | プロジェクト状況レポート |
