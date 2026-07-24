@@ -29,7 +29,7 @@ order-server
 payment-server
 notification-service
 review-service
-shipping
+simple-servers/shipping/shipping
 chat-service
 search-service
 admin-service
