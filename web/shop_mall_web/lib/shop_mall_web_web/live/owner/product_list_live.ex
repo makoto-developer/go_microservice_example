@@ -110,6 +110,7 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
+
       {:error, reason} ->
         {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -123,6 +124,7 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
+
       {:error, reason} ->
         {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -136,6 +138,7 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
+
       {:error, reason} ->
         {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -149,6 +152,7 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
+
       {:error, reason} ->
         {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -188,7 +192,10 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between h-16">
             <div class="flex items-center">
-              <.link navigate="/owner/dashboard" class="text-2xl font-bold text-white hover:text-gray-200">
+              <.link
+                navigate="/owner/dashboard"
+                class="text-2xl font-bold text-white hover:text-gray-200"
+              >
                 ショップ管理
               </.link>
             </div>
@@ -215,13 +222,14 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
           </div>
         </div>
       </nav>
-
-      <!-- メインコンテンツ -->
+      
+    <!-- メインコンテンツ -->
       <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div class="px-4 py-6 sm:px-0">
           <%= if @loading do %>
             <div class="text-center py-12">
-              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600">
+              </div>
               <p class="mt-4 text-gray-600">読み込み中...</p>
             </div>
           <% else %>
@@ -230,7 +238,7 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
               <div>
                 <h1 class="text-3xl font-bold text-gray-900">商品管理</h1>
                 <%= if @shop do %>
-                  <p class="mt-1 text-sm text-gray-600"><%= @shop.name %></p>
+                  <p class="mt-1 text-sm text-gray-600">{@shop.name}</p>
                 <% end %>
               </div>
               <.link
@@ -253,8 +261,8 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
                 新規商品登録
               </.link>
             </div>
-
-            <!-- 商品一覧 -->
+            
+    <!-- 商品一覧 -->
             <%= if Enum.empty?(@products) do %>
               <div class="text-center py-12 bg-white rounded-lg shadow">
                 <svg
@@ -318,12 +326,12 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
                             </svg>
                           </div>
                         </div>
-
-                        <!-- 商品情報 -->
+                        
+    <!-- 商品情報 -->
                         <div class="flex-1 min-w-0">
                           <div class="flex items-center space-x-3">
                             <p class="text-lg font-medium text-gray-900 truncate">
-                              <%= product.name %>
+                              {product.name}
                             </p>
                             <%= if product.published do %>
                               <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
@@ -336,18 +344,18 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
                             <% end %>
                           </div>
                           <p class="mt-1 text-sm text-gray-500 line-clamp-2">
-                            <%= product.description %>
+                            {product.description}
                           </p>
                           <div class="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                             <span class="font-medium text-gray-900">
-                              <%= format_price(product.price) %>
+                              {format_price(product.price)}
                             </span>
-                            <span>在庫: <%= product.stock_quantity %>個</span>
-                            <span>カテゴリ: <%= product.category %></span>
+                            <span>在庫: {product.stock_quantity}個</span>
+                            <span>カテゴリ: {product.category}</span>
                           </div>
                         </div>
-
-                        <!-- アクション -->
+                        
+    <!-- アクション -->
                         <div class="flex-shrink-0 flex space-x-2">
                           <.link
                             navigate={"/owner/products/#{product.id}/edit"}
@@ -360,7 +368,7 @@ defmodule ShopMallWebWeb.Owner.ProductListLive do
                             phx-value-product-id={product.id}
                             class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                           >
-                            <%= if product.published, do: "非公開", else: "公開" %>
+                            {if product.published, do: "非公開", else: "公開"}
                           </button>
                           <button
                             phx-click="delete_product"

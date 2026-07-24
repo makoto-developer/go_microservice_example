@@ -34,12 +34,15 @@ defmodule ShopMallWebWeb.Router do
     live "/owner/products", Owner.ProductListLive
     live "/owner/products/new", Owner.ProductFormLive
     live "/owner/products/:id/edit", Owner.ProductFormLive
+    live "/owner/payments", Owner.PaymentListLive
 
     # Shop listing (for customers)
     live "/shops", ShopListLive
     live "/shops/:id", ShopDetailLive
 
-    # Admin routes (temporarily disabled - Proto files not generated)
+    # Admin routes
+    live "/admin/payments", Admin.PaymentListLive
+    # (temporarily disabled - Proto files not generated)
     # live "/admin", Admin.DashboardLive
     # live "/admin/shops/pending", Admin.ShopApprovalLive
     # live "/admin/users", Admin.UserListLive

@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,6 +68,67 @@ func (r *paymentRepository) GetByOrderID(ctx context.Context, orderID uuid.UUID)
 		return nil, err
 	}
 	return payment, nil
+}
+
+func (r *paymentRepository) List(ctx context.Context, filter repository.PaymentListFilter) ([]*domain.Payment, int, error) {
+	where := "WHERE 1=1"
+	args := []any{}
+	if filter.OrderID != uuid.Nil {
+		args = append(args, filter.OrderID)
+		where += fmt.Sprintf(" AND order_id = $%d", len(args))
+	}
+	if len(filter.Statuses) > 0 {
+		placeholders := make([]string, 0, len(filter.Statuses))
+		for _, s := range filter.Statuses {
+			args = append(args, s)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+		}
+		where += " AND status IN (" + strings.Join(placeholders, ", ") + ")"
+	}
+	if filter.Method != "" {
+		args = append(args, filter.Method)
+		where += fmt.Sprintf(" AND payment_method = $%d", len(args))
+	}
+
+	total := 0
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM payments "+where, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	page := filter.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := filter.PageSize
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	args = append(args, pageSize, (page-1)*pageSize)
+	query := fmt.Sprintf(`
+		SELECT id, order_id, amount, payment_method, status, transaction_id, created_at, updated_at
+		FROM payments %s
+		ORDER BY created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	payments := []*domain.Payment{}
+	for rows.Next() {
+		payment := &domain.Payment{}
+		if err := rows.Scan(
+			&payment.ID, &payment.OrderID, &payment.Amount, &payment.PaymentMethod,
+			&payment.Status, &payment.TransactionID, &payment.CreatedAt, &payment.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		payments = append(payments, payment)
+	}
+	return payments, total, rows.Err()
 }
 
 func (r *paymentRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.PaymentStatus, transactionID string) error {

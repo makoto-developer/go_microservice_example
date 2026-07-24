@@ -39,7 +39,7 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
     }
 
     case call_auth_service(:login, request) do
-      {:ok, response} ->
+      {:ok, _response} ->
         # TODO: セッションにユーザー情報を保存
         {:noreply,
          socket
@@ -63,7 +63,7 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
     }
 
     case call_auth_service(:register, request) do
-      {:ok, response} ->
+      {:ok, _response} ->
         # 登録成功後、ショップ登録画面へ
         {:noreply,
          socket
@@ -86,6 +86,7 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, "接続エラー: #{inspect(error)}"}
         end
+
       {:error, reason} ->
         {:error, "Auth Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -99,6 +100,7 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, "接続エラー: #{inspect(error)}"}
         end
+
       {:error, reason} ->
         {:error, "Auth Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -127,18 +129,18 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
         </div>
 
         <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
-          <%= if @mode == :login, do: "オーナーログイン", else: "オーナー登録" %>
+          {if @mode == :login, do: "オーナーログイン", else: "オーナー登録"}
         </h2>
 
         <%= if @success do %>
           <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-            <%= @success %>
+            {@success}
           </div>
         <% end %>
 
         <%= if @error do %>
           <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            <%= @error %>
+            {@error}
           </div>
         <% end %>
 
@@ -174,7 +176,7 @@ defmodule ShopMallWebWeb.Owner.AuthLive do
             type="submit"
             class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors font-medium"
           >
-            <%= if @mode == :login, do: "ログイン", else: "オーナー登録" %>
+            {if @mode == :login, do: "ログイン", else: "オーナー登録"}
           </button>
         </form>
 

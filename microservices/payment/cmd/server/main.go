@@ -35,12 +35,18 @@ func main() {
 	log.Println("✅ Database connection established")
 
 	paymentRepo := postgres.NewPaymentRepository(db)
+	refundRepo := postgres.NewRefundRepository(db)
 
 	processPaymentUsecase := usecase.NewProcessPaymentUsecase(paymentRepo)
+	codPaymentUsecase := usecase.NewCODPaymentUsecase(paymentRepo)
+	refundPaymentUsecase := usecase.NewRefundPaymentUsecase(paymentRepo, refundRepo)
 
 	handler := grpchandler.NewPaymentServiceHandler(
 		processPaymentUsecase,
+		codPaymentUsecase,
+		refundPaymentUsecase,
 		paymentRepo,
+		refundRepo,
 	)
 
 	log.Println("✅ All usecases and handlers initialized successfully")

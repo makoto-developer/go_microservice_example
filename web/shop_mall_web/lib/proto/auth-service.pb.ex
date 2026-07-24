@@ -7,10 +7,10 @@ defmodule AuthService.V1.Role do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :ROLE_UNSPECIFIED, 0
-  field :CUSTOMER, 1
-  field :SHOP_OWNER, 2
-  field :ADMIN, 3
+  field(:ROLE_UNSPECIFIED, 0)
+  field(:CUSTOMER, 1)
+  field(:SHOP_OWNER, 2)
+  field(:ADMIN, 3)
 end
 
 defmodule AuthService.V1.User do
@@ -21,25 +21,27 @@ defmodule AuthService.V1.User do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :id, 1, type: :string
-  field :email, 2, type: :string
-  field :password_hash, 3, type: :string, json_name: "passwordHash"
-  field :role, 4, type: AuthService.V1.Role, enum: true
-  field :email_verified, 5, type: :bool, json_name: "emailVerified"
-  field :email_verification_token, 6, type: :string, json_name: "emailVerificationToken"
+  field(:id, 1, type: :string)
+  field(:email, 2, type: :string)
+  field(:password_hash, 3, type: :string, json_name: "passwordHash")
+  field(:role, 4, type: AuthService.V1.Role, enum: true)
+  field(:email_verified, 5, type: :bool, json_name: "emailVerified")
+  field(:email_verification_token, 6, type: :string, json_name: "emailVerificationToken")
 
-  field :email_verification_expires_at, 7,
+  field(:email_verification_expires_at, 7,
     type: Google.Protobuf.Timestamp,
     json_name: "emailVerificationExpiresAt"
+  )
 
-  field :password_reset_token, 8, type: :string, json_name: "passwordResetToken"
+  field(:password_reset_token, 8, type: :string, json_name: "passwordResetToken")
 
-  field :password_reset_expires_at, 9,
+  field(:password_reset_expires_at, 9,
     type: Google.Protobuf.Timestamp,
     json_name: "passwordResetExpiresAt"
+  )
 
-  field :created_at, 10, type: Google.Protobuf.Timestamp, json_name: "createdAt"
-  field :updated_at, 11, type: Google.Protobuf.Timestamp, json_name: "updatedAt"
+  field(:created_at, 10, type: Google.Protobuf.Timestamp, json_name: "createdAt")
+  field(:updated_at, 11, type: Google.Protobuf.Timestamp, json_name: "updatedAt")
 end
 
 defmodule AuthService.V1.RefreshToken do
@@ -50,12 +52,12 @@ defmodule AuthService.V1.RefreshToken do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :id, 1, type: :string
-  field :user_id, 2, type: :string, json_name: "userId"
-  field :token, 3, type: :string
-  field :expires_at, 4, type: Google.Protobuf.Timestamp, json_name: "expiresAt"
-  field :revoked, 5, type: :bool
-  field :created_at, 6, type: Google.Protobuf.Timestamp, json_name: "createdAt"
+  field(:id, 1, type: :string)
+  field(:user_id, 2, type: :string, json_name: "userId")
+  field(:token, 3, type: :string)
+  field(:expires_at, 4, type: Google.Protobuf.Timestamp, json_name: "expiresAt")
+  field(:revoked, 5, type: :bool)
+  field(:created_at, 6, type: Google.Protobuf.Timestamp, json_name: "createdAt")
 end
 
 defmodule AuthService.V1.UserRegistrationRequest do
@@ -66,9 +68,9 @@ defmodule AuthService.V1.UserRegistrationRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :email, 1, type: :string
-  field :password, 2, type: :string
-  field :role, 3, type: AuthService.V1.Role, enum: true
+  field(:email, 1, type: :string)
+  field(:password, 2, type: :string)
+  field(:role, 3, type: AuthService.V1.Role, enum: true)
 end
 
 defmodule AuthService.V1.EmailVerificationRequest do
@@ -79,7 +81,7 @@ defmodule AuthService.V1.EmailVerificationRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :token, 1, type: :string
+  field(:token, 1, type: :string)
 end
 
 defmodule AuthService.V1.UserLoginRequest do
@@ -90,9 +92,9 @@ defmodule AuthService.V1.UserLoginRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :email, 1, type: :string
-  field :password, 2, type: :string
-  field :keep_logged_in, 3, type: :bool, json_name: "keepLoggedIn"
+  field(:email, 1, type: :string)
+  field(:password, 2, type: :string)
+  field(:keep_logged_in, 3, type: :bool, json_name: "keepLoggedIn")
 end
 
 defmodule AuthService.V1.UserLogoutRequest do
@@ -103,7 +105,7 @@ defmodule AuthService.V1.UserLogoutRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :refresh_token, 1, type: :string, json_name: "refreshToken"
+  field(:refresh_token, 1, type: :string, json_name: "refreshToken")
 end
 
 defmodule AuthService.V1.TokenRefreshRequest do
@@ -114,7 +116,7 @@ defmodule AuthService.V1.TokenRefreshRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :refresh_token, 1, type: :string, json_name: "refreshToken"
+  field(:refresh_token, 1, type: :string, json_name: "refreshToken")
 end
 
 defmodule AuthService.V1.TokenVerificationRequest do
@@ -125,7 +127,7 @@ defmodule AuthService.V1.TokenVerificationRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :access_token, 1, type: :string, json_name: "accessToken"
+  field(:access_token, 1, type: :string, json_name: "accessToken")
 end
 
 defmodule AuthService.V1.PasswordResetRequestRequest do
@@ -136,7 +138,7 @@ defmodule AuthService.V1.PasswordResetRequestRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :email, 1, type: :string
+  field(:email, 1, type: :string)
 end
 
 defmodule AuthService.V1.PasswordResetRequest do
@@ -147,8 +149,8 @@ defmodule AuthService.V1.PasswordResetRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :token, 1, type: :string
-  field :new_password, 2, type: :string, json_name: "newPassword"
+  field(:token, 1, type: :string)
+  field(:new_password, 2, type: :string, json_name: "newPassword")
 end
 
 defmodule AuthService.V1.PasswordChangeRequest do
@@ -159,9 +161,9 @@ defmodule AuthService.V1.PasswordChangeRequest do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :user_id, 1, type: :string, json_name: "userId"
-  field :current_password, 2, type: :string, json_name: "currentPassword"
-  field :new_password, 3, type: :string, json_name: "newPassword"
+  field(:user_id, 1, type: :string, json_name: "userId")
+  field(:current_password, 2, type: :string, json_name: "currentPassword")
+  field(:new_password, 3, type: :string, json_name: "newPassword")
 end
 
 defmodule AuthService.V1.RegisterResponse do
@@ -172,10 +174,10 @@ defmodule AuthService.V1.RegisterResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :user_id, 1, type: :string, json_name: "userId"
-  field :access_token, 2, type: :string, json_name: "accessToken"
-  field :refresh_token, 3, type: :string, json_name: "refreshToken"
-  field :message, 4, type: :string
+  field(:user_id, 1, type: :string, json_name: "userId")
+  field(:access_token, 2, type: :string, json_name: "accessToken")
+  field(:refresh_token, 3, type: :string, json_name: "refreshToken")
+  field(:message, 4, type: :string)
 end
 
 defmodule AuthService.V1.VerifyEmailResponse do
@@ -186,8 +188,8 @@ defmodule AuthService.V1.VerifyEmailResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :success, 1, type: :bool
-  field :message, 2, type: :string
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
 end
 
 defmodule AuthService.V1.LoginResponse do
@@ -198,10 +200,10 @@ defmodule AuthService.V1.LoginResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :user_id, 1, type: :string, json_name: "userId"
-  field :access_token, 2, type: :string, json_name: "accessToken"
-  field :refresh_token, 3, type: :string, json_name: "refreshToken"
-  field :role, 4, type: AuthService.V1.Role, enum: true
+  field(:user_id, 1, type: :string, json_name: "userId")
+  field(:access_token, 2, type: :string, json_name: "accessToken")
+  field(:refresh_token, 3, type: :string, json_name: "refreshToken")
+  field(:role, 4, type: AuthService.V1.Role, enum: true)
 end
 
 defmodule AuthService.V1.LogoutResponse do
@@ -212,8 +214,8 @@ defmodule AuthService.V1.LogoutResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :success, 1, type: :bool
-  field :message, 2, type: :string
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
 end
 
 defmodule AuthService.V1.RefreshTokenResponse do
@@ -224,8 +226,8 @@ defmodule AuthService.V1.RefreshTokenResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :access_token, 1, type: :string, json_name: "accessToken"
-  field :refresh_token, 2, type: :string, json_name: "refreshToken"
+  field(:access_token, 1, type: :string, json_name: "accessToken")
+  field(:refresh_token, 2, type: :string, json_name: "refreshToken")
 end
 
 defmodule AuthService.V1.VerifyTokenResponse do
@@ -236,9 +238,9 @@ defmodule AuthService.V1.VerifyTokenResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :valid, 1, type: :bool
-  field :user_id, 2, type: :string, json_name: "userId"
-  field :role, 3, type: AuthService.V1.Role, enum: true
+  field(:valid, 1, type: :bool)
+  field(:user_id, 2, type: :string, json_name: "userId")
+  field(:role, 3, type: AuthService.V1.Role, enum: true)
 end
 
 defmodule AuthService.V1.PasswordResetResponse do
@@ -249,8 +251,8 @@ defmodule AuthService.V1.PasswordResetResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :success, 1, type: :bool
-  field :message, 2, type: :string
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
 end
 
 defmodule AuthService.V1.ResetPasswordResponse do
@@ -261,8 +263,8 @@ defmodule AuthService.V1.ResetPasswordResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :success, 1, type: :bool
-  field :message, 2, type: :string
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
 end
 
 defmodule AuthService.V1.ChangePasswordResponse do
@@ -273,8 +275,8 @@ defmodule AuthService.V1.ChangePasswordResponse do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :success, 1, type: :bool
-  field :message, 2, type: :string
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
 end
 
 defmodule AuthService.V1.AuthService.Service do
@@ -282,25 +284,31 @@ defmodule AuthService.V1.AuthService.Service do
 
   use GRPC.Service, name: "auth_service.v1.AuthService", protoc_gen_elixir_version: "0.16.0"
 
-  rpc :Register, AuthService.V1.UserRegistrationRequest, AuthService.V1.RegisterResponse
+  rpc(:Register, AuthService.V1.UserRegistrationRequest, AuthService.V1.RegisterResponse)
 
-  rpc :VerifyEmail, AuthService.V1.EmailVerificationRequest, AuthService.V1.VerifyEmailResponse
+  rpc(:VerifyEmail, AuthService.V1.EmailVerificationRequest, AuthService.V1.VerifyEmailResponse)
 
-  rpc :Login, AuthService.V1.UserLoginRequest, AuthService.V1.LoginResponse
+  rpc(:Login, AuthService.V1.UserLoginRequest, AuthService.V1.LoginResponse)
 
-  rpc :Logout, AuthService.V1.UserLogoutRequest, AuthService.V1.LogoutResponse
+  rpc(:Logout, AuthService.V1.UserLogoutRequest, AuthService.V1.LogoutResponse)
 
-  rpc :RefreshToken, AuthService.V1.TokenRefreshRequest, AuthService.V1.RefreshTokenResponse
+  rpc(:RefreshToken, AuthService.V1.TokenRefreshRequest, AuthService.V1.RefreshTokenResponse)
 
-  rpc :VerifyToken, AuthService.V1.TokenVerificationRequest, AuthService.V1.VerifyTokenResponse
+  rpc(:VerifyToken, AuthService.V1.TokenVerificationRequest, AuthService.V1.VerifyTokenResponse)
 
-  rpc :RequestPasswordReset,
-      AuthService.V1.PasswordResetRequestRequest,
-      AuthService.V1.PasswordResetResponse
+  rpc(
+    :RequestPasswordReset,
+    AuthService.V1.PasswordResetRequestRequest,
+    AuthService.V1.PasswordResetResponse
+  )
 
-  rpc :ResetPassword, AuthService.V1.PasswordResetRequest, AuthService.V1.ResetPasswordResponse
+  rpc(:ResetPassword, AuthService.V1.PasswordResetRequest, AuthService.V1.ResetPasswordResponse)
 
-  rpc :ChangePassword, AuthService.V1.PasswordChangeRequest, AuthService.V1.ChangePasswordResponse
+  rpc(
+    :ChangePassword,
+    AuthService.V1.PasswordChangeRequest,
+    AuthService.V1.ChangePasswordResponse
+  )
 end
 
 defmodule AuthService.V1.AuthService.Stub do

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/repository"
 	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/usecase"
 )
 
@@ -26,6 +27,10 @@ func (m *mockPaymentRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 
 func (m *mockPaymentRepository) GetByOrderID(ctx context.Context, orderID uuid.UUID) (*domain.Payment, error) {
 	return nil, nil
+}
+
+func (m *mockPaymentRepository) List(ctx context.Context, filter repository.PaymentListFilter) ([]*domain.Payment, int, error) {
+	return nil, 0, nil
 }
 
 func (m *mockPaymentRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.PaymentStatus, transactionID string) error {

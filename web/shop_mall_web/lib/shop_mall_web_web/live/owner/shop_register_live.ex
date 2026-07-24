@@ -34,16 +34,18 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
       owner_id: socket.assigns.owner_id,
       name: params["name"],
       description: params["description"],
-      logo_url: "",  # TODO: 画像アップロード実装
+      # TODO: 画像アップロード実装
+      logo_url: "",
       owner_name: params["owner_name"],
       phone_number: params["phone_number"],
       business_hours: params["business_hours"],
       return_policy: params["return_policy"],
-      categories: []  # カテゴリー機能は後で実装
+      # カテゴリー機能は後で実装
+      categories: []
     }
 
     case call_shop_service(request) do
-      {:ok, response} ->
+      {:ok, _response} ->
         {:noreply,
          socket
          |> put_flash(:info, "ショップ登録が完了しました！管理者の承認をお待ちください。")
@@ -52,13 +54,6 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
       {:error, reason} ->
         {:noreply, assign(socket, :error, "登録失敗: #{reason}")}
     end
-  end
-
-  defp parse_categories(categories_string) do
-    categories_string
-    |> String.split(",")
-    |> Enum.map(&String.trim/1)
-    |> Enum.filter(&(&1 != ""))
   end
 
   defp call_shop_service(request) do
@@ -92,7 +87,7 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
 
           <%= if @error do %>
             <div class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-              <%= @error %>
+              {@error}
             </div>
           <% end %>
 
@@ -142,8 +137,8 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
                 </div>
               </div>
             </div>
-
-            <!-- 運営者情報 -->
+            
+    <!-- 運営者情報 -->
             <div class="border-b border-gray-200 pb-6">
               <h2 class="text-lg font-semibold text-gray-800 mb-4">運営者情報</h2>
 
@@ -175,8 +170,8 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
                 </div>
               </div>
             </div>
-
-            <!-- 営業情報 -->
+            
+    <!-- 営業情報 -->
             <div class="pb-6">
               <h2 class="text-lg font-semibold text-gray-800 mb-4">営業情報</h2>
 
@@ -206,13 +201,17 @@ defmodule ShopMallWebWeb.Owner.ShopRegisterLive do
                 </div>
               </div>
             </div>
-
-            <!-- 注意事項 -->
+            
+    <!-- 注意事項 -->
             <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
               <div class="flex">
                 <div class="flex-shrink-0">
                   <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    <path
+                      fill-rule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div class="ml-3">

@@ -61,11 +61,18 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrd
 		shippingFee = 1000
 	}
 
+	// 支払い方法: 代引き指定のみ分岐し、未指定はクレジットカード扱い
+	paymentMethod := usecase.PaymentMethodCreditCard
+	if req.GetPaymentMethod() == pb.PaymentMethod_CASH_ON_DELIVERY {
+		paymentMethod = usecase.PaymentMethodCashOnDelivery
+	}
+
 	input := usecase.CreateOrderInput{
 		CustomerID:      customerID,
 		AddressID:       addressID,
 		Items:           items,
 		ShippingFee:     shippingFee,
+		PaymentMethod:   paymentMethod,
 		PaymentMethodID: req.GetPaymentMethodId(),
 	}
 
@@ -74,9 +81,14 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrd
 		return nil, status.Errorf(codes.Internal, "failed to create order: %v", err)
 	}
 
+	message := "Order created and payment completed successfully"
+	if paymentMethod == usecase.PaymentMethodCashOnDelivery {
+		message = "Order created. Payment will be collected on delivery."
+	}
+
 	return &pb.CreateOrderResponse{
 		OrderId: orderID.String(),
-		Message: "Order created and payment completed successfully",
+		Message: message,
 	}, nil
 }
 

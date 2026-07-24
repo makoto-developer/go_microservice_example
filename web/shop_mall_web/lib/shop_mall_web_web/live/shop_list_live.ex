@@ -88,17 +88,32 @@ defmodule ShopMallWebWeb.ShopListLive do
         <% else %>
           <%= if @error do %>
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-              <%= @error %>
+              {@error}
             </div>
           <% end %>
 
           <%= if length(@shops) == 0 do %>
             <div class="text-center py-12 bg-white rounded-lg shadow">
-              <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              <svg
+                class="mx-auto h-16 w-16 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
               </svg>
               <h2 class="mt-4 text-xl font-semibold text-gray-800">ショップがまだありません</h2>
-              <p class="mt-2 text-gray-600">ショップモールに出店したい方は<.link href="/owner/auth" class="text-purple-600 hover:text-purple-800 font-medium">オーナー登録</.link>へ</p>
+              <p class="mt-2 text-gray-600">
+                ショップモールに出店したい方は<.link
+                  href="/owner/auth"
+                  class="text-purple-600 hover:text-purple-800 font-medium"
+                >オーナー登録</.link>へ
+              </p>
             </div>
           <% else %>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -109,24 +124,38 @@ defmodule ShopMallWebWeb.ShopListLive do
                 >
                   <div class="h-40 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
                     <%= if shop.logo_url && shop.logo_url != "" do %>
-                      <img src={shop.logo_url} alt={shop.name} class="h-24 w-24 object-cover rounded-full" />
+                      <img
+                        src={shop.logo_url}
+                        alt={shop.name}
+                        class="h-24 w-24 object-cover rounded-full"
+                      />
                     <% else %>
                       <div class="h-24 w-24 bg-white rounded-full flex items-center justify-center">
                         <span class="text-3xl font-bold text-gray-400">
-                          <%= String.first(shop.name || "S") %>
+                          {String.first(shop.name || "S")}
                         </span>
                       </div>
                     <% end %>
                   </div>
                   <div class="p-4">
-                    <h3 class="text-lg font-semibold text-gray-800"><%= shop.name %></h3>
-                    <p class="mt-1 text-sm text-gray-600 line-clamp-2"><%= shop.description %></p>
+                    <h3 class="text-lg font-semibold text-gray-800">{shop.name}</h3>
+                    <p class="mt-1 text-sm text-gray-600 line-clamp-2">{shop.description}</p>
                     <div class="mt-3 flex items-center text-sm text-gray-500">
                       <%= if shop.owner_name && shop.owner_name != "" do %>
-                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        <svg
+                          class="h-4 w-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
                         </svg>
-                        <span><%= shop.owner_name %></span>
+                        <span>{shop.owner_name}</span>
                       <% end %>
                     </div>
                   </div>
@@ -135,8 +164,8 @@ defmodule ShopMallWebWeb.ShopListLive do
             </div>
           <% end %>
         <% end %>
-
-        <!-- オーナー登録への誘導 -->
+        
+    <!-- オーナー登録への誘導 -->
         <div class="mt-12 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-8 text-center text-white">
           <h2 class="text-2xl font-bold">あなたもショップモールに出店しませんか？</h2>
           <p class="mt-2 text-purple-100">簡単な登録で、あなたの商品を全国のお客様に届けられます</p>

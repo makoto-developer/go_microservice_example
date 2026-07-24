@@ -18,6 +18,7 @@ defmodule ShopMallWebWeb.ProductDetailLive do
      |> assign(:loading, true)
      |> assign(:error, nil)
      |> assign(:quantity, 1)
+     |> assign(:payment_method, "credit_card")
      |> load_product()}
   end
 
@@ -101,6 +102,7 @@ defmodule ShopMallWebWeb.ProductDetailLive do
 
   defp place_order(socket, user_id) do
     product = socket.assigns.product
+    cod? = socket.assigns.payment_method == "cash_on_delivery"
 
     request = %OrderService.V1.CreateOrderRequest{
       customer_id: user_id,
@@ -112,13 +114,19 @@ defmodule ShopMallWebWeb.ProductDetailLive do
         }
       ],
       shipping_address_id: @demo_address_id,
-      payment_method_id: "pm_demo_card",
+      payment_method: if(cod?, do: :CASH_ON_DELIVERY, else: :CREDIT_CARD),
+      payment_method_id: if(cod?, do: "", else: "pm_demo_card"),
       shipping_method: "standard"
     }
 
     with {:ok, channel} <- connect_order_service(),
          {:ok, response} <- OrderService.V1.OrderService.Stub.create_order(channel, request) do
-      {:noreply, put_flash(socket, :info, "注文と決済が完了しました(注文ID: #{response.order_id})")}
+      message =
+        if cod?,
+          do: "注文が確定しました。お支払いは商品お届け時です(注文ID: #{response.order_id})",
+          else: "注文と決済が完了しました(注文ID: #{response.order_id})"
+
+      {:noreply, put_flash(socket, :info, message)}
     else
       {:error, %GRPC.RPCError{message: message}} ->
         {:noreply, put_flash(socket, :error, "注文に失敗しました: #{message}")}
@@ -155,6 +163,12 @@ defmodule ShopMallWebWeb.ProductDetailLive do
       user_id ->
         place_order(socket, user_id)
     end
+  end
+
+  @impl true
+  def handle_event("select_payment_method", %{"method" => method}, socket)
+      when method in ["credit_card", "cash_on_delivery"] do
+    {:noreply, assign(socket, :payment_method, method)}
   end
 
   @impl true
@@ -309,6 +323,35 @@ defmodule ShopMallWebWeb.ProductDetailLive do
                       <dd class="text-gray-900">{@product.jan_code}</dd>
                     <% end %>
                   </dl>
+                </div>
+                
+    <!-- 支払い方法 -->
+                <div class="mb-6">
+                  <h2 class="text-lg font-semibold text-gray-900 mb-3">お支払い方法</h2>
+                  <div class="grid grid-cols-2 gap-3">
+                    <button
+                      phx-click="select_payment_method"
+                      phx-value-method="credit_card"
+                      class={"border rounded-lg px-4 py-3 text-sm font-medium text-left transition-colors " <>
+                        if(@payment_method == "credit_card",
+                          do: "border-blue-600 bg-blue-50 text-blue-700",
+                          else: "border-gray-300 text-gray-700 hover:border-gray-400"
+                        )}
+                    >
+                      💳 クレジットカード <span class="block text-xs text-gray-500 mt-1">今すぐ決済されます</span>
+                    </button>
+                    <button
+                      phx-click="select_payment_method"
+                      phx-value-method="cash_on_delivery"
+                      class={"border rounded-lg px-4 py-3 text-sm font-medium text-left transition-colors " <>
+                        if(@payment_method == "cash_on_delivery",
+                          do: "border-blue-600 bg-blue-50 text-blue-700",
+                          else: "border-gray-300 text-gray-700 hover:border-gray-400"
+                        )}
+                    >
+                      📦 代金引換 <span class="block text-xs text-gray-500 mt-1">お届け時に現金でお支払い</span>
+                    </button>
+                  </div>
                 </div>
                 
     <!-- 購入(注文作成 → 決済まで実行) -->

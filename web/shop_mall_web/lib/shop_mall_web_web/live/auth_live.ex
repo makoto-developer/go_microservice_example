@@ -44,10 +44,12 @@ defmodule ShopMallWebWeb.AuthLive do
     }
 
     IO.puts("=== Calling auth service for login ===")
+
     case call_auth_service(:login, request) do
       {:ok, response} ->
         IO.puts("=== Login SUCCESS ===")
         IO.inspect(response)
+
         {:noreply,
          socket
          |> put_flash(:info, "ログイン成功！")
@@ -56,6 +58,7 @@ defmodule ShopMallWebWeb.AuthLive do
       {:error, reason} ->
         IO.puts("=== Login FAILED ===")
         IO.inspect(reason)
+
         {:noreply,
          socket
          |> assign(:error, "ログイン失敗: #{inspect(reason)}")
@@ -71,7 +74,7 @@ defmodule ShopMallWebWeb.AuthLive do
     }
 
     case call_auth_service(:register, request) do
-      {:ok, response} ->
+      {:ok, _response} ->
         {:noreply,
          socket
          |> put_flash(:info, "登録成功！メールを確認してください。ログイン画面に移動します...")
@@ -94,6 +97,7 @@ defmodule ShopMallWebWeb.AuthLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, "接続エラー: #{inspect(error)}"}
         end
+
       {:error, reason} ->
         {:error, "Auth Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -107,6 +111,7 @@ defmodule ShopMallWebWeb.AuthLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, "接続エラー: #{inspect(error)}"}
         end
+
       {:error, reason} ->
         {:error, "Auth Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -130,18 +135,18 @@ defmodule ShopMallWebWeb.AuthLive do
     <div class="min-h-screen flex items-center justify-center bg-gray-100">
       <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
-          <%= if @mode == :login, do: "ログイン", else: "新規登録" %>
+          {if @mode == :login, do: "ログイン", else: "新規登録"}
         </h2>
 
         <%= if @success do %>
           <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-            <%= @success %>
+            {@success}
           </div>
         <% end %>
 
         <%= if @error do %>
           <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            <%= @error %>
+            {@error}
           </div>
         <% end %>
 
@@ -176,7 +181,7 @@ defmodule ShopMallWebWeb.AuthLive do
             type="submit"
             class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium"
           >
-            <%= if @mode == :login, do: "ログイン", else: "登録" %>
+            {if @mode == :login, do: "ログイン", else: "登録"}
           </button>
         </form>
 

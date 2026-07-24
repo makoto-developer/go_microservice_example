@@ -15,16 +15,25 @@ import (
 type PaymentServiceHandler struct {
 	pb.UnimplementedPaymentServiceServer
 	processPaymentUsecase usecase.ProcessPaymentUsecase
+	codPaymentUsecase     usecase.CODPaymentUsecase
+	refundPaymentUsecase  usecase.RefundPaymentUsecase
 	paymentRepo           repository.PaymentRepository
+	refundRepo            repository.RefundRepository
 }
 
 func NewPaymentServiceHandler(
 	processPaymentUsecase usecase.ProcessPaymentUsecase,
+	codPaymentUsecase usecase.CODPaymentUsecase,
+	refundPaymentUsecase usecase.RefundPaymentUsecase,
 	paymentRepo repository.PaymentRepository,
+	refundRepo repository.RefundRepository,
 ) *PaymentServiceHandler {
 	return &PaymentServiceHandler{
 		processPaymentUsecase: processPaymentUsecase,
+		codPaymentUsecase:     codPaymentUsecase,
+		refundPaymentUsecase:  refundPaymentUsecase,
 		paymentRepo:           paymentRepo,
+		refundRepo:            refundRepo,
 	}
 }
 

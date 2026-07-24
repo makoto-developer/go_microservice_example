@@ -109,7 +109,7 @@ defmodule ShopMallWebWeb.PasswordResetConfirmLive do
             <div class="flex">
               <div class="ml-3">
                 <p class="text-sm font-medium text-green-800">
-                  <%= @message %>
+                  {@message}
                 </p>
               </div>
             </div>
@@ -129,7 +129,7 @@ defmodule ShopMallWebWeb.PasswordResetConfirmLive do
             <div class="flex">
               <div class="ml-3">
                 <p class="text-sm font-medium text-red-800">
-                  <%= @error %>
+                  {@error}
                 </p>
               </div>
             </div>

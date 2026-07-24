@@ -18,9 +18,10 @@ const (
 )
 
 const (
-	PaymentMethodCreditCard   PaymentMethod = "credit_card"
-	PaymentMethodDebitCard    PaymentMethod = "debit_card"
-	PaymentMethodBankTransfer PaymentMethod = "bank_transfer"
+	PaymentMethodCreditCard     PaymentMethod = "credit_card"
+	PaymentMethodDebitCard      PaymentMethod = "debit_card"
+	PaymentMethodBankTransfer   PaymentMethod = "bank_transfer"
+	PaymentMethodCashOnDelivery PaymentMethod = "cash_on_delivery"
 )
 
 var (

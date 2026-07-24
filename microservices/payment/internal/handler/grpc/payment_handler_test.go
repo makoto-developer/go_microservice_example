@@ -26,7 +26,7 @@ func (u *fakeProcessPaymentUsecase) Execute(_ context.Context, input usecase.Pro
 
 func TestCreatePaymentIntent_UsesRequestedAmount(t *testing.T) {
 	uc := &fakeProcessPaymentUsecase{}
-	h := NewPaymentServiceHandler(uc, nil)
+	h := NewPaymentServiceHandler(uc, nil, nil, nil, nil)
 
 	resp, err := h.CreatePaymentIntent(context.Background(), &pb.CreatePaymentIntentRequest{
 		OrderId: uuid.New().String(),
@@ -49,7 +49,7 @@ func TestCreatePaymentIntent_UsesRequestedAmount(t *testing.T) {
 func TestCreatePaymentIntent_RejectsInvalidAmount(t *testing.T) {
 	for _, amount := range []string{"", "abc", "-100", "0"} {
 		uc := &fakeProcessPaymentUsecase{}
-		h := NewPaymentServiceHandler(uc, nil)
+		h := NewPaymentServiceHandler(uc, nil, nil, nil, nil)
 
 		_, err := h.CreatePaymentIntent(context.Background(), &pb.CreatePaymentIntentRequest{
 			OrderId: uuid.New().String(),
@@ -66,7 +66,7 @@ func TestCreatePaymentIntent_RejectsInvalidAmount(t *testing.T) {
 
 func TestCreatePaymentIntent_RejectsInvalidOrderID(t *testing.T) {
 	uc := &fakeProcessPaymentUsecase{}
-	h := NewPaymentServiceHandler(uc, nil)
+	h := NewPaymentServiceHandler(uc, nil, nil, nil, nil)
 
 	_, err := h.CreatePaymentIntent(context.Background(), &pb.CreatePaymentIntentRequest{
 		OrderId: "not-a-uuid",

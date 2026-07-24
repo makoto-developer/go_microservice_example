@@ -10,11 +10,20 @@ import (
 	"time"
 )
 
+// PaymentMethod は注文時に選択される支払い方法。
+type PaymentMethod string
+
+const (
+	PaymentMethodCreditCard     PaymentMethod = "credit_card"
+	PaymentMethodCashOnDelivery PaymentMethod = "cash_on_delivery"
+)
+
 type CreateOrderInput struct {
 	CustomerID      uuid.UUID
 	AddressID       uuid.UUID
 	Items           []OrderItemInput
 	ShippingFee     int64
+	PaymentMethod   PaymentMethod // 未指定はクレジットカード扱い
 	PaymentMethodID string
 }
 
@@ -94,13 +103,7 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 	// 決済サービスで支払いを実行する。失敗した場合は注文をキャンセルする。
 	// paymentClient が未設定(nil)の場合は決済をスキップする(ローカル起動の後方互換)。
 	if u.paymentClient != nil {
-		_, err := u.paymentClient.ProcessPayment(ctx, client.ProcessPaymentInput{
-			OrderID:         order.ID.String(),
-			CustomerID:      input.CustomerID.String(),
-			PaymentMethodID: input.PaymentMethodID,
-			Amount:          totalAmount,
-			Currency:        "jpy",
-		})
+		nextStatus, err := u.executePayment(ctx, order.ID, input, totalAmount)
 		if err != nil {
 			if cancelErr := u.orderRepo.UpdateStatus(ctx, order.ID, domain.OrderStatusCancelled); cancelErr != nil {
 				return uuid.Nil, fmt.Errorf("payment failed (%v) and order cancellation also failed: %w", err, cancelErr)
@@ -108,12 +111,39 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 			return uuid.Nil, fmt.Errorf("payment failed, order %s cancelled: %w", order.ID, err)
 		}
 
-		if err := u.orderRepo.UpdateStatus(ctx, order.ID, domain.OrderStatusPaid); err != nil {
-			return uuid.Nil, fmt.Errorf("payment succeeded but failed to mark order as paid: %w", err)
+		if err := u.orderRepo.UpdateStatus(ctx, order.ID, nextStatus); err != nil {
+			return uuid.Nil, fmt.Errorf("payment succeeded but failed to update order status: %w", err)
 		}
 	}
 
 	return order.ID, nil
+}
+
+// executePayment は支払い方法に応じて決済サービスを呼び、注文の次のステータスを返す。
+// 代引きは配達時に集金するため Paid にはせず Confirmed(注文確定)止まりにする。
+func (u *orderManagementUsecase) executePayment(ctx context.Context, orderID uuid.UUID, input CreateOrderInput, totalAmount int64) (domain.OrderStatus, error) {
+	if input.PaymentMethod == PaymentMethodCashOnDelivery {
+		_, err := u.paymentClient.CreateCODPayment(ctx, client.CODPaymentInput{
+			OrderID: orderID.String(),
+			Amount:  totalAmount,
+		})
+		if err != nil {
+			return "", err
+		}
+		return domain.OrderStatusConfirmed, nil
+	}
+
+	_, err := u.paymentClient.ProcessPayment(ctx, client.ProcessPaymentInput{
+		OrderID:         orderID.String(),
+		CustomerID:      input.CustomerID.String(),
+		PaymentMethodID: input.PaymentMethodID,
+		Amount:          totalAmount,
+		Currency:        "jpy",
+	})
+	if err != nil {
+		return "", err
+	}
+	return domain.OrderStatusPaid, nil
 }
 
 func (u *orderManagementUsecase) GetOrder(ctx context.Context, orderID uuid.UUID) (*domain.Order, error) {
@@ -133,6 +163,13 @@ func (u *orderManagementUsecase) GetOrderItems(ctx context.Context, orderID uuid
 }
 
 func (u *orderManagementUsecase) CancelOrder(ctx context.Context, orderID uuid.UUID) error {
+	// 支払い済みの決済があれば全額返金する(未決済なら決済サービスが NotFound を返し、返金はスキップされる)
+	if u.paymentClient != nil {
+		if err := u.paymentClient.RefundByOrder(ctx, orderID.String(), "order cancelled"); err != nil {
+			return fmt.Errorf("failed to refund payment for order %s: %w", orderID, err)
+		}
+	}
+
 	if err := u.orderRepo.UpdateStatus(ctx, orderID, domain.OrderStatusCancelled); err != nil {
 		return fmt.Errorf("failed to cancel order: %w", err)
 	}

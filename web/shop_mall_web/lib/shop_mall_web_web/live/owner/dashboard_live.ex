@@ -85,7 +85,9 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
-      {:error, reason} -> {:error, "接続エラー: #{inspect(reason)}"}
+
+      {:error, reason} ->
+        {:error, "接続エラー: #{inspect(reason)}"}
     end
   end
 
@@ -97,7 +99,9 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
-      {:error, reason} -> {:error, "接続エラー: #{inspect(reason)}"}
+
+      {:error, reason} ->
+        {:error, "接続エラー: #{inspect(reason)}"}
     end
   end
 
@@ -109,7 +113,9 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
-      {:error, reason} -> {:error, "接続エラー: #{inspect(reason)}"}
+
+      {:error, reason} ->
+        {:error, "接続エラー: #{inspect(reason)}"}
     end
   end
 
@@ -132,7 +138,10 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between h-16">
             <div class="flex items-center">
-              <.link navigate="/owner/dashboard" class="text-2xl font-bold text-white hover:text-gray-200">
+              <.link
+                navigate="/owner/dashboard"
+                class="text-2xl font-bold text-white hover:text-gray-200"
+              >
                 ショップ管理
               </.link>
             </div>
@@ -159,13 +168,14 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
           </div>
         </div>
       </nav>
-
-      <!-- メインコンテンツ -->
+      
+    <!-- メインコンテンツ -->
       <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div class="px-4 py-6 sm:px-0">
           <%= if @loading do %>
             <div class="text-center py-12">
-              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600">
+              </div>
               <p class="mt-4 text-gray-600">読み込み中...</p>
             </div>
           <% else %>
@@ -174,10 +184,10 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
               <div class="bg-white overflow-hidden shadow rounded-lg mb-6">
                 <div class="px-4 py-5 sm:p-6">
                   <h2 class="text-2xl font-bold text-gray-900 mb-2">
-                    <%= @shop.name %>
+                    {@shop.name}
                   </h2>
                   <p class="text-gray-600">
-                    <%= @shop.description %>
+                    {@shop.description}
                   </p>
                   <div class="mt-4 flex items-center space-x-4">
                     <span class={"px-3 py-1 rounded-full text-sm font-medium " <>
@@ -188,13 +198,13 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
                         :SUSPENDED -> "bg-gray-100 text-gray-800"
                         _ -> "bg-gray-100 text-gray-800"
                       end}>
-                      <%= case @shop.status do
+                      {case @shop.status do
                         :APPROVED -> "承認済み"
                         :PENDING_APPROVAL -> "承認待ち"
                         :REJECTED -> "却下"
                         :SUSPENDED -> "停止中"
                         _ -> "不明"
-                      end %>
+                      end}
                     </span>
                     <%= if @shop.published do %>
                       <span class="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
@@ -209,8 +219,8 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
                 </div>
               </div>
             <% end %>
-
-            <!-- 統計カード -->
+            
+    <!-- 統計カード -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <!-- 商品数 -->
               <div class="bg-white overflow-hidden shadow rounded-lg">
@@ -237,7 +247,7 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
                           登録商品数
                         </dt>
                         <dd class="text-3xl font-semibold text-gray-900">
-                          <%= @product_count %>
+                          {@product_count}
                         </dd>
                       </dl>
                     </div>
@@ -252,8 +262,8 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
                   </div>
                 </div>
               </div>
-
-              <!-- 注文数 -->
+              
+    <!-- 注文数 -->
               <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
                   <div class="flex items-center">
@@ -278,7 +288,7 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
                           受注件数
                         </dt>
                         <dd class="text-3xl font-semibold text-gray-900">
-                          <%= @order_count %>
+                          {@order_count}
                         </dd>
                       </dl>
                     </div>
@@ -293,8 +303,8 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
                   </div>
                 </div>
               </div>
-
-              <!-- 売上 -->
+              
+    <!-- 売上 -->
               <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
                   <div class="flex items-center">
@@ -335,8 +345,8 @@ defmodule ShopMallWebWeb.Owner.DashboardLive do
                 </div>
               </div>
             </div>
-
-            <!-- クイックアクション -->
+            
+    <!-- クイックアクション -->
             <div class="bg-white shadow rounded-lg">
               <div class="px-4 py-5 sm:p-6">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">クイックアクション</h3>

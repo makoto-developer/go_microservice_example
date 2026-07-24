@@ -70,9 +70,17 @@ func (r *fakeOrderItemRepo) GetByOrderID(_ context.Context, _ uuid.UUID) ([]*dom
 	return r.items, nil
 }
 
+type refundCall struct {
+	orderID string
+	reason  string
+}
+
 type fakePaymentClient struct {
-	calls []client.ProcessPaymentInput
-	err   error
+	calls       []client.ProcessPaymentInput
+	codCalls    []client.CODPaymentInput
+	refundCalls []refundCall
+	err         error
+	refundErr   error
 }
 
 func (c *fakePaymentClient) ProcessPayment(_ context.Context, in client.ProcessPaymentInput) (*client.PaymentResult, error) {
@@ -81,6 +89,19 @@ func (c *fakePaymentClient) ProcessPayment(_ context.Context, in client.ProcessP
 		return nil, c.err
 	}
 	return &client.PaymentResult{PaymentID: "pay_test"}, nil
+}
+
+func (c *fakePaymentClient) CreateCODPayment(_ context.Context, in client.CODPaymentInput) (*client.PaymentResult, error) {
+	c.codCalls = append(c.codCalls, in)
+	if c.err != nil {
+		return nil, c.err
+	}
+	return &client.PaymentResult{PaymentID: "pay_cod_test"}, nil
+}
+
+func (c *fakePaymentClient) RefundByOrder(_ context.Context, orderID string, reason string) error {
+	c.refundCalls = append(c.refundCalls, refundCall{orderID: orderID, reason: reason})
+	return c.refundErr
 }
 
 func (c *fakePaymentClient) Close() error { return nil }
@@ -158,6 +179,74 @@ func TestCreateOrder_PaymentFailureCancelsOrder(t *testing.T) {
 	orderID := orderRepo.created[0].ID
 	if status, ok := orderRepo.lastStatus(orderID); !ok || status != domain.OrderStatusCancelled {
 		t.Errorf("order status = %v (ok=%v), want %v", status, ok, domain.OrderStatusCancelled)
+	}
+}
+
+func TestCreateOrder_CODCreatesPaymentAndConfirmsOrder(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	payment := &fakePaymentClient{}
+	u := NewOrderManagementUsecase(orderRepo, itemRepo, payment)
+
+	input := testInput()
+	input.PaymentMethod = PaymentMethodCashOnDelivery
+	orderID, err := u.CreateOrder(context.Background(), input)
+	if err != nil {
+		t.Fatalf("CreateOrder returned error: %v", err)
+	}
+
+	if len(payment.calls) != 0 {
+		t.Errorf("card payment should not run for COD, got %d calls", len(payment.calls))
+	}
+	if len(payment.codCalls) != 1 {
+		t.Fatalf("expected 1 COD payment call, got %d", len(payment.codCalls))
+	}
+	if payment.codCalls[0].Amount != 3000 {
+		t.Errorf("COD amount = %d, want 3000", payment.codCalls[0].Amount)
+	}
+
+	// 代引きは配達時に支払うため Paid ではなく Confirmed
+	if status, ok := orderRepo.lastStatus(orderID); !ok || status != domain.OrderStatusConfirmed {
+		t.Errorf("order status = %v (ok=%v), want %v", status, ok, domain.OrderStatusConfirmed)
+	}
+}
+
+func TestCancelOrder_RefundsPayment(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	payment := &fakePaymentClient{}
+	u := NewOrderManagementUsecase(orderRepo, itemRepo, payment)
+
+	orderID := uuid.New()
+	if err := u.CancelOrder(context.Background(), orderID); err != nil {
+		t.Fatalf("CancelOrder returned error: %v", err)
+	}
+
+	if len(payment.refundCalls) != 1 {
+		t.Fatalf("expected 1 refund call, got %d", len(payment.refundCalls))
+	}
+	if payment.refundCalls[0].orderID != orderID.String() {
+		t.Errorf("refund order id = %s, want %s", payment.refundCalls[0].orderID, orderID)
+	}
+	if status, ok := orderRepo.lastStatus(orderID); !ok || status != domain.OrderStatusCancelled {
+		t.Errorf("order status = %v (ok=%v), want %v", status, ok, domain.OrderStatusCancelled)
+	}
+}
+
+func TestCancelOrder_RefundFailureKeepsOrder(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	payment := &fakePaymentClient{refundErr: errors.New("payment service down")}
+	u := NewOrderManagementUsecase(orderRepo, itemRepo, payment)
+
+	orderID := uuid.New()
+	err := u.CancelOrder(context.Background(), orderID)
+	if err == nil {
+		t.Fatal("expected error when refund fails")
+	}
+	// 返金に失敗したらキャンセルしない(返金漏れ防止)
+	if _, ok := orderRepo.lastStatus(orderID); ok {
+		t.Error("order should not be cancelled when refund fails")
 	}
 }
 

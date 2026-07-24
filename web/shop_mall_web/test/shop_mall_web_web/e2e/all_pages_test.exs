@@ -242,7 +242,8 @@ defmodule ShopMallWebWeb.E2E.AllPagesTest do
 
     test "全画面がレスポンシブデザインに対応している", %{conn: conn} do
       pages = [
-        {"/auth", false},  # 認証画面はシンプルなので必須ではない
+        # 認証画面はシンプルなので必須ではない
+        {"/auth", false},
         {"/dashboard", true},
         {"/products", true},
         {"/owner/dashboard", true},

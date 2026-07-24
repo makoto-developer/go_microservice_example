@@ -132,6 +132,7 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
             # 公開設定が有効な場合、ToggleProductPublishを呼ぶ
             if published do
               IO.puts("=== CALLING TOGGLE PUBLISH ===")
+
               toggle_request = %ToggleProductPublishRequest{
                 product_id: response.product_id
               }
@@ -226,6 +227,7 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
+
       {:error, reason} ->
         {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -239,6 +241,7 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
           {:error, %GRPC.RPCError{} = error} -> {:error, error.message}
           error -> {:error, error}
         end
+
       {:error, reason} ->
         {:error, "Shop Serviceに接続できません: #{inspect(reason)}"}
     end
@@ -263,7 +266,10 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between h-16">
             <div class="flex items-center">
-              <.link navigate="/owner/dashboard" class="text-2xl font-bold text-white hover:text-gray-200">
+              <.link
+                navigate="/owner/dashboard"
+                class="text-2xl font-bold text-white hover:text-gray-200"
+              >
                 ショップ管理
               </.link>
             </div>
@@ -290,19 +296,19 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
           </div>
         </div>
       </nav>
-
-      <!-- メインコンテンツ -->
+      
+    <!-- メインコンテンツ -->
       <main class="max-w-3xl mx-auto py-6 sm:px-6 lg:px-8">
         <div class="px-4 py-6 sm:px-0">
           <div class="bg-white shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
               <h1 class="text-2xl font-bold text-gray-900 mb-6">
-                <%= if @mode == :new, do: "新規商品登録", else: "商品編集" %>
+                {if @mode == :new, do: "新規商品登録", else: "商品編集"}
               </h1>
 
               <%= if @error do %>
                 <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-                  <%= @error %>
+                  {@error}
                 </div>
               <% end %>
 
@@ -321,8 +327,8 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                     required
                   />
                 </div>
-
-                <!-- 説明 -->
+                
+    <!-- 説明 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     説明 <span class="text-red-500">*</span>
@@ -335,8 +341,8 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                     required
                   ><%= @description %></textarea>
                 </div>
-
-                <!-- 価格 -->
+                
+    <!-- 価格 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     価格（円） <span class="text-red-500">*</span>
@@ -351,8 +357,8 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                   />
                   <p class="mt-1 text-sm text-gray-500">小数点も入力可能です（例: 2980.50）</p>
                 </div>
-
-                <!-- 在庫数 -->
+                
+    <!-- 在庫数 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     在庫数 <span class="text-red-500">*</span>
@@ -367,8 +373,8 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                     required
                   />
                 </div>
-
-                <!-- カテゴリ -->
+                
+    <!-- カテゴリ -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     カテゴリ <span class="text-red-500">*</span>
@@ -405,8 +411,8 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                     </option>
                   </select>
                 </div>
-
-                <!-- 公開設定 -->
+                
+    <!-- 公開設定 -->
                 <div class="flex items-center">
                   <input
                     type="checkbox"
@@ -419,8 +425,8 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                     この商品を公開する
                   </label>
                 </div>
-
-                <!-- ボタン -->
+                
+    <!-- ボタン -->
                 <div class="flex justify-end space-x-3 pt-6 border-t">
                   <.link
                     navigate="/owner/products"
@@ -433,7 +439,7 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                     phx-disable-with="処理中..."
                     class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    <%= if @mode == :new, do: "登録", else: "更新" %>
+                    {if @mode == :new, do: "登録", else: "更新"}
                   </button>
                 </div>
               </form>

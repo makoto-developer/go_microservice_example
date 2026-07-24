@@ -42,8 +42,8 @@ defmodule ShopMallWebWeb.DashboardLive do
           </div>
         </div>
       </nav>
-
-      <!-- メインコンテンツ -->
+      
+    <!-- メインコンテンツ -->
       <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div class="px-4 py-6 sm:px-0">
           <!-- ウェルカムメッセージ -->
@@ -57,8 +57,8 @@ defmodule ShopMallWebWeb.DashboardLive do
               </p>
             </div>
           </div>
-
-          <!-- カード一覧 -->
+          
+    <!-- カード一覧 -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- 商品一覧カード -->
             <div class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow">
@@ -100,8 +100,8 @@ defmodule ShopMallWebWeb.DashboardLive do
                 </div>
               </div>
             </div>
-
-            <!-- 注文履歴カード（未実装） -->
+            
+    <!-- 注文履歴カード（未実装） -->
             <div class="bg-white overflow-hidden shadow rounded-lg opacity-60">
               <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center">
@@ -141,8 +141,8 @@ defmodule ShopMallWebWeb.DashboardLive do
                 </div>
               </div>
             </div>
-
-            <!-- カート（未実装） -->
+            
+    <!-- カート（未実装） -->
             <div class="bg-white overflow-hidden shadow rounded-lg opacity-60">
               <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center">
