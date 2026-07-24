@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package shipping_service.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/makoto-developer/go_microservice_example/microservices/shipping/proto;v1";
+
+service ShippingService {
+  // 配送料の見積もり
+  rpc CalculateShippingFee(CalculateShippingFeeRequest) returns (CalculateShippingFeeResponse);
+  // 出荷の作成(注文確定後に order サービスから呼ばれる)
+  rpc CreateShipment(CreateShipmentRequest) returns (CreateShipmentResponse);
+  // 追跡番号の登録(倉庫の出荷処理で呼ばれる。状態は shipped になる)
+  rpc RegisterTrackingNumber(RegisterTrackingNumberRequest) returns (RegisterTrackingNumberResponse);
+  // 配送状態の更新(配送業者の webhook 相当。delivered で代引きの集金が確定する)
+  rpc UpdateShipmentStatus(UpdateShipmentStatusRequest) returns (UpdateShipmentStatusResponse);
+  rpc GetShipmentDetail(GetShipmentDetailRequest) returns (GetShipmentDetailResponse);
+  rpc GetShipmentByOrder(GetShipmentByOrderRequest) returns (GetShipmentByOrderResponse);
+  // 配送業者 API から追跡情報を同期する(バッチ想定)
+  rpc SyncCarrierTracking(SyncCarrierTrackingRequest) returns (SyncCarrierTrackingResponse);
+  // 住所の妥当性チェック(郵便番号・都道府県)
+  rpc ValidateAddress(ValidateAddressRequest) returns (ValidateAddressResponse);
+  // 住所の正規化(表記ゆれの吸収)
+  rpc NormalizeAddress(NormalizeAddressRequest) returns (NormalizeAddressResponse);
+}
+
+enum ShipmentStatus {
+  SHIPMENT_STATUS_UNSPECIFIED = 0;
+  SHIPMENT_STATUS_PENDING = 1;
+  SHIPMENT_STATUS_PREPARING = 2;
+  SHIPMENT_STATUS_SHIPPED = 3;
+  SHIPMENT_STATUS_IN_TRANSIT = 4;
+  SHIPMENT_STATUS_DELIVERED = 5;
+  SHIPMENT_STATUS_FAILED = 6;
+}
+
+message Shipment {
+  string id = 1;
+  string order_id = 2;
+  string customer_id = 3;
+  ShipmentStatus status = 4;
+  string tracking_number = 5;
+  string carrier = 6;
+  string shipping_address = 7;
+  google.protobuf.Timestamp estimated_delivery = 8;
+  google.protobuf.Timestamp actual_delivery = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message CalculateShippingFeeRequest {
+  string shipping_method = 1;
+  int32 total_weight_grams = 2;
+  string postal_code = 3;
+}
+
+message CalculateShippingFeeResponse {
+  bool success = 1;
+  string message = 2;
+  string fee = 3;
+}
+
+message CreateShipmentRequest {
+  string order_id = 1;
+  string customer_id = 2;
+  string shipping_address = 3;
+  string carrier = 4;
+}
+
+message CreateShipmentResponse {
+  bool success = 1;
+  string message = 2;
+  string shipment_id = 3;
+}
+
+message RegisterTrackingNumberRequest {
+  string shipment_id = 1;
+  string tracking_number = 2;
+}
+
+message RegisterTrackingNumberResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message UpdateShipmentStatusRequest {
+  string shipment_id = 1;
+  ShipmentStatus new_status = 2;
+}
+
+message UpdateShipmentStatusResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetShipmentDetailRequest {
+  string shipment_id = 1;
+}
+
+message GetShipmentDetailResponse {
+  bool success = 1;
+  string message = 2;
+  Shipment shipment = 3;
+}
+
+message GetShipmentByOrderRequest {
+  string order_id = 1;
+}
+
+message GetShipmentByOrderResponse {
+  bool success = 1;
+  string message = 2;
+  Shipment shipment = 3;
+}
+
+message SyncCarrierTrackingRequest {
+  string shipment_id = 1;
+}
+
+message SyncCarrierTrackingResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ValidateAddressRequest {
+  string postal_code = 1;
+  string prefecture = 2;
+  string city = 3;
+  string address_line = 4;
+}
+
+message ValidateAddressResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message NormalizeAddressRequest {
+  string postal_code = 1;
+  string prefecture = 2;
+  string city = 3;
+  string address_line = 4;
+}
+
+message NormalizeAddressResponse {
+  bool success = 1;
+  string message = 2;
+  string normalized_address = 3;
+}
