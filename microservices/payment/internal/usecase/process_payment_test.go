@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/usecase"
 )
 
 type mockPaymentRepository struct {

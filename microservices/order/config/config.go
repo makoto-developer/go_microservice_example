@@ -8,6 +8,17 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
+	Payment  PaymentServiceConfig
+}
+
+// PaymentServiceConfig は決済サービス(payment)への接続先。
+type PaymentServiceConfig struct {
+	Host string
+	Port string
+}
+
+func (c *PaymentServiceConfig) Address() string {
+	return fmt.Sprintf("%s:%s", c.Host, c.Port)
 }
 
 type ServerConfig struct {
@@ -35,6 +46,10 @@ func LoadConfig() (*Config, error) {
 			Password: getEnv("ORDER_DB_PASSWORD", "order_password"),
 			DBName:   getEnv("ORDER_DB_NAME", "order_db"),
 			SSLMode:  getEnv("ORDER_DB_SSLMODE", "disable"),
+		},
+		Payment: PaymentServiceConfig{
+			Host: getEnv("PAYMENT_SERVICE_HOST", "localhost"),
+			Port: getEnv("PAYMENT_SERVICE_PORT", "50056"),
 		},
 	}, nil
 }

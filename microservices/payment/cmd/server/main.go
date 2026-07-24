@@ -10,11 +10,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/makoto-developer/go_microservice_example/generated/payment/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/payment/internal/handler/grpc"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/repository/postgres"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/payment_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/payment/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/repository/postgres"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/payment/proto"
 )
 
 func main() {

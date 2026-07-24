@@ -3,17 +3,19 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"time"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/client"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/repository"
+	"time"
 )
 
 type CreateOrderInput struct {
-	CustomerID  uuid.UUID
-	AddressID   uuid.UUID
-	Items       []OrderItemInput
-	ShippingFee int64
+	CustomerID      uuid.UUID
+	AddressID       uuid.UUID
+	Items           []OrderItemInput
+	ShippingFee     int64
+	PaymentMethodID string
 }
 
 type OrderItemInput struct {
@@ -34,15 +36,18 @@ type OrderManagementUsecase interface {
 type orderManagementUsecase struct {
 	orderRepo     repository.OrderRepository
 	orderItemRepo repository.OrderItemRepository
+	paymentClient client.PaymentClient
 }
 
 func NewOrderManagementUsecase(
 	orderRepo repository.OrderRepository,
 	orderItemRepo repository.OrderItemRepository,
+	paymentClient client.PaymentClient,
 ) OrderManagementUsecase {
 	return &orderManagementUsecase{
 		orderRepo:     orderRepo,
 		orderItemRepo: orderItemRepo,
+		paymentClient: paymentClient,
 	}
 }
 
@@ -52,7 +57,7 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 		totalAmount += item.UnitPrice * int64(item.Quantity)
 	}
 	totalAmount += input.ShippingFee
-	
+
 	order := &domain.Order{
 		ID:          uuid.New(),
 		CustomerID:  input.CustomerID,
@@ -64,11 +69,11 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	
+
 	if err := u.orderRepo.Create(ctx, order); err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create order: %w", err)
 	}
-	
+
 	for _, itemInput := range input.Items {
 		item := &domain.OrderItem{
 			ID:          uuid.New(),
@@ -80,12 +85,34 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 			Subtotal:    itemInput.UnitPrice * int64(itemInput.Quantity),
 			CreatedAt:   time.Now(),
 		}
-		
+
 		if err := u.orderItemRepo.Create(ctx, item); err != nil {
 			return uuid.Nil, fmt.Errorf("failed to create order item: %w", err)
 		}
 	}
-	
+
+	// 決済サービスで支払いを実行する。失敗した場合は注文をキャンセルする。
+	// paymentClient が未設定(nil)の場合は決済をスキップする(ローカル起動の後方互換)。
+	if u.paymentClient != nil {
+		_, err := u.paymentClient.ProcessPayment(ctx, client.ProcessPaymentInput{
+			OrderID:         order.ID.String(),
+			CustomerID:      input.CustomerID.String(),
+			PaymentMethodID: input.PaymentMethodID,
+			Amount:          totalAmount,
+			Currency:        "jpy",
+		})
+		if err != nil {
+			if cancelErr := u.orderRepo.UpdateStatus(ctx, order.ID, domain.OrderStatusCancelled); cancelErr != nil {
+				return uuid.Nil, fmt.Errorf("payment failed (%v) and order cancellation also failed: %w", err, cancelErr)
+			}
+			return uuid.Nil, fmt.Errorf("payment failed, order %s cancelled: %w", order.ID, err)
+		}
+
+		if err := u.orderRepo.UpdateStatus(ctx, order.ID, domain.OrderStatusPaid); err != nil {
+			return uuid.Nil, fmt.Errorf("payment succeeded but failed to mark order as paid: %w", err)
+		}
+	}
+
 	return order.ID, nil
 }
 

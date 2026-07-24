@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
 )
 
 type orderRepository struct {
@@ -30,7 +30,7 @@ func (r *orderRepository) Create(ctx context.Context, order *domain.Order) error
 func (r *orderRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Order, error) {
 	query := `SELECT id, customer_id, order_number, status, total_amount, shipping_fee, address_id, payment_method_id, created_at, updated_at
 		FROM orders WHERE id = $1`
-	
+
 	var order domain.Order
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&order.ID, &order.CustomerID, &order.OrderNumber, &order.Status, &order.TotalAmount,
@@ -47,13 +47,13 @@ func (r *orderRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Or
 func (r *orderRepository) GetByCustomerID(ctx context.Context, customerID uuid.UUID) ([]*domain.Order, error) {
 	query := `SELECT id, customer_id, order_number, status, total_amount, shipping_fee, address_id, payment_method_id, created_at, updated_at
 		FROM orders WHERE customer_id = $1 ORDER BY created_at DESC`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, customerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var orders []*domain.Order
 	for rows.Next() {
 		var order domain.Order

@@ -18,14 +18,14 @@ const (
 )
 
 const (
-	PaymentMethodCreditCard PaymentMethod = "credit_card"
-	PaymentMethodDebitCard  PaymentMethod = "debit_card"
+	PaymentMethodCreditCard   PaymentMethod = "credit_card"
+	PaymentMethodDebitCard    PaymentMethod = "debit_card"
 	PaymentMethodBankTransfer PaymentMethod = "bank_transfer"
 )
 
 var (
 	ErrPaymentAlreadyProcessed = errors.New("payment already processed")
-	ErrInvalidAmount = errors.New("invalid payment amount")
+	ErrInvalidAmount           = errors.New("invalid payment amount")
 )
 
 type Payment struct {

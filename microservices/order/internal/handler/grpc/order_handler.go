@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	pb "github.com/makoto-developer/go_microservice_example/proto/order_service/v1"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/usecase"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/order/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -62,10 +62,11 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrd
 	}
 
 	input := usecase.CreateOrderInput{
-		CustomerID:  customerID,
-		AddressID:   addressID,
-		Items:       items,
-		ShippingFee: shippingFee,
+		CustomerID:      customerID,
+		AddressID:       addressID,
+		Items:           items,
+		ShippingFee:     shippingFee,
+		PaymentMethodID: req.GetPaymentMethodId(),
 	}
 
 	orderID, err := h.orderMgmt.CreateOrder(ctx, input)
@@ -75,7 +76,7 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrd
 
 	return &pb.CreateOrderResponse{
 		OrderId: orderID.String(),
-		Message: "Order created successfully",
+		Message: "Order created and payment completed successfully",
 	}, nil
 }
 
@@ -105,10 +106,10 @@ func (h *OrderServiceHandler) GetOrderDetail(ctx context.Context, req *pb.GetOrd
 
 func (h *OrderServiceHandler) ListOrders(ctx context.Context, req *pb.ListOrdersRequest) (*pb.ListOrdersResponse, error) {
 	return &pb.ListOrdersResponse{
-		Orders:    []*pb.Order{},
+		Orders:     []*pb.Order{},
 		TotalCount: 0,
-		Page:      req.GetPage(),
-		PageSize:  req.GetPageSize(),
+		Page:       req.GetPage(),
+		PageSize:   req.GetPageSize(),
 	}, nil
 }
 

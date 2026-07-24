@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/repository"
 )
 
 type paymentRepository struct {

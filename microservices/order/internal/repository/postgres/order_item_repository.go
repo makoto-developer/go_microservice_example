@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
 )
 
 type orderItemRepository struct {
@@ -30,13 +30,13 @@ func (r *orderItemRepository) Create(ctx context.Context, item *domain.OrderItem
 func (r *orderItemRepository) GetByOrderID(ctx context.Context, orderID uuid.UUID) ([]*domain.OrderItem, error) {
 	query := `SELECT id, order_id, product_id, variation_id, quantity, unit_price, subtotal, created_at
 		FROM order_items WHERE order_id = $1`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order items: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var items []*domain.OrderItem
 	for rows.Next() {
 		var item domain.OrderItem

@@ -1,0 +1,64 @@
+{
+  "name": "go_microservice_example",
+  "services": [
+    {
+      "name": "admin",
+      "path": "microservices/admin"
+    },
+    {
+      "name": "auth",
+      "path": "microservices/auth"
+    },
+    {
+      "name": "chat",
+      "path": "microservices/chat"
+    },
+    {
+      "name": "customer",
+      "path": "microservices/customer"
+    },
+    {
+      "name": "inventory",
+      "path": "microservices/inventory"
+    },
+    {
+      "name": "notification",
+      "path": "microservices/notification"
+    },
+    {
+      "name": "order",
+      "path": "microservices/order"
+    },
+    {
+      "name": "payment",
+      "path": "microservices/payment"
+    },
+    {
+      "name": "review",
+      "path": "microservices/review"
+    },
+    {
+      "name": "search",
+      "path": "microservices/search"
+    },
+    {
+      "name": "shipping",
+      "path": "microservices/shipping"
+    },
+    {
+      "name": "shop",
+      "path": "microservices/shop"
+    }
+  ],
+  "exclude": [
+    "manual",
+    "backup_new_impl",
+    "mps-workspace",
+    "simple-servers",
+    ".serena"
+  ],
+  "testPaths": [
+    "tools/test-client",
+    "tools/mock"
+  ]
+}

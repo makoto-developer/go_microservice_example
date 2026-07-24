@@ -2,11 +2,12 @@ package grpc
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/repository"
-	"github.com/makoto-developer/go_microservice_example/generated/payment/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/payment_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/payment/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/payment/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -33,10 +34,15 @@ func (h *PaymentServiceHandler) CreatePaymentIntent(ctx context.Context, req *pb
 		return nil, status.Error(codes.InvalidArgument, "invalid order ID")
 	}
 
+	amount, err := strconv.Atoi(req.GetAmount())
+	if err != nil || amount <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "invalid amount")
+	}
+
 	input := usecase.ProcessPaymentInput{
 		OrderID:       orderID,
-		Amount:        3000,
-		PaymentMethod: "credit_card",
+		Amount:        amount,
+		PaymentMethod: "credit_card", // モック決済のため支払い手段は固定(payment_method_id の解決は未実装)
 	}
 
 	output, err := h.processPaymentUsecase.Execute(ctx, input)

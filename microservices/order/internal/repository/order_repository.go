@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/order/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
 )
 
 type OrderRepository interface {

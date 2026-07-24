@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/makoto-developer/go_microservice_example/microservices/order/config"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/client"
 	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/order/internal/handler/grpc"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/repository/postgres"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/usecase"
@@ -37,7 +38,15 @@ func main() {
 
 	orderRepo := postgres.NewOrderRepository(db)
 	orderItemRepo := postgres.NewOrderItemRepository(db)
-	orderMgmt := usecase.NewOrderManagementUsecase(orderRepo, orderItemRepo)
+
+	paymentClient, err := client.NewPaymentClient(cfg.Payment.Address())
+	if err != nil {
+		log.Fatalf("Failed to create payment client: %v", err)
+	}
+	defer paymentClient.Close()
+	log.Printf("💳 Payment Service: %s", cfg.Payment.Address())
+
+	orderMgmt := usecase.NewOrderManagementUsecase(orderRepo, orderItemRepo, paymentClient)
 	handler := grpchandler.NewOrderServiceHandler(orderMgmt)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
