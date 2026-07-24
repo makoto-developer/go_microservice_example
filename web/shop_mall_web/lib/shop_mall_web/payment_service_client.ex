@@ -8,6 +8,8 @@ defmodule ShopMallWeb.PaymentServiceClient do
     ConfirmCODPaymentRequest,
     CreateRefundRequest,
     GetPaymentDetailRequest,
+    GetPaymentStatusRequest,
+    GetRefundStatusRequest,
     ListPaymentsRequest,
     PaymentService.Stub
   }
@@ -46,6 +48,20 @@ defmodule ShopMallWeb.PaymentServiceClient do
     request = %ConfirmCODPaymentRequest{payment_id: payment_id, order_id: order_id}
 
     with_channel(fn channel -> Stub.confirm_cod_payment(channel, request) end)
+  end
+
+  @doc "決済の現在状態を取得する(操作後の検証用)。"
+  def get_payment_status(payment_id) do
+    request = %GetPaymentStatusRequest{payment_id: payment_id}
+
+    with_channel(fn channel -> Stub.get_payment_status(channel, request) end)
+  end
+
+  @doc "返金の状態を取得する。"
+  def get_refund_status(refund_id) do
+    request = %GetRefundStatusRequest{refund_id: refund_id}
+
+    with_channel(fn channel -> Stub.get_refund_status(channel, request) end)
   end
 
   defp with_channel(fun) do

@@ -69,10 +69,17 @@ defmodule ShopMallWebWeb.Owner.PaymentListLive do
         socket
       ) do
     case Payments.confirm_cod_payment(payment_id, order_id) do
-      {:ok, response} ->
+      {:ok, _response} ->
+        # 確定後の状態を決済サービスに問い合わせて検証・表示する
+        status_note =
+          case Payments.get_payment_status(payment_id) do
+            {:ok, st} -> "(現在の状態: #{Payments.status_label(st.status)})"
+            {:error, _} -> ""
+          end
+
         {:noreply,
          socket
-         |> put_flash(:info, "集金を確定しました: #{response.message}")
+         |> put_flash(:info, "集金を確定しました#{status_note}")
          |> load_payments()}
 
       {:error, reason} ->

@@ -74,6 +74,29 @@ defmodule PaymentService.V1.Payment do
   field(:updated_at, 15, type: Google.Protobuf.Timestamp, json_name: "updatedAt")
 end
 
+defmodule PaymentService.V1.GetPaymentStatusRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "payment_service.v1.GetPaymentStatusRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:payment_id, 1, type: :string, json_name: "paymentId")
+end
+
+defmodule PaymentService.V1.GetPaymentStatusResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "payment_service.v1.GetPaymentStatusResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:status, 1, type: PaymentService.V1.PaymentStatus, enum: true)
+  field(:transaction_id, 2, type: :string, json_name: "transactionId")
+end
+
 defmodule PaymentService.V1.ConfirmCODPaymentRequest do
   @moduledoc false
 
@@ -221,6 +244,12 @@ defmodule PaymentService.V1.PaymentService.Service do
   use GRPC.Service,
     name: "payment_service.v1.PaymentService",
     protoc_gen_elixir_version: "0.16.0"
+
+  rpc(
+    :GetPaymentStatus,
+    PaymentService.V1.GetPaymentStatusRequest,
+    PaymentService.V1.GetPaymentStatusResponse
+  )
 
   rpc(
     :ConfirmCODPayment,

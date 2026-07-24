@@ -98,11 +98,18 @@ defmodule ShopMallWebWeb.Admin.PaymentListLive do
 
     case Payments.create_refund(payment_id, "", reason) do
       {:ok, response} ->
+        # 返金処理の完了状態を確認して結果に含める
+        status_note =
+          case Payments.get_refund_status(response.refund_id) do
+            {:ok, st} -> "、状態: #{refund_status_label(st.status)}、¥#{st.refund_amount}"
+            {:error, _} -> ""
+          end
+
         {:noreply,
          socket
          |> assign(:refund_target, nil)
          |> assign(:detail, nil)
-         |> put_flash(:info, "返金を実行しました(返金ID: #{response.refund_id})")
+         |> put_flash(:info, "返金を実行しました(返金ID: #{response.refund_id}#{status_note})")
          |> load_payments()}
 
       {:error, reason} ->
@@ -112,6 +119,12 @@ defmodule ShopMallWebWeb.Admin.PaymentListLive do
          |> put_flash(:error, "返金に失敗しました: #{reason}")}
     end
   end
+
+  defp refund_status_label(:REFUND_STATUS_SUCCEEDED), do: "返金完了"
+  defp refund_status_label(:REFUND_STATUS_PENDING), do: "処理待ち"
+  defp refund_status_label(:REFUND_STATUS_PROCESSING), do: "処理中"
+  defp refund_status_label(:REFUND_STATUS_FAILED), do: "失敗"
+  defp refund_status_label(_), do: "不明"
 
   @impl true
   def render(assigns) do
