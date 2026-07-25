@@ -41,6 +41,7 @@ type OrderManagementUsecase interface {
 	GetOrder(ctx context.Context, orderID uuid.UUID) (*domain.Order, error)
 	GetOrderItems(ctx context.Context, orderID uuid.UUID) ([]*domain.OrderItem, error)
 	ListOrdersByCustomer(ctx context.Context, customerID uuid.UUID) ([]*domain.Order, error)
+	Reorder(ctx context.Context, originalOrderID uuid.UUID) (uuid.UUID, error)
 	CancelOrder(ctx context.Context, orderID uuid.UUID) error
 	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status domain.OrderStatus) error
 }
@@ -229,6 +230,38 @@ func (u *orderManagementUsecase) executePayment(ctx context.Context, orderID uui
 		return "", err
 	}
 	return domain.OrderStatusPaid, nil
+}
+
+// Reorder は過去の注文と同じ内容で新しい注文を作る(再注文)。
+// 支払いは通常のカードフローに乗る(在庫引当・決済・出荷起票も通常どおり)。
+func (u *orderManagementUsecase) Reorder(ctx context.Context, originalOrderID uuid.UUID) (uuid.UUID, error) {
+	original, err := u.orderRepo.GetByID(ctx, originalOrderID)
+	if err != nil || original == nil {
+		return uuid.Nil, fmt.Errorf("original order not found: %w", err)
+	}
+	items, err := u.orderItemRepo.GetByOrderID(ctx, originalOrderID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to load original items: %w", err)
+	}
+	if len(items) == 0 {
+		return uuid.Nil, fmt.Errorf("original order %s has no items", originalOrderID)
+	}
+
+	input := CreateOrderInput{
+		CustomerID:      original.CustomerID,
+		AddressID:       original.AddressID,
+		ShippingFee:     original.ShippingFee,
+		PaymentMethodID: "pm_reorder",
+	}
+	for _, item := range items {
+		input.Items = append(input.Items, OrderItemInput{
+			ProductID:   item.ProductID,
+			VariationID: item.VariationID,
+			Quantity:    item.Quantity,
+			UnitPrice:   item.UnitPrice,
+		})
+	}
+	return u.CreateOrder(ctx, input)
 }
 
 // releaseStock は在庫引当の解放(補償トランザクション)。失敗はログのみ(期限切れ解放バッチで回収される想定)。

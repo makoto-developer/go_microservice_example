@@ -22,6 +22,7 @@ type ShippingServiceHandler struct {
 	shipmentRepo          repository.ShipmentRepository
 	paymentClient         client.PaymentClient      // nil の場合は決済連携をスキップ
 	notificationClient    client.NotificationClient // nil の場合は通知をスキップ
+	orderClient           client.OrderClient        // nil の場合は注文ステータス連携をスキップ
 }
 
 func NewShippingServiceHandler(
@@ -39,6 +40,12 @@ func NewShippingServiceHandler(
 // WithNotification は配達完了通知(notification サービス連携)を有効にする。
 func (h *ShippingServiceHandler) WithNotification(nc client.NotificationClient) *ShippingServiceHandler {
 	h.notificationClient = nc
+	return h
+}
+
+// WithOrder は配達完了時の注文ステータス反映(order サービス連携)を有効にする。
+func (h *ShippingServiceHandler) WithOrder(oc client.OrderClient) *ShippingServiceHandler {
+	h.orderClient = oc
 	return h
 }
 
@@ -145,6 +152,14 @@ func (h *ShippingServiceHandler) UpdateShipmentStatus(ctx context.Context, req *
 				message = "Shipment delivered, but COD confirmation failed (will retry)"
 			} else {
 				message = "Shipment delivered. COD payment (if any) confirmed."
+			}
+		}
+		// 注文サービスへ配達完了を反映(best effort)
+		if h.orderClient != nil {
+			if err := h.orderClient.MarkOrderDelivered(
+				ctx, shipment.OrderID.String(), shipment.TrackingNumber, shipment.Carrier,
+			); err != nil {
+				log.Printf("order status sync failed for order %s: %v", shipment.OrderID, err)
 			}
 		}
 		// 配達完了メール(best effort)

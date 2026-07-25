@@ -151,10 +151,32 @@ func (h *OrderServiceHandler) UpdateOrderStatus(ctx context.Context, req *pb.Upd
 	}, nil
 }
 
+// GetOrderStatusHistory は注文のステータス履歴を返す。
+// このサンプルは履歴テーブルを持たないため、現在のステータスまでの経路を復元して返す。
 func (h *OrderServiceHandler) GetOrderStatusHistory(ctx context.Context, req *pb.GetOrderStatusHistoryRequest) (*pb.GetOrderStatusHistoryResponse, error) {
-	return &pb.GetOrderStatusHistoryResponse{
-		History: []pb.OrderStatus{},
-	}, nil
+	orderID, err := uuid.Parse(req.GetOrderId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid order_id: %v", err)
+	}
+	order, err := h.orderMgmt.GetOrder(ctx, orderID)
+	if err != nil || order == nil {
+		return nil, status.Errorf(codes.NotFound, "order not found")
+	}
+
+	path := []pb.OrderStatus{pb.OrderStatus_PENDING}
+	switch order.Status {
+	case domain.OrderStatusConfirmed:
+		path = append(path, pb.OrderStatus_CONFIRMED)
+	case domain.OrderStatusPaid:
+		path = append(path, pb.OrderStatus_PAYMENT_PROCESSING)
+	case domain.OrderStatusShipped:
+		path = append(path, pb.OrderStatus_PAYMENT_PROCESSING, pb.OrderStatus_SHIPPED)
+	case domain.OrderStatusDelivered:
+		path = append(path, pb.OrderStatus_PAYMENT_PROCESSING, pb.OrderStatus_SHIPPED, pb.OrderStatus_DELIVERED)
+	case domain.OrderStatusCancelled:
+		path = append(path, pb.OrderStatus_CANCELLED)
+	}
+	return &pb.GetOrderStatusHistoryResponse{History: path}, nil
 }
 
 func (h *OrderServiceHandler) CancelOrder(ctx context.Context, req *pb.CancelOrderRequest) (*pb.CancelOrderResponse, error) {
@@ -202,10 +224,19 @@ func (h *OrderServiceHandler) ExportOrdersToCSV(ctx context.Context, req *pb.Exp
 	}, nil
 }
 
+// CreateReorder は過去の注文と同じ内容で再注文する。
 func (h *OrderServiceHandler) CreateReorder(ctx context.Context, req *pb.CreateReorderRequest) (*pb.CreateReorderResponse, error) {
+	originalID, err := uuid.Parse(req.GetOriginalOrderId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid original_order_id: %v", err)
+	}
+	orderID, err := h.orderMgmt.Reorder(ctx, originalID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to reorder: %v", err)
+	}
 	return &pb.CreateReorderResponse{
-		OrderId: "",
-		Message: "Reorder functionality not yet implemented",
+		OrderId: orderID.String(),
+		Message: "Reorder created successfully",
 	}, nil
 }
 

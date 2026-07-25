@@ -7,6 +7,9 @@ defmodule ShopMallWebWeb.OrderHistoryLive do
 
   alias OrderService.V1.{
     CancelOrderRequest,
+    CreateReorderRequest,
+    GetOrderDetailRequest,
+    GetOrderStatusHistoryRequest,
     ListOrdersRequest,
     OrderService.Stub
   }
@@ -31,6 +34,8 @@ defmodule ShopMallWebWeb.OrderHistoryLive do
      |> assign(:error, nil)
      |> assign(:cancel_target, nil)
      |> assign(:cancel_reasons, @cancel_reasons)
+     |> assign(:detail, nil)
+     |> assign(:history, [])
      |> load_orders()}
   end
 
@@ -62,6 +67,53 @@ defmodule ShopMallWebWeb.OrderHistoryLive do
     host = System.get_env("ORDER_SERVICE_HOST", "localhost")
     port = System.get_env("ORDER_SERVICE_PORT", "50055")
     GRPC.Stub.connect("#{host}:#{port}")
+  end
+
+  @impl true
+  def handle_event("show_detail", %{"order-id" => order_id}, socket) do
+    with {:ok, channel} <- connect_order_service(),
+         {:ok, detail} <-
+           Stub.get_order_detail(channel, %GetOrderDetailRequest{
+             order_id: order_id,
+             requester_id: socket.assigns.current_user_id || "",
+             requester_role: "customer"
+           }),
+         {:ok, hist} <-
+           Stub.get_order_status_history(channel, %GetOrderStatusHistoryRequest{
+             order_id: order_id
+           }) do
+      {:noreply, socket |> assign(:detail, detail.order) |> assign(:history, hist.history)}
+    else
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "詳細の取得に失敗しました: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("close_detail", _params, socket) do
+    {:noreply, socket |> assign(:detail, nil) |> assign(:history, [])}
+  end
+
+  @impl true
+  def handle_event("reorder", %{"order-id" => order_id}, socket) do
+    request = %CreateReorderRequest{
+      customer_id: socket.assigns.current_user_id || "",
+      original_order_id: order_id
+    }
+
+    with {:ok, channel} <- connect_order_service(),
+         {:ok, response} <- Stub.create_reorder(channel, request) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "同じ内容で再注文しました(注文ID: #{response.order_id})")
+       |> load_orders()}
+    else
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:noreply, put_flash(socket, :error, "再注文に失敗しました: #{message}")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "再注文に失敗しました: #{inspect(reason)}")}
+    end
   end
 
   @impl true
@@ -234,7 +286,22 @@ defmodule ShopMallWebWeb.OrderHistoryLive do
                     (送料 {format_amount(order.shipping_fee)} 含む)
                   </div>
                 </div>
-                <div>
+                <div class="space-x-2">
+                  <button
+                    phx-click="show_detail"
+                    phx-value-order-id={order.id}
+                    class="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50"
+                  >
+                    詳細
+                  </button>
+                  <button
+                    :if={order.status not in [:CANCELLED]}
+                    phx-click="reorder"
+                    phx-value-order-id={order.id}
+                    class="px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                  >
+                    再注文
+                  </button>
                   <button
                     :if={cancellable?(order)}
                     phx-click="open_cancel"
@@ -248,6 +315,42 @@ defmodule ShopMallWebWeb.OrderHistoryLive do
             </div>
           </div>
         <% end %>
+        
+    <!-- 注文詳細モーダル(GetOrderDetail + GetOrderStatusHistory) -->
+        <div
+          :if={@detail}
+          class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+        >
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-lg font-bold text-gray-900">注文詳細 {@detail.order_number}</h2>
+              <button phx-click="close_detail" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <dl class="grid grid-cols-3 gap-y-2 text-sm mb-4">
+              <dt class="text-gray-500">状態</dt>
+              <dd class="col-span-2">
+                <span class={"inline-flex px-2 py-0.5 rounded-full text-xs font-medium " <> status_color(@detail.status)}>
+                  {status_label(@detail.status)}
+                </span>
+              </dd>
+              <dt class="text-gray-500">合計</dt>
+              <dd class="col-span-2 font-semibold">{format_amount(@detail.total_amount)}</dd>
+              <dt class="text-gray-500">送料</dt>
+              <dd class="col-span-2">{format_amount(@detail.shipping_fee)}</dd>
+              <dt class="text-gray-500">注文日時</dt>
+              <dd class="col-span-2">{format_timestamp(@detail.created_at)}</dd>
+            </dl>
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">ステータス履歴</h3>
+            <div class="flex items-center flex-wrap gap-1 text-xs">
+              <%= for {st, idx} <- Enum.with_index(@history) do %>
+                <span :if={idx > 0} class="text-gray-400">→</span>
+                <span class={"inline-flex px-2 py-0.5 rounded-full font-medium " <> status_color(st)}>
+                  {status_label(st)}
+                </span>
+              <% end %>
+            </div>
+          </div>
+        </div>
         
     <!-- キャンセル確認モーダル -->
         <div

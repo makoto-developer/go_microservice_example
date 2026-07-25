@@ -48,6 +48,7 @@ defmodule ShopMallWebWeb.Router do
 
     # Admin routes
     live "/admin/payments", Admin.PaymentListLive
+    live "/admin/orders", Admin.OrderAnalyticsLive
     # (temporarily disabled - Proto files not generated)
     # live "/admin", Admin.DashboardLive
     # live "/admin/shops/pending", Admin.ShopApprovalLive

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"context"
 	"database/sql"
 	"fmt"
@@ -124,6 +126,16 @@ func main() {
 		paymentClient,
 	)
 
+	// 配達完了の注文ステータス反映(注文サービス)
+	orderAddr := fmt.Sprintf("%s:%s", getEnvOr("ORDER_SERVICE_HOST", "localhost"), getEnvOr("ORDER_SERVICE_PORT", "50055"))
+	if orderClient, err := client.NewOrderClient(orderAddr); err != nil {
+		log.Printf("Warning: order client unavailable (%v). Order status sync disabled.", err)
+	} else {
+		defer orderClient.Close()
+		handler.WithOrder(orderClient)
+		log.Printf("🧾 Order Service: %s", orderAddr)
+	}
+
 	// 配達完了メール(通知サービス)
 	notificationAddr := fmt.Sprintf("%s:%s", cfg.Notification.Host, cfg.Notification.Port)
 	if notificationClient, err := client.NewNotificationClient(notificationAddr); err != nil {
@@ -148,4 +160,11 @@ func main() {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
+}
+
+func getEnvOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }

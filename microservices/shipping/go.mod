@@ -6,6 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
 	github.com/makoto-developer/go_microservice_example/microservices/notification v0.0.0
+	github.com/makoto-developer/go_microservice_example/microservices/order v0.0.0
 	github.com/makoto-developer/go_microservice_example/microservices/payment v0.0.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.10
@@ -21,3 +22,5 @@ require (
 replace github.com/makoto-developer/go_microservice_example/microservices/payment => ../payment
 
 replace github.com/makoto-developer/go_microservice_example/microservices/notification => ../notification
+
+replace github.com/makoto-developer/go_microservice_example/microservices/order => ../order

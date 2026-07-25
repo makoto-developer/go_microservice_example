@@ -194,6 +194,216 @@ defmodule OrderService.V1.CreateOrderResponse do
   field(:message, 3, type: :string)
 end
 
+defmodule OrderService.V1.GetOrderDetailRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetOrderDetailRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:order_id, 1, type: :string, json_name: "orderId")
+  field(:requester_id, 2, type: :string, json_name: "requesterId")
+  field(:requester_role, 3, type: :string, json_name: "requesterRole")
+end
+
+defmodule OrderService.V1.GetOrderDetailResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetOrderDetailResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:order, 1, type: OrderService.V1.Order)
+end
+
+defmodule OrderService.V1.GetOrderStatusHistoryRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetOrderStatusHistoryRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:order_id, 1, type: :string, json_name: "orderId")
+end
+
+defmodule OrderService.V1.GetOrderStatusHistoryResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetOrderStatusHistoryResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:history, 1, repeated: true, type: OrderService.V1.OrderStatus, enum: true)
+end
+
+defmodule OrderService.V1.CreateReorderRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.CreateReorderRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:customer_id, 1, type: :string, json_name: "customerId")
+  field(:original_order_id, 2, type: :string, json_name: "originalOrderId")
+end
+
+defmodule OrderService.V1.CreateReorderResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.CreateReorderResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:order_id, 1, type: :string, json_name: "orderId")
+  field(:message, 2, type: :string)
+end
+
+defmodule OrderService.V1.SearchOrdersRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.SearchOrdersRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:shop_id, 1, type: :string, json_name: "shopId")
+  field(:order_number, 2, type: :string, json_name: "orderNumber")
+  field(:customer_name, 3, type: :string, json_name: "customerName")
+  field(:customer_email, 4, type: :string, json_name: "customerEmail")
+  field(:product_name, 5, type: :string, json_name: "productName")
+  field(:date_from, 6, type: :string, json_name: "dateFrom")
+  field(:date_to, 7, type: :string, json_name: "dateTo")
+
+  field(:status_filter, 8,
+    repeated: true,
+    type: OrderService.V1.OrderStatus,
+    enum: true,
+    json_name: "statusFilter"
+  )
+
+  field(:min_amount, 9, type: :string, json_name: "minAmount")
+  field(:max_amount, 10, type: :string, json_name: "maxAmount")
+  field(:page, 11, type: :int32)
+  field(:page_size, 12, type: :int32, json_name: "pageSize")
+end
+
+defmodule OrderService.V1.SearchOrdersResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.SearchOrdersResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:orders, 1, repeated: true, type: OrderService.V1.Order)
+  field(:total_count, 2, type: :int32, json_name: "totalCount")
+end
+
+defmodule OrderService.V1.GetOrderStatisticsRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetOrderStatisticsRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:shop_id, 1, type: :string, json_name: "shopId")
+  field(:date_from, 2, type: :string, json_name: "dateFrom")
+  field(:date_to, 3, type: :string, json_name: "dateTo")
+  field(:group_by, 4, type: :string, json_name: "groupBy")
+end
+
+defmodule OrderService.V1.GetOrderStatisticsResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetOrderStatisticsResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:total_orders, 1, type: :int32, json_name: "totalOrders")
+  field(:total_sales, 2, type: :int64, json_name: "totalSales")
+  field(:pending_orders, 3, type: :int32, json_name: "pendingOrders")
+  field(:completed_orders, 4, type: :int32, json_name: "completedOrders")
+end
+
+defmodule OrderService.V1.GetProductSalesRankingRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetProductSalesRankingRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:shop_id, 1, type: :string, json_name: "shopId")
+  field(:date_from, 2, type: :string, json_name: "dateFrom")
+  field(:date_to, 3, type: :string, json_name: "dateTo")
+  field(:limit, 4, type: :int32)
+end
+
+defmodule OrderService.V1.ProductSalesRank do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.ProductSalesRank",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:product_id, 1, type: :string, json_name: "productId")
+  field(:product_name, 2, type: :string, json_name: "productName")
+  field(:total_sold, 3, type: :int32, json_name: "totalSold")
+  field(:total_revenue, 4, type: :int64, json_name: "totalRevenue")
+end
+
+defmodule OrderService.V1.GetProductSalesRankingResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.GetProductSalesRankingResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:rankings, 1, repeated: true, type: OrderService.V1.ProductSalesRank)
+end
+
+defmodule OrderService.V1.ExportOrdersToCSVRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.ExportOrdersToCSVRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:shop_id, 1, type: :string, json_name: "shopId")
+  field(:date_from, 2, type: :string, json_name: "dateFrom")
+  field(:date_to, 3, type: :string, json_name: "dateTo")
+
+  field(:status_filter, 4,
+    repeated: true,
+    type: OrderService.V1.OrderStatus,
+    enum: true,
+    json_name: "statusFilter"
+  )
+end
+
+defmodule OrderService.V1.ExportOrdersToCSVResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "order_service.v1.ExportOrdersToCSVResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:csv_url, 1, type: :string, json_name: "csvUrl")
+  field(:message, 2, type: :string)
+end
+
 defmodule OrderService.V1.OrderService.Service do
   @moduledoc false
 
@@ -202,6 +412,44 @@ defmodule OrderService.V1.OrderService.Service do
   rpc(:CreateOrder, OrderService.V1.CreateOrderRequest, OrderService.V1.CreateOrderResponse)
   rpc(:ListOrders, OrderService.V1.ListOrdersRequest, OrderService.V1.ListOrdersResponse)
   rpc(:CancelOrder, OrderService.V1.CancelOrderRequest, OrderService.V1.CancelOrderResponse)
+
+  rpc(
+    :GetOrderDetail,
+    OrderService.V1.GetOrderDetailRequest,
+    OrderService.V1.GetOrderDetailResponse
+  )
+
+  rpc(
+    :GetOrderStatusHistory,
+    OrderService.V1.GetOrderStatusHistoryRequest,
+    OrderService.V1.GetOrderStatusHistoryResponse
+  )
+
+  rpc(
+    :CreateReorder,
+    OrderService.V1.CreateReorderRequest,
+    OrderService.V1.CreateReorderResponse
+  )
+
+  rpc(:SearchOrders, OrderService.V1.SearchOrdersRequest, OrderService.V1.SearchOrdersResponse)
+
+  rpc(
+    :GetOrderStatistics,
+    OrderService.V1.GetOrderStatisticsRequest,
+    OrderService.V1.GetOrderStatisticsResponse
+  )
+
+  rpc(
+    :GetProductSalesRanking,
+    OrderService.V1.GetProductSalesRankingRequest,
+    OrderService.V1.GetProductSalesRankingResponse
+  )
+
+  rpc(
+    :ExportOrdersToCSV,
+    OrderService.V1.ExportOrdersToCSVRequest,
+    OrderService.V1.ExportOrdersToCSVResponse
+  )
 end
 
 defmodule OrderService.V1.OrderService.Stub do
