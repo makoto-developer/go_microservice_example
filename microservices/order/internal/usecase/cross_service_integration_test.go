@@ -1,8 +1,9 @@
 // サービス横断の統合テスト。
-// payment / shipping のインメモリ gRPC サーバ(testsupport)を実際に起動し、
+// payment / shipping / inventory のインメモリ gRPC サーバ(testsupport)を実際に起動し、
 // order のユースケースから本物のクライアント・実 TCP 通信で一連のフローを検証する。
 //
-//	代引き購入   : order → payment.CreateCODPayment(pending)、order → shipping.CreateShipment
+//	代引き購入   : order → inventory.BulkReserveStock → payment.CreateCODPayment(pending)
+//	               → shipping.CreateShipment → inventory.ConfirmStock
 //	配達完了     : shipping → payment.ListPayments → ConfirmCODPayment(completed)
 //	カード購入   : order → payment.CreatePaymentIntent/ConfirmPayment(completed)
 //	キャンセル   : order → payment.CreateRefund(refunded)
@@ -17,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	inventorytest "github.com/makoto-developer/go_microservice_example/microservices/inventory/testsupport"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/client"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/repository"
@@ -75,11 +77,12 @@ var _ repository.OrderItemRepository = (*memOrderItemRepo)(nil)
 // ---- セットアップ ----
 
 type stack struct {
-	orderRepo        *memOrderRepo
-	usecase          usecase.OrderManagementUsecase
-	paymentInspector *paymenttest.Inspector
-	shipInspector    *shippingtest.Inspector
-	shippingAddr     string
+	orderRepo          *memOrderRepo
+	usecase            usecase.OrderManagementUsecase
+	paymentInspector   *paymenttest.Inspector
+	shipInspector      *shippingtest.Inspector
+	inventoryInspector *inventorytest.Inspector
+	shippingAddr       string
 }
 
 func startStack(t *testing.T) *stack {
@@ -109,16 +112,29 @@ func startStack(t *testing.T) *stack {
 	}
 	t.Cleanup(func() { shippingClient.Close() })
 
+	inventoryAddr, stopInventory, inventoryInspector, err := inventorytest.StartServer()
+	if err != nil {
+		t.Fatalf("start inventory server: %v", err)
+	}
+	t.Cleanup(stopInventory)
+
+	inventoryClient, err := client.NewInventoryClient(inventoryAddr)
+	if err != nil {
+		t.Fatalf("inventory client: %v", err)
+	}
+	t.Cleanup(func() { inventoryClient.Close() })
+
 	orderRepo := newMemOrderRepo()
-	u := usecase.NewOrderManagementUsecaseWithShipping(
-		orderRepo, &memOrderItemRepo{}, paymentClient, shippingClient)
+	u := usecase.NewOrderManagementUsecaseFull(
+		orderRepo, &memOrderItemRepo{}, paymentClient, shippingClient, nil, inventoryClient)
 
 	return &stack{
-		orderRepo:        orderRepo,
-		usecase:          u,
-		paymentInspector: paymentInspector,
-		shipInspector:    shipInspector,
-		shippingAddr:     shippingAddr,
+		orderRepo:          orderRepo,
+		usecase:            u,
+		paymentInspector:   paymentInspector,
+		shipInspector:      shipInspector,
+		inventoryInspector: inventoryInspector,
+		shippingAddr:       shippingAddr,
 	}
 }
 
@@ -134,6 +150,12 @@ func TestIntegration_CODOrderToDeliveryConfirmsPayment(t *testing.T) {
 	ctx := testCtx(t)
 	s := startStack(t)
 
+	// 0. 在庫を用意
+	productID := uuid.New()
+	if err := s.inventoryInspector.SeedStock(productID.String(), 10); err != nil {
+		t.Fatalf("seed stock: %v", err)
+	}
+
 	// 1. 代引きで注文
 	orderID, err := s.usecase.CreateOrder(ctx, usecase.CreateOrderInput{
 		CustomerID:    uuid.New(),
@@ -141,11 +163,19 @@ func TestIntegration_CODOrderToDeliveryConfirmsPayment(t *testing.T) {
 		ShippingFee:   500,
 		PaymentMethod: usecase.PaymentMethodCashOnDelivery,
 		Items: []usecase.OrderItemInput{
-			{ProductID: uuid.New(), Quantity: 2, UnitPrice: 1200},
+			{ProductID: productID, Quantity: 2, UnitPrice: 1200},
 		},
 	})
 	if err != nil {
 		t.Fatalf("CreateOrder: %v", err)
+	}
+
+	// 在庫が引き当てられ、決済成功で確定している(order → inventory 連携)
+	if _, reserved, _ := s.inventoryInspector.Stock(productID.String()); reserved != 2 {
+		t.Errorf("reserved stock = %d, want 2", reserved)
+	}
+	if sts := s.inventoryInspector.ReservationStatuses(orderID.String()); len(sts) != 1 || sts[0] != "CONFIRMED" {
+		t.Errorf("reservation statuses = %v, want [CONFIRMED]", sts)
 	}
 
 	if st := s.orderRepo.statuses[orderID]; st != domain.OrderStatusConfirmed {
@@ -202,6 +232,11 @@ func TestIntegration_CardOrderCancelRefunds(t *testing.T) {
 	ctx := testCtx(t)
 	s := startStack(t)
 
+	productID := uuid.New()
+	if err := s.inventoryInspector.SeedStock(productID.String(), 3); err != nil {
+		t.Fatalf("seed stock: %v", err)
+	}
+
 	// 1. クレジットカードで注文(即時決済)
 	orderID, err := s.usecase.CreateOrder(ctx, usecase.CreateOrderInput{
 		CustomerID:      uuid.New(),
@@ -209,7 +244,7 @@ func TestIntegration_CardOrderCancelRefunds(t *testing.T) {
 		ShippingFee:     500,
 		PaymentMethodID: "pm_test",
 		Items: []usecase.OrderItemInput{
-			{ProductID: uuid.New(), Quantity: 1, UnitPrice: 5000},
+			{ProductID: productID, Quantity: 1, UnitPrice: 5000},
 		},
 	})
 	if err != nil {
@@ -253,5 +288,40 @@ func TestIntegration_CancelWithoutPaymentIsNoop(t *testing.T) {
 	}
 	if n := s.paymentInspector.RefundCount(); n != 0 {
 		t.Errorf("no refunds expected, got %d", n)
+	}
+}
+
+func TestIntegration_InsufficientStockFailsOrderBeforePayment(t *testing.T) {
+	ctx := testCtx(t)
+	s := startStack(t)
+
+	productID := uuid.New()
+	if err := s.inventoryInspector.SeedStock(productID.String(), 1); err != nil {
+		t.Fatalf("seed stock: %v", err)
+	}
+
+	// 在庫1に対して5個注文 → 引当が FailedPrecondition で失敗し、決済まで進まない
+	_, err := s.usecase.CreateOrder(ctx, usecase.CreateOrderInput{
+		CustomerID:  uuid.New(),
+		AddressID:   uuid.New(),
+		ShippingFee: 500,
+		Items: []usecase.OrderItemInput{
+			{ProductID: productID, Quantity: 5, UnitPrice: 1000},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error when stock is insufficient")
+	}
+	for id := range s.orderRepo.orders {
+		if status, _, _, ok := s.paymentInspector.PaymentByOrder(id.String()); ok {
+			t.Errorf("payment should not exist for failed order, got %s", status)
+		}
+		if st := s.orderRepo.statuses[id]; st != domain.OrderStatusCancelled {
+			t.Errorf("order status = %s, want CANCELLED", st)
+		}
+	}
+	// 引当は残っていない(補償で解放済み or そもそも引当されていない)
+	if _, reserved, _ := s.inventoryInspector.Stock(productID.String()); reserved != 0 {
+		t.Errorf("reserved stock = %d, want 0", reserved)
 	}
 }

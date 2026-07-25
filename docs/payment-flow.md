@@ -16,19 +16,27 @@ order / payment / shipping / shop_mall_web が連携する決済の全体像。
 sequenceDiagram
   participant W as shop_mall_web
   participant O as order
+  participant I as inventory
   participant P as payment
   participant S as shipping
+  participant N as notification
 
   W->>O: CreateOrder(payment_method=CREDIT_CARD)
+  O->>I: BulkReserveStock(在庫引当)
   O->>P: CreatePaymentIntent
   O->>P: ConfirmPayment
   Note over P: payments: completed
   O->>O: 注文を PAID に
+  O->>I: ConfirmStock(引当確定)
   O->>S: CreateShipment(出荷起票)
+  O->>N: SendEmail(注文確認)
 ```
 
-- 決済に失敗した注文は自動でキャンセルされる
-- 出荷起票の失敗は注文を失敗させない(バックオフィスで再起票する想定)
+Saga(補償トランザクション):
+
+- 在庫が足りなければ決済前に注文をキャンセルする(BulkReserveStock は全部成功 or 全部なし)
+- 決済に失敗したら在庫引当を解放(ReleaseStock)して注文をキャンセルする
+- 出荷起票・引当確定・通知の失敗は注文を失敗させない(バックオフィス/バッチで回収する想定)
 
 ## 購入(代金引換)
 
@@ -50,6 +58,7 @@ sequenceDiagram
   S->>P: ListPayments(order_id)
   S->>P: ConfirmCODPayment
   Note over P: payments: completed(集金確定)
+  S->>N: SendEmail(配達完了)
 ```
 
 集金確定の経路は2つある(結果は同じ):
@@ -70,6 +79,7 @@ sequenceDiagram
   O->>P: CreateRefund(order_id, 全額)
   Note over P: refunds: succeeded / payments: refunded
   O->>O: 注文を CANCELLED に
+  O->>O: 在庫引当を解放・キャンセル通知(best effort)
 ```
 
 - 支払い済み(completed)の決済のみ返金対象。未決済なら payment が NotFound を返し、返金はスキップされる
@@ -91,5 +101,6 @@ sequenceDiagram
 
 - 各サービスの単体テスト: `go test ./...`(payment 13 / order 12 / shipping 6)
 - **サービス横断の統合テスト**: `microservices/order/internal/usecase/cross_service_integration_test.go`
-  - payment / shipping の testsupport(インメモリ gRPC サーバ)を実 TCP で起動し、
-    購入→配達→集金確定、購入→キャンセル→返金の全チェーンを実 gRPC 通信で検証する
+  - payment / shipping / inventory の testsupport(インメモリ gRPC サーバ)を実 TCP で起動し、
+    在庫引当→購入→配達→集金確定、購入→キャンセル→返金、在庫不足での注文失敗を
+    実 gRPC 通信で検証する
