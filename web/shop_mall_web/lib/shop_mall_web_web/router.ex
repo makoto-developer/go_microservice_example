@@ -59,6 +59,7 @@ defmodule ShopMallWebWeb.Router do
     live "/admin/orders", Admin.OrderAnalyticsLive
     live "/admin/reviews", Admin.ReviewModerationLive
     live "/admin/search", Admin.SearchAdminLive
+    live "/admin/notifications", Admin.NotificationCenterLive
     # (temporarily disabled - Proto files not generated)
     # live "/admin", Admin.DashboardLive
     # live "/admin/shops/pending", Admin.ShopApprovalLive
