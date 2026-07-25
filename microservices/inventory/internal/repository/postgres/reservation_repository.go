@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/domain"
 )
 
 type reservationRepository struct {
@@ -30,7 +30,7 @@ func (r *reservationRepository) Create(ctx context.Context, reservation *domain.
 func (r *reservationRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Reservation, error) {
 	query := `SELECT id, inventory_id, order_id, quantity, status, expires_at, created_at, updated_at
 		FROM reservations WHERE id = $1`
-	
+
 	var res domain.Reservation
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&res.ID, &res.InventoryID, &res.OrderID, &res.Quantity, &res.Status, &res.ExpiresAt, &res.CreatedAt, &res.UpdatedAt)
@@ -46,13 +46,13 @@ func (r *reservationRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 func (r *reservationRepository) GetByOrderID(ctx context.Context, orderID uuid.UUID) ([]*domain.Reservation, error) {
 	query := `SELECT id, inventory_id, order_id, quantity, status, expires_at, created_at, updated_at
 		FROM reservations WHERE order_id = $1`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reservations: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var reservations []*domain.Reservation
 	for rows.Next() {
 		var res domain.Reservation

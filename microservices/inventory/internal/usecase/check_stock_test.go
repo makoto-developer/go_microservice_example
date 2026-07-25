@@ -5,21 +5,17 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/usecase"
 )
 
 type mockInventoryRepository struct {
-	getByProductAndShopFunc func(ctx context.Context, productID, shopID uuid.UUID) (*domain.Inventory, error)
+	getByProductIDFunc func(ctx context.Context, productID uuid.UUID, variationID *uuid.UUID) (*domain.Inventory, error)
 }
 
-func (m *mockInventoryRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Inventory, error) {
-	return nil, nil
-}
-
-func (m *mockInventoryRepository) GetByProductAndShop(ctx context.Context, productID, shopID uuid.UUID) (*domain.Inventory, error) {
-	if m.getByProductAndShopFunc != nil {
-		return m.getByProductAndShopFunc(ctx, productID, shopID)
+func (m *mockInventoryRepository) GetByProductID(ctx context.Context, productID uuid.UUID, variationID *uuid.UUID) (*domain.Inventory, error) {
+	if m.getByProductIDFunc != nil {
+		return m.getByProductIDFunc(ctx, productID, variationID)
 	}
 	return nil, nil
 }
@@ -32,15 +28,15 @@ func (m *mockInventoryRepository) Update(ctx context.Context, inventory *domain.
 	return nil
 }
 
-func (m *mockInventoryRepository) UpdateQuantity(ctx context.Context, id uuid.UUID, quantity, reservedQuantity int) error {
+func (m *mockInventoryRepository) UpdateQuantity(ctx context.Context, id uuid.UUID, quantity int) error {
 	return nil
 }
 
-func (m *mockInventoryRepository) Reserve(ctx context.Context, inventoryID uuid.UUID, quantity int, orderID uuid.UUID) error {
+func (m *mockInventoryRepository) Reserve(ctx context.Context, id uuid.UUID, quantity int) error {
 	return nil
 }
 
-func (m *mockInventoryRepository) Release(ctx context.Context, orderID uuid.UUID) error {
+func (m *mockInventoryRepository) Release(ctx context.Context, id uuid.UUID, quantity int) error {
 	return nil
 }
 
@@ -49,7 +45,7 @@ func TestCheckStockUsecase_Success(t *testing.T) {
 	shopID := uuid.New()
 
 	repo := &mockInventoryRepository{
-		getByProductAndShopFunc: func(ctx context.Context, pid, sid uuid.UUID) (*domain.Inventory, error) {
+		getByProductIDFunc: func(ctx context.Context, pid uuid.UUID, _ *uuid.UUID) (*domain.Inventory, error) {
 			return &domain.Inventory{
 				ID:               uuid.New(),
 				ProductID:        productID,
@@ -92,7 +88,7 @@ func TestCheckStockUsecase_InsufficientStock(t *testing.T) {
 	shopID := uuid.New()
 
 	repo := &mockInventoryRepository{
-		getByProductAndShopFunc: func(ctx context.Context, pid, sid uuid.UUID) (*domain.Inventory, error) {
+		getByProductIDFunc: func(ctx context.Context, pid uuid.UUID, _ *uuid.UUID) (*domain.Inventory, error) {
 			return &domain.Inventory{
 				ID:               uuid.New(),
 				ProductID:        productID,

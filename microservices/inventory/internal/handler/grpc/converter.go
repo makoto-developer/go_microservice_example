@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/domain"
-	pb "github.com/makoto-developer/go_microservice_example/proto/inventory-service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/domain"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/inventory/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/repository"
 )
 
 var (

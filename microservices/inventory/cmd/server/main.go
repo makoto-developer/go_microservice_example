@@ -3,16 +3,16 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"net"
 	_ "github.com/lib/pq"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/repository/postgres"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/inventory/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	pb "github.com/makoto-developer/go_microservice_example/proto/inventory-service/v1"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/inventory/internal/handler/grpc"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/repository/postgres"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/usecase"
+	"log"
+	"net"
 )
 
 func main() {

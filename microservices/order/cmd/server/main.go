@@ -64,7 +64,16 @@ func main() {
 		log.Printf("📧 Notification Service: %s", cfg.Notification.Address())
 	}
 
-	orderMgmt := usecase.NewOrderManagementUsecaseFull(orderRepo, orderItemRepo, paymentClient, shippingClient, notificationClient)
+	inventoryClient, err := client.NewInventoryClient(cfg.Inventory.Address())
+	if err != nil {
+		log.Printf("Warning: inventory client unavailable (%v). Stock reservation disabled.", err)
+		inventoryClient = nil
+	} else {
+		defer inventoryClient.Close()
+		log.Printf("📦 Inventory Service: %s", cfg.Inventory.Address())
+	}
+
+	orderMgmt := usecase.NewOrderManagementUsecaseFull(orderRepo, orderItemRepo, paymentClient, shippingClient, notificationClient, inventoryClient)
 	handler := grpchandler.NewOrderServiceHandler(orderMgmt)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))

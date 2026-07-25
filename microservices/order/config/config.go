@@ -11,6 +11,17 @@ type Config struct {
 	Payment      PaymentServiceConfig
 	Shipping     ShippingServiceConfig
 	Notification NotificationServiceConfig
+	Inventory    InventoryServiceConfig
+}
+
+// InventoryServiceConfig は在庫サービス(inventory)への接続先。
+type InventoryServiceConfig struct {
+	Host string
+	Port string
+}
+
+func (c *InventoryServiceConfig) Address() string {
+	return c.Host + ":" + c.Port
 }
 
 // NotificationServiceConfig は通知サービス(notification)への接続先。
@@ -80,6 +91,10 @@ func LoadConfig() (*Config, error) {
 		Notification: NotificationServiceConfig{
 			Host: getEnv("NOTIFICATION_SERVICE_HOST", "localhost"),
 			Port: getEnv("NOTIFICATION_SERVICE_PORT", "20107"),
+		},
+		Inventory: InventoryServiceConfig{
+			Host: getEnv("INVENTORY_SERVICE_HOST", "localhost"),
+			Port: getEnv("INVENTORY_SERVICE_PORT", "50054"),
 		},
 	}, nil
 }

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/usecase"
 )
 
 func TestReserveStockUsecase_Success(t *testing.T) {
@@ -16,7 +16,7 @@ func TestReserveStockUsecase_Success(t *testing.T) {
 	inventoryID := uuid.New()
 
 	repo := &mockInventoryRepository{
-		getByProductAndShopFunc: func(ctx context.Context, pid, sid uuid.UUID) (*domain.Inventory, error) {
+		getByProductIDFunc: func(ctx context.Context, pid uuid.UUID, _ *uuid.UUID) (*domain.Inventory, error) {
 			return &domain.Inventory{
 				ID:               inventoryID,
 				ProductID:        productID,
@@ -53,7 +53,7 @@ func TestReserveStockUsecase_InsufficientStock(t *testing.T) {
 	orderID := uuid.New()
 
 	repo := &mockInventoryRepository{
-		getByProductAndShopFunc: func(ctx context.Context, pid, sid uuid.UUID) (*domain.Inventory, error) {
+		getByProductIDFunc: func(ctx context.Context, pid uuid.UUID, _ *uuid.UUID) (*domain.Inventory, error) {
 			return &domain.Inventory{
 				ID:               uuid.New(),
 				ProductID:        productID,

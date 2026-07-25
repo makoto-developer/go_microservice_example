@@ -1,6 +1,6 @@
 # go_microservice_example アーキテクチャレポート
 
-> strata 0.1.0 により生成(2026-07-24T15:03:49.724Z)。
+> strata 0.1.0 により生成(2026-07-25T00:37:47.231Z)。
 > 静的解析のため、メッセージキュー等の動的連携は含まれない。
 
 ## サービス間依存図
@@ -27,6 +27,7 @@ graph LR
   s13 -->|"6"| s7
   s13 -->|"6"| s1
   s6 -->|"5"| s7
+  s6 -->|"4"| s4
   s10 -->|"3"| s7
   s13 -->|"3"| s10
   s13 -->|"3"| s6
@@ -43,6 +44,7 @@ graph LR
 | shop_mall_web | payment | PaymentService.ConfirmCODPayment, PaymentService.CreateRefund, PaymentService.GetPaymentDetail, PaymentService.GetPaymentStatus, PaymentService.GetRefundStatus, PaymentService.ListPayments |
 | shop_mall_web | auth | AuthService.Login, AuthService.Register, AuthService.RequestPasswordReset, AuthService.ResetPassword |
 | order | payment | PaymentService.ConfirmPayment, PaymentService.CreateCODPayment, PaymentService.CreatePaymentIntent, PaymentService.CreateRefund |
+| order | inventory | InventoryService.BulkReserveStock, InventoryService.ConfirmStock, InventoryService.ReleaseStock |
 | shipping | payment | PaymentService.ConfirmCODPayment, PaymentService.ListPayments |
 | shop_mall_web | shipping | ShippingService.GetShipmentByOrder, ShippingService.RegisterTrackingNumber, ShippingService.UpdateShipmentStatus |
 | shop_mall_web | order | OrderService.CancelOrder, OrderService.CreateOrder, OrderService.ListOrders |
@@ -59,10 +61,10 @@ graph LR
 | shop | 5,573 | 19 | 10 | 0 | 9 |
 | customer | 5,180 | 24 | 0 | 0 | 24 |
 | dsl-generator | 3,196 | 0 | 0 | 0 | 0 |
+| order | 2,397 | 11 | 3 | 0 | 8 |
 | payment | 2,332 | 9 | 9 | 0 | 0 |
-| order | 2,163 | 11 | 3 | 0 | 8 |
 | shipping | 1,689 | 9 | 4 | 1 | 4 |
-| inventory | 1,230 | 14 | 0 | 0 | 14 |
+| inventory | 1,288 | 14 | 3 | 0 | 11 |
 | admin | 788 | 28 | 0 | 0 | 28 |
 | review | 656 | 19 | 0 | 0 | 19 |
 | notification | 583 | 13 | 1 | 0 | 12 |
@@ -77,7 +79,7 @@ graph LR
 - **auth**: AuthService.ChangePassword, AuthService.Logout, AuthService.RefreshToken, AuthService.VerifyEmail, AuthService.VerifyToken, CustomerAuthService.RequestPasswordReset, CustomerAuthService.ResetPassword, CustomerAuthService.VerifyEmail, OwnerAuthService.RequestPasswordReset, OwnerAuthService.ResetPassword, OwnerAuthService.VerifyEmail
 - **chat**: ChatService.CreateChatRoom, ChatService.GetArchivedMessages, ChatService.GetChatRoomDetail, ChatService.GetChatRooms, ChatService.GetMessages, ChatService.GetUserPresence, ChatService.MarkMessagesAsRead, ChatService.SearchMessages, ChatService.SendMessage, ChatService.UpdatePresence, ChatService.UpdateRoomStatus, ChatService.UploadChatFile, ChatService.UploadChatImage
 - **customer**: CustomerService.AddToCart, CustomerService.AddToFavorite, CustomerService.DeleteAddress, CustomerService.DeletePaymentMethod, CustomerService.GetCart, CustomerService.GetFavorites, CustomerService.GetMyReviews, CustomerService.GetOrderDetail, CustomerService.GetOrderHistory, CustomerService.GetProfile, CustomerService.MergeGuestCart, CustomerService.PostReview, CustomerService.RegisterAddress, CustomerService.RegisterPaymentMethod, CustomerService.RemoveFromCart, CustomerService.RemoveFromFavorite, CustomerService.ReorderFromHistory, CustomerService.RequestOrderCancel, CustomerService.SearchPostalCode, CustomerService.UpdateAddress, CustomerService.UpdateCartItemQuantity, CustomerService.UpdateProfile, CustomerService.UpdateReview, CustomerService.UploadProfileImage
-- **inventory**: InventoryService.BulkGetInventory, InventoryService.BulkReserveStock, InventoryService.CheckStockAlert, InventoryService.ConfirmStock, InventoryService.GetInventory, InventoryService.GetInventoryByProduct, InventoryService.GetInventoryHistory, InventoryService.GetStockTakingHistory, InventoryService.RecordStockTaking, InventoryService.RegisterInventory, InventoryService.ReleaseExpiredReservations, InventoryService.ReleaseStock, InventoryService.ReserveStock, InventoryService.UpdateInventoryQuantity
+- **inventory**: InventoryService.BulkGetInventory, InventoryService.CheckStockAlert, InventoryService.GetInventory, InventoryService.GetInventoryByProduct, InventoryService.GetInventoryHistory, InventoryService.GetStockTakingHistory, InventoryService.RecordStockTaking, InventoryService.RegisterInventory, InventoryService.ReleaseExpiredReservations, InventoryService.ReserveStock, InventoryService.UpdateInventoryQuantity
 - **notification**: NotificationService.CreateEmailTemplate, NotificationService.GetNotificationHistory, NotificationService.GetNotificationPreference, NotificationService.PreviewEmailTemplate, NotificationService.RefreshDeviceToken, NotificationService.RegisterDeviceToken, NotificationService.ResendNotification, NotificationService.SendBulkEmail, NotificationService.SendPushNotification, NotificationService.UnregisterDeviceToken, NotificationService.UpdateEmailTemplate, NotificationService.UpdateNotificationPreference
 - **order**: OrderService.CreateReorder, OrderService.ExportOrdersToCSV, OrderService.GetOrderDetail, OrderService.GetOrderStatistics, OrderService.GetOrderStatusHistory, OrderService.GetProductSalesRanking, OrderService.SearchOrders, OrderService.UpdateOrderStatus
 - **review**: ReviewService.ApproveReview, ReviewService.DeleteReview, ReviewService.DeleteReviewByAdmin, ReviewService.DeleteShopReply, ReviewService.GetMyReviews, ReviewService.GetPendingReviews, ReviewService.GetProductRating, ReviewService.GetReviewDetail, ReviewService.GetReviewReports, ReviewService.GetReviewsByProduct, ReviewService.MarkReviewHelpful, ReviewService.PostReview, ReviewService.PostShopReply, ReviewService.RejectReview, ReviewService.ReportReview, ReviewService.ResolveReviewReport, ReviewService.UnmarkReviewHelpful, ReviewService.UpdateReview, ReviewService.UpdateShopReply

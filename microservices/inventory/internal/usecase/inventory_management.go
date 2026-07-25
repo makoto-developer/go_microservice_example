@@ -3,10 +3,10 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"time"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/repository"
+	"time"
 )
 
 type ReserveInventoryInput struct {
@@ -43,11 +43,11 @@ func (u *inventoryManagementUsecase) ReserveInventory(ctx context.Context, input
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("inventory not found: %w", err)
 	}
-	
+
 	if err := u.inventoryRepo.Reserve(ctx, inventory.ID, input.Quantity); err != nil {
 		return uuid.Nil, fmt.Errorf("failed to reserve: %w", err)
 	}
-	
+
 	reservation := &domain.Reservation{
 		ID:          uuid.New(),
 		InventoryID: inventory.ID,
@@ -58,11 +58,11 @@ func (u *inventoryManagementUsecase) ReserveInventory(ctx context.Context, input
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	
+
 	if err := u.reservationRepo.Create(ctx, reservation); err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create reservation: %w", err)
 	}
-	
+
 	return reservation.ID, nil
 }
 
@@ -71,17 +71,17 @@ func (u *inventoryManagementUsecase) ReleaseInventory(ctx context.Context, order
 	if err != nil {
 		return fmt.Errorf("failed to get reservations: %w", err)
 	}
-	
+
 	for _, res := range reservations {
 		if err := u.inventoryRepo.Release(ctx, res.InventoryID, res.Quantity); err != nil {
 			return fmt.Errorf("failed to release: %w", err)
 		}
-		
+
 		if err := u.reservationRepo.UpdateStatus(ctx, res.ID, domain.ReservationStatusReleased); err != nil {
 			return fmt.Errorf("failed to update status: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -90,13 +90,13 @@ func (u *inventoryManagementUsecase) ConfirmInventory(ctx context.Context, order
 	if err != nil {
 		return fmt.Errorf("failed to get reservations: %w", err)
 	}
-	
+
 	for _, res := range reservations {
 		if err := u.reservationRepo.UpdateStatus(ctx, res.ID, domain.ReservationStatusConfirmed); err != nil {
 			return fmt.Errorf("failed to confirm: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -105,10 +105,10 @@ func (u *inventoryManagementUsecase) UpdateInventoryQuantity(ctx context.Context
 	if err != nil {
 		return fmt.Errorf("inventory not found: %w", err)
 	}
-	
+
 	if err := u.inventoryRepo.UpdateQuantity(ctx, inventory.ID, quantity); err != nil {
 		return fmt.Errorf("failed to update quantity: %w", err)
 	}
-	
+
 	return nil
 }

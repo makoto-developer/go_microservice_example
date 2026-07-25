@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/inventory/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/inventory/internal/domain"
 )
 
 type inventoryRepository struct {
@@ -30,7 +30,7 @@ func (r *inventoryRepository) Create(ctx context.Context, inventory *domain.Inve
 func (r *inventoryRepository) GetByProductID(ctx context.Context, productID uuid.UUID, variationID *uuid.UUID) (*domain.Inventory, error) {
 	query := `SELECT id, product_id, variation_id, shop_id, quantity, reserved_quantity, created_at, updated_at
 		FROM inventories WHERE product_id = $1 AND ($2::uuid IS NULL OR variation_id = $2)`
-	
+
 	var inv domain.Inventory
 	err := r.db.QueryRowContext(ctx, query, productID, variationID).Scan(
 		&inv.ID, &inv.ProductID, &inv.VariationID, &inv.ShopID, &inv.Quantity, &inv.ReservedQuantity, &inv.CreatedAt, &inv.UpdatedAt)

@@ -138,6 +138,33 @@ func (c *fakeNotificationClient) NotifyOrderCancelled(_ context.Context, in clie
 
 func (c *fakeNotificationClient) Close() error { return nil }
 
+type fakeInventoryClient struct {
+	reserved   [][]client.StockItem
+	confirmed  []string
+	released   []string
+	reserveErr error
+}
+
+func (c *fakeInventoryClient) ReserveOrderStock(_ context.Context, _ string, items []client.StockItem) error {
+	if c.reserveErr != nil {
+		return c.reserveErr
+	}
+	c.reserved = append(c.reserved, items)
+	return nil
+}
+
+func (c *fakeInventoryClient) ConfirmOrderStock(_ context.Context, orderID string) error {
+	c.confirmed = append(c.confirmed, orderID)
+	return nil
+}
+
+func (c *fakeInventoryClient) ReleaseOrderStock(_ context.Context, orderID string) error {
+	c.released = append(c.released, orderID)
+	return nil
+}
+
+func (c *fakeInventoryClient) Close() error { return nil }
+
 func testInput() CreateOrderInput {
 	return CreateOrderInput{
 		CustomerID:      uuid.New(),
@@ -333,11 +360,88 @@ func TestCreateOrder_PaymentFailureSkipsShipment(t *testing.T) {
 	}
 }
 
+func TestCreateOrder_ReservesAndConfirmsStock(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	inventory := &fakeInventoryClient{}
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, nil, inventory)
+
+	orderID, err := u.CreateOrder(context.Background(), testInput())
+	if err != nil {
+		t.Fatalf("CreateOrder: %v", err)
+	}
+	if len(inventory.reserved) != 1 || len(inventory.reserved[0]) != 2 {
+		t.Fatalf("expected 1 reservation with 2 items, got %v", inventory.reserved)
+	}
+	if len(inventory.confirmed) != 1 || inventory.confirmed[0] != orderID.String() {
+		t.Errorf("stock should be confirmed after payment, got %v", inventory.confirmed)
+	}
+	if len(inventory.released) != 0 {
+		t.Errorf("no release expected on success, got %v", inventory.released)
+	}
+}
+
+func TestCreateOrder_NoStockCancelsBeforePayment(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	payment := &fakePaymentClient{}
+	inventory := &fakeInventoryClient{reserveErr: errors.New("insufficient stock")}
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, payment, nil, nil, inventory)
+
+	_, err := u.CreateOrder(context.Background(), testInput())
+	if err == nil {
+		t.Fatal("expected error when stock is unavailable")
+	}
+	if len(payment.calls)+len(payment.codCalls) != 0 {
+		t.Error("payment should not run when stock reservation fails")
+	}
+	orderID := orderRepo.created[0].ID
+	if status, _ := orderRepo.lastStatus(orderID); status != domain.OrderStatusCancelled {
+		t.Errorf("order status = %s, want CANCELLED", status)
+	}
+}
+
+func TestCreateOrder_PaymentFailureReleasesStock(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	inventory := &fakeInventoryClient{}
+	payment := &fakePaymentClient{err: errors.New("card declined")}
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, payment, nil, nil, inventory)
+
+	if _, err := u.CreateOrder(context.Background(), testInput()); err == nil {
+		t.Fatal("expected error when payment fails")
+	}
+	if len(inventory.released) != 1 {
+		t.Errorf("stock should be released when payment fails, got %v", inventory.released)
+	}
+	if len(inventory.confirmed) != 0 {
+		t.Errorf("no confirmation expected on failure, got %v", inventory.confirmed)
+	}
+}
+
+func TestCancelOrder_ReleasesStock(t *testing.T) {
+	orderRepo := newFakeOrderRepo()
+	itemRepo := &fakeOrderItemRepo{}
+	inventory := &fakeInventoryClient{}
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, nil, inventory)
+
+	orderID, err := u.CreateOrder(context.Background(), testInput())
+	if err != nil {
+		t.Fatalf("CreateOrder: %v", err)
+	}
+	if err := u.CancelOrder(context.Background(), orderID); err != nil {
+		t.Fatalf("CancelOrder: %v", err)
+	}
+	if len(inventory.released) != 1 || inventory.released[0] != orderID.String() {
+		t.Errorf("stock should be released on cancel, got %v", inventory.released)
+	}
+}
+
 func TestCreateOrder_SendsConfirmationEmail(t *testing.T) {
 	orderRepo := newFakeOrderRepo()
 	itemRepo := &fakeOrderItemRepo{}
 	notification := &fakeNotificationClient{}
-	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification)
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification, nil)
 
 	input := testInput()
 	input.CustomerEmail = "customer@example.com"
@@ -361,7 +465,7 @@ func TestCreateOrder_NoEmailSkipsNotification(t *testing.T) {
 	orderRepo := newFakeOrderRepo()
 	itemRepo := &fakeOrderItemRepo{}
 	notification := &fakeNotificationClient{}
-	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification)
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification, nil)
 
 	if _, err := u.CreateOrder(context.Background(), testInput()); err != nil {
 		t.Fatalf("CreateOrder: %v", err)
@@ -375,7 +479,7 @@ func TestCancelOrder_SendsCancellationEmail(t *testing.T) {
 	orderRepo := newFakeOrderRepo()
 	itemRepo := &fakeOrderItemRepo{}
 	notification := &fakeNotificationClient{}
-	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification)
+	u := NewOrderManagementUsecaseFull(orderRepo, itemRepo, &fakePaymentClient{}, nil, notification, nil)
 
 	orderID, err := u.CreateOrder(context.Background(), testInput())
 	if err != nil {

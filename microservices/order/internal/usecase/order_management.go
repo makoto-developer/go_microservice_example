@@ -51,6 +51,7 @@ type orderManagementUsecase struct {
 	paymentClient      client.PaymentClient
 	shippingClient     client.ShippingClient     // nil の場合は出荷起票をスキップ
 	notificationClient client.NotificationClient // nil の場合は通知をスキップ
+	inventoryClient    client.InventoryClient    // nil の場合は在庫引当をスキップ
 }
 
 func NewOrderManagementUsecase(
@@ -87,6 +88,7 @@ func NewOrderManagementUsecaseFull(
 	paymentClient client.PaymentClient,
 	shippingClient client.ShippingClient,
 	notificationClient client.NotificationClient,
+	inventoryClient client.InventoryClient,
 ) OrderManagementUsecase {
 	return &orderManagementUsecase{
 		orderRepo:          orderRepo,
@@ -94,6 +96,7 @@ func NewOrderManagementUsecaseFull(
 		paymentClient:      paymentClient,
 		shippingClient:     shippingClient,
 		notificationClient: notificationClient,
+		inventoryClient:    inventoryClient,
 	}
 }
 
@@ -137,11 +140,26 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 		}
 	}
 
-	// 決済サービスで支払いを実行する。失敗した場合は注文をキャンセルする。
+	// 在庫の引当(inventory サービス)。在庫が無ければ決済前に注文を失敗させる
+	if u.inventoryClient != nil {
+		items := make([]client.StockItem, 0, len(input.Items))
+		for _, item := range input.Items {
+			items = append(items, client.StockItem{ProductID: item.ProductID.String(), Quantity: item.Quantity})
+		}
+		if err := u.inventoryClient.ReserveOrderStock(ctx, order.ID.String(), items); err != nil {
+			if cancelErr := u.orderRepo.UpdateStatus(ctx, order.ID, domain.OrderStatusCancelled); cancelErr != nil {
+				return uuid.Nil, fmt.Errorf("stock reservation failed (%v) and order cancellation also failed: %w", err, cancelErr)
+			}
+			return uuid.Nil, fmt.Errorf("stock reservation failed, order %s cancelled: %w", order.ID, err)
+		}
+	}
+
+	// 決済サービスで支払いを実行する。失敗した場合は在庫引当を解放し、注文をキャンセルする。
 	// paymentClient が未設定(nil)の場合は決済をスキップする(ローカル起動の後方互換)。
 	if u.paymentClient != nil {
 		nextStatus, err := u.executePayment(ctx, order.ID, input, totalAmount)
 		if err != nil {
+			u.releaseStock(ctx, order.ID) // 補償: 引当を解放
 			if cancelErr := u.orderRepo.UpdateStatus(ctx, order.ID, domain.OrderStatusCancelled); cancelErr != nil {
 				return uuid.Nil, fmt.Errorf("payment failed (%v) and order cancellation also failed: %w", err, cancelErr)
 			}
@@ -150,6 +168,13 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 
 		if err := u.orderRepo.UpdateStatus(ctx, order.ID, nextStatus); err != nil {
 			return uuid.Nil, fmt.Errorf("payment succeeded but failed to update order status: %w", err)
+		}
+	}
+
+	// 決済まで通ったので引当を確定する(失敗しても注文は成立、restock はバッチ想定)
+	if u.inventoryClient != nil {
+		if err := u.inventoryClient.ConfirmOrderStock(ctx, order.ID.String()); err != nil {
+			log.Printf("stock confirmation failed for order %s: %v", order.ID, err)
 		}
 	}
 
@@ -206,6 +231,16 @@ func (u *orderManagementUsecase) executePayment(ctx context.Context, orderID uui
 	return domain.OrderStatusPaid, nil
 }
 
+// releaseStock は在庫引当の解放(補償トランザクション)。失敗はログのみ(期限切れ解放バッチで回収される想定)。
+func (u *orderManagementUsecase) releaseStock(ctx context.Context, orderID uuid.UUID) {
+	if u.inventoryClient == nil {
+		return
+	}
+	if err := u.inventoryClient.ReleaseOrderStock(ctx, orderID.String()); err != nil {
+		log.Printf("stock release failed for order %s: %v", orderID, err)
+	}
+}
+
 func (u *orderManagementUsecase) GetOrder(ctx context.Context, orderID uuid.UUID) (*domain.Order, error) {
 	order, err := u.orderRepo.GetByID(ctx, orderID)
 	if err != nil {
@@ -241,6 +276,9 @@ func (u *orderManagementUsecase) CancelOrder(ctx context.Context, orderID uuid.U
 	if err := u.orderRepo.UpdateStatus(ctx, orderID, domain.OrderStatusCancelled); err != nil {
 		return fmt.Errorf("failed to cancel order: %w", err)
 	}
+
+	// 在庫引当を解放(best effort)
+	u.releaseStock(ctx, orderID)
 
 	// キャンセル確認メール(宛先が分かる場合のみ・best effort)
 	if u.notificationClient != nil {
