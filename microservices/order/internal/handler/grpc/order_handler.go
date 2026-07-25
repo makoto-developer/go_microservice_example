@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/domain"
@@ -11,6 +12,17 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// toGRPCError はドメイン層のエラーを適切な gRPC ステータスコードへ変換する。
+// 既知の番兵エラーは対応するコードに、それ以外は Internal にマップする。
+func toGRPCError(action string, err error) error {
+	switch {
+	case errors.Is(err, domain.ErrOrderNotFound):
+		return status.Errorf(codes.NotFound, "%s: %v", action, err)
+	default:
+		return status.Errorf(codes.Internal, "%s: %v", action, err)
+	}
+}
 
 type OrderServiceHandler struct {
 	pb.UnimplementedOrderServiceServer
@@ -96,7 +108,7 @@ func (h *OrderServiceHandler) GetOrderDetail(ctx context.Context, req *pb.GetOrd
 
 	order, err := h.orderMgmt.GetOrder(ctx, orderID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get order: %v", err)
+		return nil, toGRPCError("failed to get order", err)
 	}
 
 	return &pb.GetOrderDetailResponse{Order: orderToProto(order)}, nil
@@ -153,7 +165,10 @@ func (h *OrderServiceHandler) GetOrderStatusHistory(ctx context.Context, req *pb
 		return nil, status.Errorf(codes.InvalidArgument, "invalid order_id: %v", err)
 	}
 	order, err := h.orderMgmt.GetOrder(ctx, orderID)
-	if err != nil || order == nil {
+	if err != nil {
+		return nil, toGRPCError("failed to get order", err)
+	}
+	if order == nil {
 		return nil, status.Errorf(codes.NotFound, "order not found")
 	}
 
@@ -180,7 +195,7 @@ func (h *OrderServiceHandler) CancelOrder(ctx context.Context, req *pb.CancelOrd
 	}
 
 	if err := h.orderMgmt.CancelOrder(ctx, orderID); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to cancel order: %v", err)
+		return nil, toGRPCError("failed to cancel order", err)
 	}
 
 	return &pb.CancelOrderResponse{

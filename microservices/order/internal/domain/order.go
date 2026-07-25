@@ -1,9 +1,14 @@
 package domain
 
 import (
+	"errors"
 	"github.com/google/uuid"
 	"time"
 )
+
+// ErrOrderNotFound は指定した注文が存在しないことを表す番兵エラー。
+// リポジトリが返し、ハンドラは errors.Is でこれを検出して gRPC の NotFound に変換する。
+var ErrOrderNotFound = errors.New("order not found")
 
 type OrderStatus string
 

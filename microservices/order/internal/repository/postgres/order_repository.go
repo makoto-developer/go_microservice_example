@@ -36,7 +36,7 @@ func (r *orderRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Or
 		&order.ID, &order.CustomerID, &order.OrderNumber, &order.Status, &order.TotalAmount,
 		&order.ShippingFee, &order.AddressID, &order.PaymentMethodID, &order.CreatedAt, &order.UpdatedAt)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("order not found")
+		return nil, domain.ErrOrderNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
