@@ -73,6 +73,27 @@ func (r *reservationRepository) UpdateStatus(ctx context.Context, id uuid.UUID, 
 	return nil
 }
 
+func (r *reservationRepository) GetExpiredPending(ctx context.Context) ([]*domain.Reservation, error) {
+	query := `SELECT id, inventory_id, order_id, quantity, status, expires_at, created_at, updated_at
+		FROM reservations WHERE status = $1 AND expires_at < NOW()`
+
+	rows, err := r.db.QueryContext(ctx, query, domain.ReservationStatusPending)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get expired reservations: %w", err)
+	}
+	defer rows.Close()
+
+	var reservations []*domain.Reservation
+	for rows.Next() {
+		var res domain.Reservation
+		if err := rows.Scan(&res.ID, &res.InventoryID, &res.OrderID, &res.Quantity, &res.Status, &res.ExpiresAt, &res.CreatedAt, &res.UpdatedAt); err != nil {
+			return nil, err
+		}
+		reservations = append(reservations, &res)
+	}
+	return reservations, nil
+}
+
 func (r *reservationRepository) DeleteExpired(ctx context.Context) error {
 	query := `UPDATE reservations SET status = $1, updated_at = NOW()
 		WHERE status = $2 AND expires_at < NOW()`

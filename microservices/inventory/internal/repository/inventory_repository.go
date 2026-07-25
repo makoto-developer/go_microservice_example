@@ -21,5 +21,7 @@ type ReservationRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Reservation, error)
 	GetByOrderID(ctx context.Context, orderID uuid.UUID) ([]*domain.Reservation, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.ReservationStatus) error
+	// GetExpiredPending は期限切れかつ PENDING の引当を返す(在庫へ戻す対象)。
+	GetExpiredPending(ctx context.Context) ([]*domain.Reservation, error)
 	DeleteExpired(ctx context.Context) error
 }

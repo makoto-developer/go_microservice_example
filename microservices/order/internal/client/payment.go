@@ -98,11 +98,18 @@ func (c *grpcPaymentClient) RefundByOrder(ctx context.Context, orderID string, r
 		Reason:  reason,
 	})
 	if err != nil {
-		// 決済前の注文キャンセルでは返金対象がないので、NotFound は成功扱いにする
-		if status.Code(err) == codes.NotFound {
+		switch status.Code(err) {
+		case codes.NotFound:
+			// 決済前の注文キャンセルでは返金対象がない
 			return nil
+		case codes.FailedPrecondition:
+			// 未 capture の決済(配達前の代引き pending 等)は返金対象外。
+			// まだ集金していないので返金は不要で、注文キャンセルは続行してよい。
+			// (サンプルのため pending 決済の void は行わない)
+			return nil
+		default:
+			return fmt.Errorf("refund payment: %w", err)
 		}
-		return fmt.Errorf("refund payment: %w", err)
 	}
 	return nil
 }

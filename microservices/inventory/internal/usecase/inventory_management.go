@@ -78,6 +78,12 @@ func (u *inventoryManagementUsecase) ReleaseInventory(ctx context.Context, order
 	}
 
 	for _, res := range reservations {
+		// PENDING の引当のみ在庫に戻す。CONFIRMED/RELEASED/EXPIRED を解放すると
+		// 二重解放になり在庫が水増しされるため、冪等性のためにスキップする。
+		if res.Status != domain.ReservationStatusPending {
+			continue
+		}
+
 		if err := u.inventoryRepo.Release(ctx, res.InventoryID, res.Quantity); err != nil {
 			return fmt.Errorf("failed to release: %w", err)
 		}
@@ -158,6 +164,20 @@ func (u *inventoryManagementUsecase) AdjustQuantity(ctx context.Context, invento
 }
 
 // ReleaseExpiredReservations は期限切れの引当を解放する(バッチから呼ばれる)。
+// 単にステータスを EXPIRED にするだけでなく、確保していた在庫を実際に戻す。
 func (u *inventoryManagementUsecase) ReleaseExpiredReservations(ctx context.Context) error {
-	return u.reservationRepo.DeleteExpired(ctx)
+	expired, err := u.reservationRepo.GetExpiredPending(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get expired reservations: %w", err)
+	}
+
+	for _, res := range expired {
+		if err := u.inventoryRepo.Release(ctx, res.InventoryID, res.Quantity); err != nil {
+			return fmt.Errorf("failed to release expired reservation %s: %w", res.ID, err)
+		}
+		if err := u.reservationRepo.UpdateStatus(ctx, res.ID, domain.ReservationStatusExpired); err != nil {
+			return fmt.Errorf("failed to mark reservation %s expired: %w", res.ID, err)
+		}
+	}
+	return nil
 }

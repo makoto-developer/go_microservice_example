@@ -186,4 +186,14 @@ func (r *memReservationRepo) UpdateStatus(_ context.Context, id uuid.UUID, statu
 	return nil
 }
 
+func (r *memReservationRepo) GetExpiredPending(_ context.Context) ([]*domain.Reservation, error) {
+	out := []*domain.Reservation{}
+	for _, res := range r.items {
+		if res.Status == domain.ReservationStatusPending && res.ExpiresAt.Before(time.Now()) {
+			out = append(out, res)
+		}
+	}
+	return out, nil
+}
+
 func (r *memReservationRepo) DeleteExpired(_ context.Context) error { return nil }
