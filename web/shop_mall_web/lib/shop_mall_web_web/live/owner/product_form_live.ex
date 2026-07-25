@@ -1,12 +1,15 @@
 defmodule ShopMallWebWeb.Owner.ProductFormLive do
   use ShopMallWebWeb, :live_view
 
+  alias ShopMallWeb.ShopServiceClient, as: Shops
+
   alias ShopService.V1.{
     ShopService.Stub,
     RegisterProductRequest,
     UpdateProductRequest,
     GetProductRequest,
-    ToggleProductPublishRequest
+    ToggleProductPublishRequest,
+    ProductVariationInput
   }
 
   @impl true
@@ -27,6 +30,11 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
       |> assign(:loading, false)
       |> assign(:error, nil)
       |> assign_form_defaults()
+      |> allow_upload(:product_image,
+        accept: ~w(.jpg .jpeg .png),
+        max_entries: 1,
+        max_file_size: 2_000_000
+      )
 
     socket =
       if mode == :edit do
@@ -73,6 +81,57 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
         socket
         |> assign(:error, "商品の読み込みに失敗しました: #{inspect(reason)}")
         |> assign(:loading, false)
+    end
+  end
+
+  @impl true
+  def handle_event("add_variation", params, socket) do
+    variation = %ProductVariationInput{
+      sku: params["sku"] || "",
+      attribute_name: params["attribute_name"] || "",
+      attribute_value: params["attribute_value"] || "",
+      price: params["price"] || "0",
+      stock_quantity: String.to_integer(params["stock_quantity"] || "0")
+    }
+
+    case Shops.manage_variation(socket.assigns.product_id, [variation]) do
+      {:ok, response} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           "バリエーションを登録しました(ID: #{Enum.join(response.variation_ids, ", ")})"
+         )}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "バリエーション登録に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("validate_upload", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("upload_image", _params, socket) do
+    results =
+      consume_uploaded_entries(socket, :product_image, fn %{path: path}, _entry ->
+        {:ok, File.read!(path)}
+      end)
+
+    case results do
+      [image_data | _] ->
+        case Shops.upload_product_image(socket.assigns.product_id, image_data) do
+          {:ok, response} ->
+            {:noreply, put_flash(socket, :info, "商品画像をアップロードしました(#{response.url})")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "画像アップロードに失敗しました: #{reason}")}
+        end
+
+      [] ->
+        {:noreply, put_flash(socket, :error, "画像ファイルを選択してください")}
     end
   end
 
@@ -443,6 +502,90 @@ defmodule ShopMallWebWeb.Owner.ProductFormLive do
                   </button>
                 </div>
               </form>
+
+              <%= if @mode == :edit do %>
+                <!-- バリエーション管理(ManageVariation) -->
+                <div class="mt-8 border-t pt-6">
+                  <h2 class="text-lg font-semibold text-gray-900 mb-3">バリエーションを追加</h2>
+                  <form phx-submit="add_variation" class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">SKU</label>
+                      <input
+                        type="text"
+                        name="sku"
+                        required
+                        placeholder="TSHIRT-RED-M"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">価格(円)</label>
+                      <input
+                        type="number"
+                        name="price"
+                        required
+                        placeholder="2980"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">属性名</label>
+                      <input
+                        type="text"
+                        name="attribute_name"
+                        required
+                        placeholder="サイズ"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">属性値</label>
+                      <input
+                        type="text"
+                        name="attribute_value"
+                        required
+                        placeholder="M"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">在庫数</label>
+                      <input
+                        type="number"
+                        name="stock_quantity"
+                        required
+                        placeholder="10"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div class="flex items-end">
+                      <button
+                        type="submit"
+                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                      >
+                        バリエーション登録
+                      </button>
+                    </div>
+                  </form>
+                </div>
+                
+    <!-- 商品画像アップロード(UploadProductImage) -->
+                <div class="mt-8 border-t pt-6">
+                  <h2 class="text-lg font-semibold text-gray-900 mb-3">商品画像</h2>
+                  <form phx-submit="upload_image" phx-change="validate_upload" class="space-y-3">
+                    <.live_file_input upload={@uploads.product_image} class="text-sm" />
+                    <div :for={entry <- @uploads.product_image.entries} class="text-xs text-gray-500">
+                      {entry.client_name}({div(entry.client_size, 1024)} KB)
+                    </div>
+                    <button
+                      type="submit"
+                      class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    >
+                      アップロード
+                    </button>
+                  </form>
+                </div>
+              <% end %>
             </div>
           </div>
         </div>
