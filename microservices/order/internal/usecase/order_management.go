@@ -181,7 +181,16 @@ func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOr
 		}
 
 		if err := u.orderRepo.UpdateStatus(ctx, order.ID, nextStatus); err != nil {
-			return uuid.Nil, fmt.Errorf("payment succeeded but failed to update order status: %w", err)
+			// 補償: 決済は成立したがステータス更新に失敗。返金し、引当を解放して
+			// 注文をキャンセルすることで「課金済みなのに注文が確定しない」状態を防ぐ。
+			if refundErr := u.paymentClient.RefundByOrder(ctx, order.ID.String(), "order finalization failed"); refundErr != nil {
+				log.Printf("compensation refund failed for order %s: %v", order.ID, refundErr)
+			}
+			u.releaseStock(ctx, order.ID)
+			if cancelErr := u.orderRepo.UpdateStatus(ctx, order.ID, domain.OrderStatusCancelled); cancelErr != nil {
+				log.Printf("compensation cancel failed for order %s: %v", order.ID, cancelErr)
+			}
+			return uuid.Nil, fmt.Errorf("payment succeeded but failed to update order status (compensated): %w", err)
 		}
 	}
 
