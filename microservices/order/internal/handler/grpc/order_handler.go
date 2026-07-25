@@ -56,12 +56,6 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrd
 		})
 	}
 
-	// Calculate shipping fee based on shipping method (simplified for now)
-	shippingFee := int64(500) // Default shipping fee
-	if req.GetShippingMethod() == "express" {
-		shippingFee = 1000
-	}
-
 	// 支払い方法: 代引き指定のみ分岐し、未指定はクレジットカード扱い
 	paymentMethod := usecase.PaymentMethodCreditCard
 	if req.GetPaymentMethod() == pb.PaymentMethod_CASH_ON_DELIVERY {
@@ -73,7 +67,7 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *pb.CreateOrd
 		CustomerEmail:   req.GetCustomerEmail(),
 		AddressID:       addressID,
 		Items:           items,
-		ShippingFee:     shippingFee,
+		ShippingMethod:  req.GetShippingMethod(),
 		PaymentMethod:   paymentMethod,
 		PaymentMethodID: req.GetPaymentMethodId(),
 	}

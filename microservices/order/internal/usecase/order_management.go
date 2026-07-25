@@ -24,7 +24,8 @@ type CreateOrderInput struct {
 	CustomerEmail   string // 通知メールの宛先(空なら通知スキップ)
 	AddressID       uuid.UUID
 	Items           []OrderItemInput
-	ShippingFee     int64
+	ShippingFee     int64         // 0 の場合は shipping サービスに見積もりを依頼する
+	ShippingMethod  string        // standard / express
 	PaymentMethod   PaymentMethod // 未指定はクレジットカード扱い
 	PaymentMethodID string
 }
@@ -102,6 +103,18 @@ func NewOrderManagementUsecaseFull(
 }
 
 func (u *orderManagementUsecase) CreateOrder(ctx context.Context, input CreateOrderInput) (uuid.UUID, error) {
+	// 送料: 指定が無ければ shipping サービスに見積もりを依頼(失敗時は標準料金)
+	if input.ShippingFee == 0 {
+		input.ShippingFee = 500
+		if u.shippingClient != nil {
+			if fee, err := u.shippingClient.CalculateFee(ctx, input.ShippingMethod, 0); err == nil {
+				input.ShippingFee = fee
+			} else {
+				log.Printf("shipping fee estimation failed (fallback to default): %v", err)
+			}
+		}
+	}
+
 	var totalAmount int64
 	for _, item := range input.Items {
 		totalAmount += item.UnitPrice * int64(item.Quantity)

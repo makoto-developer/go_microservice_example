@@ -55,6 +55,7 @@ defmodule ShopMallWebWeb.Router do
     live "/shops/:id", ShopDetailLive
 
     # Admin routes
+    live "/admin", Admin.AdminPortalLive
     live "/admin/payments", Admin.PaymentListLive
     live "/admin/orders", Admin.OrderAnalyticsLive
     live "/admin/reviews", Admin.ReviewModerationLive

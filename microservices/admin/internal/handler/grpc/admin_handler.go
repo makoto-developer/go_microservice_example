@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 
-	pb "github.com/makoto-developer/go_microservice_example/proto/admin_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/admin/proto"
 )
 
 type AdminServiceHandler struct {

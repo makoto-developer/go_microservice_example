@@ -119,6 +119,10 @@ func (c *fakeShippingClient) CreateShipment(_ context.Context, in client.CreateS
 	return "shipment_test", nil
 }
 
+func (c *fakeShippingClient) CalculateFee(_ context.Context, _ string, _ int32) (int64, error) {
+	return 500, nil
+}
+
 func (c *fakeShippingClient) Close() error { return nil }
 
 type fakeNotificationClient struct {

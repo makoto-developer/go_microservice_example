@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/admin/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/admin/internal/domain"
 )
 
 type AdminRepository interface {
