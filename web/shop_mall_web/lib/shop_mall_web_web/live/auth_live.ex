@@ -25,9 +25,6 @@ defmodule ShopMallWebWeb.AuthLive do
 
   @impl true
   def handle_event("submit", %{"email" => email, "password" => password}, socket) do
-    IO.puts("=== AUTH EVENT: submit received ===")
-    IO.inspect(%{email: email, password: String.length(password), mode: socket.assigns.mode})
-
     case socket.assigns.mode do
       :login -> handle_login(socket, email, password)
       :register -> handle_register(socket, email, password)
@@ -35,20 +32,13 @@ defmodule ShopMallWebWeb.AuthLive do
   end
 
   defp handle_login(socket, email, password) do
-    IO.puts("=== HANDLE LOGIN called ===")
-    IO.inspect(%{email: email})
-
     request = %UserLoginRequest{
       email: email,
       password: password
     }
 
-    IO.puts("=== Calling auth service for login ===")
-
     case call_auth_service(:login, request) do
       {:ok, response} ->
-        IO.puts("=== Login SUCCESS ===")
-
         # LiveView からはセッションに書けないため、署名付きトークンを
         # SessionController に渡してクッキーセッションへ user_id と認証トークンを保存する
         token =
@@ -64,9 +54,6 @@ defmodule ShopMallWebWeb.AuthLive do
          |> redirect(to: "/session/establish?token=#{token}")}
 
       {:error, reason} ->
-        IO.puts("=== Login FAILED ===")
-        IO.inspect(reason)
-
         {:noreply,
          socket
          |> assign(:error, "ログイン失敗: #{inspect(reason)}")

@@ -1,13 +1,13 @@
 defmodule ShopMallWebWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :shop_mall_web
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
+  # セッションはクッキーに保存する。access_token など機微な値を入れるため、
+  # 署名(改竄防止)に加えて encryption_salt で暗号化し、内容を読めないようにする。
   @session_options [
     store: :cookie,
     key: "_shop_mall_web_key",
     signing_salt: "EA7W0OKm",
+    encryption_salt: "kQ3mZ8vT",
     same_site: "Lax"
   ]
 
