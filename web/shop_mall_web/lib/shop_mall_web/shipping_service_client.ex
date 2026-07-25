@@ -38,6 +38,43 @@ defmodule ShopMallWeb.ShippingServiceClient do
     with_channel(fn channel -> Stub.update_shipment_status(channel, request) end)
   end
 
+  @doc "出荷 ID から最新の詳細を取得する。"
+  def get_shipment_detail(shipment_id) do
+    request = %ShippingService.V1.GetShipmentDetailRequest{shipment_id: shipment_id}
+
+    with_channel(fn channel ->
+      ShippingService.V1.ShippingService.Stub.get_shipment_detail(channel, request)
+    end)
+  end
+
+  @doc "住所の妥当性を検証する(郵便番号・都道府県が必須)。"
+  def validate_address(postal_code, prefecture, city, address_line) do
+    request = %ShippingService.V1.ValidateAddressRequest{
+      postal_code: postal_code,
+      prefecture: prefecture,
+      city: city,
+      address_line: address_line
+    }
+
+    with_channel(fn channel ->
+      ShippingService.V1.ShippingService.Stub.validate_address(channel, request)
+    end)
+  end
+
+  @doc "住所を正規化した表記に整える。"
+  def normalize_address(postal_code, prefecture, city, address_line) do
+    request = %ShippingService.V1.NormalizeAddressRequest{
+      postal_code: postal_code,
+      prefecture: prefecture,
+      city: city,
+      address_line: address_line
+    }
+
+    with_channel(fn channel ->
+      ShippingService.V1.ShippingService.Stub.normalize_address(channel, request)
+    end)
+  end
+
   defp with_channel(fun) do
     host = System.get_env("SHIPPING_SERVICE_HOST", "localhost")
     port = System.get_env("SHIPPING_SERVICE_PORT", "50057")

@@ -7,6 +7,7 @@ defmodule ShopMallWebWeb.MyPageLive do
 
   alias ShopMallWeb.CustomerServiceClient, as: Customers
   alias ShopMallWeb.ReviewServiceClient, as: Reviews
+  alias ShopMallWeb.ShippingServiceClient, as: Shipping
 
   @impl true
   def mount(_params, session, socket) do
@@ -166,6 +167,38 @@ defmodule ShopMallWebWeb.MyPageLive do
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "削除に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("validate_address", params, socket) do
+    case Shipping.validate_address(
+           params["postal_code"] || "",
+           params["prefecture"] || "",
+           params["city"] || "",
+           params["address_line1"] || ""
+         ) do
+      {:ok, resp} ->
+        {:noreply, put_flash(socket, if(resp.success, do: :info, else: :error), resp.message)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "検証に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("normalize_address", params, socket) do
+    case Shipping.normalize_address(
+           params["postal_code"] || "",
+           params["prefecture"] || "",
+           params["city"] || "",
+           params["address_line1"] || ""
+         ) do
+      {:ok, resp} ->
+        {:noreply, put_flash(socket, :info, "正規化: #{resp.normalized_address}")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "正規化に失敗しました: #{reason}")}
     end
   end
 
@@ -568,6 +601,28 @@ defmodule ShopMallWebWeb.MyPageLive do
                       title="郵便番号から住所を補完(登録済みの郵便番号を使用)"
                     >
                       🔍 郵便番号から住所検索
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="validate_address"
+                      phx-value-postal_code={@address && @address.postal_code}
+                      phx-value-prefecture={@address && @address.prefecture}
+                      phx-value-city={@address && @address.city}
+                      phx-value-address_line1={@address && @address.address_line1}
+                      class="text-sm text-blue-600 hover:text-blue-800 ml-3"
+                    >
+                      ✓ 住所を検証
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="normalize_address"
+                      phx-value-postal_code={@address && @address.postal_code}
+                      phx-value-prefecture={@address && @address.prefecture}
+                      phx-value-city={@address && @address.city}
+                      phx-value-address_line1={@address && @address.address_line1}
+                      class="text-sm text-blue-600 hover:text-blue-800 ml-3"
+                    >
+                      整形
                     </button>
                     <button
                       type="submit"

@@ -93,6 +93,18 @@ defmodule ShopMallWebWeb.Owner.PaymentListLive do
   # --- 配送(shipping サービス連携) ---
 
   @impl true
+  def handle_event("shipment_detail", _params, socket) do
+    case Shipping.get_shipment_detail(socket.assigns.shipment.id) do
+      {:ok, resp} ->
+        {:noreply,
+         socket |> assign(:shipment, resp.shipment) |> put_flash(:info, "最新の配送詳細を取得しました")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "詳細の取得に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
   def handle_event("open_shipment", %{"order-id" => order_id}, socket) do
     case Shipping.get_shipment_by_order(order_id) do
       {:ok, response} ->
@@ -309,7 +321,17 @@ defmodule ShopMallWebWeb.Owner.PaymentListLive do
           <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-lg font-bold text-gray-900">配送情報</h2>
-              <button phx-click="close_shipment" class="text-gray-400 hover:text-gray-600">✕</button>
+              <div class="space-x-2">
+                <button
+                  phx-click="shipment_detail"
+                  class="text-sm text-emerald-700 hover:text-emerald-900"
+                >
+                  ↻ 最新詳細
+                </button>
+                <button phx-click="close_shipment" class="text-gray-400 hover:text-gray-600">
+                  ✕
+                </button>
+              </div>
             </div>
 
             <dl class="grid grid-cols-3 gap-y-3 text-sm mb-4">

@@ -121,6 +121,83 @@ defmodule ShippingService.V1.GetShipmentByOrderResponse do
   field(:shipment, 3, type: ShippingService.V1.Shipment)
 end
 
+defmodule ShippingService.V1.GetShipmentDetailRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shipping_service.v1.GetShipmentDetailRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:shipment_id, 1, type: :string, json_name: "shipmentId")
+end
+
+defmodule ShippingService.V1.GetShipmentDetailResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shipping_service.v1.GetShipmentDetailResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+  field(:shipment, 3, type: ShippingService.V1.Shipment)
+end
+
+defmodule ShippingService.V1.ValidateAddressRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shipping_service.v1.ValidateAddressRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:postal_code, 1, type: :string, json_name: "postalCode")
+  field(:prefecture, 2, type: :string)
+  field(:city, 3, type: :string)
+  field(:address_line, 4, type: :string, json_name: "addressLine")
+end
+
+defmodule ShippingService.V1.ValidateAddressResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shipping_service.v1.ValidateAddressResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+end
+
+defmodule ShippingService.V1.NormalizeAddressRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shipping_service.v1.NormalizeAddressRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:postal_code, 1, type: :string, json_name: "postalCode")
+  field(:prefecture, 2, type: :string)
+  field(:city, 3, type: :string)
+  field(:address_line, 4, type: :string, json_name: "addressLine")
+end
+
+defmodule ShippingService.V1.NormalizeAddressResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "shipping_service.v1.NormalizeAddressResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+  field(:normalized_address, 3, type: :string, json_name: "normalizedAddress")
+end
+
 defmodule ShippingService.V1.ShippingService.Service do
   @moduledoc false
 
@@ -144,6 +221,24 @@ defmodule ShippingService.V1.ShippingService.Service do
     :GetShipmentByOrder,
     ShippingService.V1.GetShipmentByOrderRequest,
     ShippingService.V1.GetShipmentByOrderResponse
+  )
+
+  rpc(
+    :GetShipmentDetail,
+    ShippingService.V1.GetShipmentDetailRequest,
+    ShippingService.V1.GetShipmentDetailResponse
+  )
+
+  rpc(
+    :ValidateAddress,
+    ShippingService.V1.ValidateAddressRequest,
+    ShippingService.V1.ValidateAddressResponse
+  )
+
+  rpc(
+    :NormalizeAddress,
+    ShippingService.V1.NormalizeAddressRequest,
+    ShippingService.V1.NormalizeAddressResponse
   )
 end
 
