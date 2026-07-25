@@ -27,6 +27,22 @@ func (r *inventoryRepository) Create(ctx context.Context, inventory *domain.Inve
 	return nil
 }
 
+func (r *inventoryRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Inventory, error) {
+	query := `SELECT id, product_id, variation_id, shop_id, quantity, reserved_quantity, created_at, updated_at
+		FROM inventories WHERE id = $1`
+
+	var inv domain.Inventory
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&inv.ID, &inv.ProductID, &inv.VariationID, &inv.ShopID, &inv.Quantity, &inv.ReservedQuantity, &inv.CreatedAt, &inv.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("inventory not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+	return &inv, nil
+}
+
 func (r *inventoryRepository) GetByProductID(ctx context.Context, productID uuid.UUID, variationID *uuid.UUID) (*domain.Inventory, error) {
 	query := `SELECT id, product_id, variation_id, shop_id, quantity, reserved_quantity, created_at, updated_at
 		FROM inventories WHERE product_id = $1 AND ($2::uuid IS NULL OR variation_id = $2)`

@@ -41,6 +41,7 @@ defmodule ShopMallWebWeb.Router do
     live "/owner/shop/settings", Owner.ShopSettingsLive
     live "/owner/sales", Owner.SalesReportLive
     live "/owner/orders", Owner.OrderManageLive
+    live "/owner/inventory", Owner.InventoryLive
 
     # Shop listing (for customers)
     live "/shops", ShopListLive

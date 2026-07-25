@@ -8,6 +8,7 @@ import (
 
 type InventoryRepository interface {
 	Create(ctx context.Context, inventory *domain.Inventory) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Inventory, error)
 	GetByProductID(ctx context.Context, productID uuid.UUID, variationID *uuid.UUID) (*domain.Inventory, error)
 	Update(ctx context.Context, inventory *domain.Inventory) error
 	UpdateQuantity(ctx context.Context, id uuid.UUID, quantity int) error

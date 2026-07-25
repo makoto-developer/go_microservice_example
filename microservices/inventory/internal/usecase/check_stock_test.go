@@ -13,6 +13,10 @@ type mockInventoryRepository struct {
 	getByProductIDFunc func(ctx context.Context, productID uuid.UUID, variationID *uuid.UUID) (*domain.Inventory, error)
 }
 
+func (m *mockInventoryRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Inventory, error) {
+	return nil, nil
+}
+
 func (m *mockInventoryRepository) GetByProductID(ctx context.Context, productID uuid.UUID, variationID *uuid.UUID) (*domain.Inventory, error) {
 	if m.getByProductIDFunc != nil {
 		return m.getByProductIDFunc(ctx, productID, variationID)

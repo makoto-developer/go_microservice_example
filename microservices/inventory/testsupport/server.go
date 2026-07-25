@@ -102,6 +102,13 @@ func (r *memInventoryRepo) Create(_ context.Context, inv *domain.Inventory) erro
 	return nil
 }
 
+func (r *memInventoryRepo) GetByID(_ context.Context, id uuid.UUID) (*domain.Inventory, error) {
+	if inv, ok := r.items[id]; ok {
+		return inv, nil
+	}
+	return nil, fmt.Errorf("inventory %s not found", id)
+}
+
 func (r *memInventoryRepo) GetByProductID(_ context.Context, productID uuid.UUID, _ *uuid.UUID) (*domain.Inventory, error) {
 	for _, inv := range r.items {
 		if inv.ProductID == productID {
