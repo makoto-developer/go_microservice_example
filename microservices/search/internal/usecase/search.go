@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 
-	"github.com/makoto-developer/go_microservice_example/generated/search/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/search/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/search/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/search/internal/repository"
 )
 
 type SearchInput struct {

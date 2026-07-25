@@ -31,6 +31,7 @@ defmodule ShopMallWebWeb.Router do
     live "/cart", CartLive
     live "/auth/verify-email", VerifyEmailLive
     live "/products", ProductListLive
+    live "/search", SearchLive
     live "/products/:id", ProductDetailLive
     live "/orders", OrderHistoryLive
 
@@ -56,6 +57,7 @@ defmodule ShopMallWebWeb.Router do
     live "/admin/payments", Admin.PaymentListLive
     live "/admin/orders", Admin.OrderAnalyticsLive
     live "/admin/reviews", Admin.ReviewModerationLive
+    live "/admin/search", Admin.SearchAdminLive
     # (temporarily disabled - Proto files not generated)
     # live "/admin", Admin.DashboardLive
     # live "/admin/shops/pending", Admin.ShopApprovalLive

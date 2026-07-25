@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/search/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/search/internal/domain"
 )
 
 type SearchRepository interface {

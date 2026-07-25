@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 
-	pb "github.com/makoto-developer/go_microservice_example/proto/search_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/search/proto"
 )
 
 type SearchServiceHandler struct {

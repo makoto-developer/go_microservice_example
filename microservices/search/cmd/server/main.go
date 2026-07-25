@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/makoto-developer/go_microservice_example/generated/search/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/search/internal/handler/grpc"
-	pb "github.com/makoto-developer/go_microservice_example/proto/search_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/search/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/search/internal/handler/grpc"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/search/proto"
 )
 
 func main() {

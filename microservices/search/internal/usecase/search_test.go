@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/search/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/search/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/search/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/search/internal/usecase"
 )
 
 type mockSearchRepository struct {
