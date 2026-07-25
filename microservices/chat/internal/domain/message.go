@@ -15,12 +15,12 @@ const (
 )
 
 type ChatRoom struct {
-	ID          uuid.UUID `db:"id" json:"id"`
-	CustomerID  uuid.UUID `db:"customer_id" json:"customer_id"`
-	ShopID      uuid.UUID `db:"shop_id" json:"shop_id"`
-	LastMessage *string   `db:"last_message" json:"last_message,omitempty"`
+	ID            uuid.UUID  `db:"id" json:"id"`
+	CustomerID    uuid.UUID  `db:"customer_id" json:"customer_id"`
+	ShopID        uuid.UUID  `db:"shop_id" json:"shop_id"`
+	LastMessage   *string    `db:"last_message" json:"last_message,omitempty"`
 	LastMessageAt *time.Time `db:"last_message_at" json:"last_message_at,omitempty"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	CreatedAt     time.Time  `db:"created_at" json:"created_at"`
 }
 
 type Message struct {

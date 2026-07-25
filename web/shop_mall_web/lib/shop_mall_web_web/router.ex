@@ -32,6 +32,7 @@ defmodule ShopMallWebWeb.Router do
     live "/auth/verify-email", VerifyEmailLive
     live "/products", ProductListLive
     live "/search", SearchLive
+    live "/chat", ChatLive
     live "/products/:id", ProductDetailLive
     live "/orders", OrderHistoryLive
 

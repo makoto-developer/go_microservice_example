@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/chat/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/chat/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/chat/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/chat/internal/usecase"
 )
 
 type mockChatRepository struct {

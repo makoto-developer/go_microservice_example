@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/chat/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/chat/internal/domain"
 )
 
 type ChatRepository interface {
