@@ -13,6 +13,7 @@ import (
 	"github.com/makoto-developer/go_microservice_example/microservices/order/config"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/client"
 	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/order/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/interceptor"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/repository/postgres"
 	"github.com/makoto-developer/go_microservice_example/microservices/order/internal/usecase"
 	pb "github.com/makoto-developer/go_microservice_example/microservices/order/proto"
@@ -81,7 +82,20 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	if cfg.Auth.AccessSecret == "" {
+		log.Printf("⚠️  JWT_ACCESS_SECRET 未設定: 認証インターセプタは(reflection 以外の)全 RPC を拒否します")
+	}
+
+	// 横断インターセプタ: 最外側から Recovery(panic 回復)→ Logging → Auth(JWT 認証)。
+	// 全 RPC ハンドラの前段で実行される。認可はハンドラを直接呼ばないため、
+	// コールグラフ解析には現れない横断的関心事。
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			interceptor.NewRecoveryUnaryInterceptor(),
+			interceptor.NewLoggingUnaryInterceptor(),
+			interceptor.NewAuthUnaryInterceptor(cfg.Auth.AccessSecret),
+		),
+	)
 	pb.RegisterOrderServiceServer(grpcServer, handler)
 	reflection.Register(grpcServer)
 

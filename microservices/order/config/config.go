@@ -12,6 +12,13 @@ type Config struct {
 	Shipping     ShippingServiceConfig
 	Notification NotificationServiceConfig
 	Inventory    InventoryServiceConfig
+	Auth         AuthConfig
+}
+
+// AuthConfig は受信 RPC の JWT を検証するための設定。
+// auth サービスがアクセストークンの署名に使うのと同じ HS256 シークレットを共有する。
+type AuthConfig struct {
+	AccessSecret string
 }
 
 // InventoryServiceConfig は在庫サービス(inventory)への接続先。
@@ -95,6 +102,10 @@ func LoadConfig() (*Config, error) {
 		Inventory: InventoryServiceConfig{
 			Host: getEnv("INVENTORY_SERVICE_HOST", "localhost"),
 			Port: getEnv("INVENTORY_SERVICE_PORT", "50054"),
+		},
+		Auth: AuthConfig{
+			// auth サービスの JWT_ACCESS_SECRET と同じ値を設定する
+			AccessSecret: getEnv("JWT_ACCESS_SECRET", ""),
 		},
 	}, nil
 }
