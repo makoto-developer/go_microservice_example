@@ -10,11 +10,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/makoto-developer/go_microservice_example/generated/auth/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/auth/internal/handler/grpc"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/repository/postgres"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/generated/auth/proto/auth_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/auth/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/repository/postgres"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/auth_service/v1"
 )
 
 func main() {
@@ -22,19 +22,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	
+
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
-	
+
 	if err := db.Ping(); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
-	
+
 	log.Println("Connected to database successfully")
-	
+
 	userRepo := postgres.NewUserRepository(db)
 	jwtService := usecase.NewJWTService(cfg.JWTAccessSecret, cfg.JWTRefreshSecret)
 	emailService := usecase.NewEmailService()
@@ -42,18 +42,18 @@ func main() {
 	loginUsecase := usecase.NewUserLoginUsecase(userRepo, jwtService)
 	passwordResetUsecase := usecase.NewPasswordResetUsecase(userRepo, emailService)
 	authHandler := grpchandler.NewAuthServiceHandler(registrationUsecase, loginUsecase, jwtService, passwordResetUsecase)
-	
+
 	grpcServer := grpc.NewServer()
 	pb.RegisterAuthServiceServer(grpcServer, authHandler)
 	reflection.Register(grpcServer)
-	
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.ServerPort))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	
+
 	log.Printf("Auth Service listening on port %s", cfg.ServerPort)
-	
+
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}

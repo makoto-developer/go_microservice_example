@@ -6,9 +6,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/makoto-developer/go_microservice_example/generated/auth/proto/auth_service/v1"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/auth_service/v1"
 )
 
 type AuthServiceHandler struct {
@@ -45,12 +45,12 @@ func (h *AuthServiceHandler) Register(ctx context.Context, req *pb.UserRegistrat
 	default:
 		return nil, status.Error(codes.InvalidArgument, "invalid role")
 	}
-	
+
 	userID, accessToken, refreshToken, err := h.registrationUsecase.Execute(ctx, req.Email, req.Password, role)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	
+
 	return &pb.RegisterResponse{
 		UserId:       userID,
 		AccessToken:  accessToken,
@@ -64,7 +64,7 @@ func (h *AuthServiceHandler) Login(ctx context.Context, req *pb.UserLoginRequest
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
-	
+
 	var pbRole pb.Role
 	switch role {
 	case domain.RoleCustomer:
@@ -76,7 +76,7 @@ func (h *AuthServiceHandler) Login(ctx context.Context, req *pb.UserLoginRequest
 	default:
 		pbRole = pb.Role_ROLE_UNSPECIFIED
 	}
-	
+
 	return &pb.LoginResponse{
 		UserId:       userID,
 		AccessToken:  accessToken,
@@ -90,7 +90,7 @@ func (h *AuthServiceHandler) VerifyToken(ctx context.Context, req *pb.TokenVerif
 	if err != nil {
 		return &pb.VerifyTokenResponse{Valid: false}, nil
 	}
-	
+
 	var pbRole pb.Role
 	switch claims.Role {
 	case string(domain.RoleCustomer):
@@ -102,7 +102,7 @@ func (h *AuthServiceHandler) VerifyToken(ctx context.Context, req *pb.TokenVerif
 	default:
 		pbRole = pb.Role_ROLE_UNSPECIFIED
 	}
-	
+
 	return &pb.VerifyTokenResponse{Valid: true, UserId: claims.UserID, Role: pbRole}, nil
 }
 
@@ -115,17 +115,17 @@ func (h *AuthServiceHandler) RefreshToken(ctx context.Context, req *pb.TokenRefr
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
 	}
-	
+
 	accessToken, err := h.jwtService.GenerateAccessToken(claims.UserID, "")
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to generate access token")
 	}
-	
+
 	refreshToken, err := h.jwtService.GenerateRefreshToken(claims.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to generate refresh token")
 	}
-	
+
 	return &pb.RefreshTokenResponse{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 

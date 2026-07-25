@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/domain"
 )
 
 type UserRepository interface {

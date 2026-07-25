@@ -5,13 +5,16 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/customer_auth/v1"
 	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/repository"
 	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/customer_auth/v1"
 )
 
 // CustomerAuthHandler implements CustomerAuthService gRPC server
@@ -153,12 +156,7 @@ func (h *CustomerAuthHandler) VerifyEmail(
 	}
 
 	// Verify email
-	if err := user.VerifyEmail(); err != nil {
-		return &pb.CustomerVerifyEmailResponse{
-			Success: false,
-			Message: err.Error(),
-		}, nil
-	}
+	user.VerifyEmail()
 
 	// Update user
 	if err := h.customerUserRepo.Update(ctx, user); err != nil {
@@ -202,7 +200,7 @@ func (h *CustomerAuthHandler) RequestPasswordReset(
 	}
 
 	// Set reset token
-	user.SetPasswordResetToken(token)
+	user.SetPasswordResetToken(token, time.Now().Add(1*time.Hour))
 
 	// Update user
 	if err := h.customerUserRepo.Update(ctx, user); err != nil {
@@ -249,13 +247,12 @@ func (h *CustomerAuthHandler) ResetPassword(
 		}, nil
 	}
 
-	// Reset password
-	if err := user.ResetPassword(req.NewPassword); err != nil {
-		return &pb.CustomerResetPasswordResponse{
-			Success: false,
-			Message: err.Error(),
-		}, nil
+	// Reset password(bcrypt でハッシュ化して保存)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to hash password")
 	}
+	user.ResetPassword(string(hashed))
 
 	// Update user
 	if err := h.customerUserRepo.Update(ctx, user); err != nil {
@@ -285,7 +282,11 @@ func (h *CustomerAuthHandler) RefreshToken(
 	}
 
 	// Find user
-	user, err := h.customerUserRepo.FindByID(ctx, claims.UserID)
+	claimUserID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid token subject")
+	}
+	user, err := h.customerUserRepo.FindByID(ctx, claimUserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to find user: %v", err))
 	}

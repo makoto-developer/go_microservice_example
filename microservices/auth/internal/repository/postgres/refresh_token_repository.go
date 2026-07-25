@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/domain"
 )
 
 type refreshTokenRepository struct {
@@ -22,12 +22,12 @@ func (r *refreshTokenRepository) Create(ctx context.Context, token *domain.Refre
 		INSERT INTO refresh_tokens (id, user_id, token, expires_at, revoked, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	
+
 	_, err := r.db.ExecContext(
 		ctx, query,
 		token.ID, token.UserID, token.Token, token.ExpiresAt, token.Revoked, token.CreatedAt,
 	)
-	
+
 	return err
 }
 
@@ -37,17 +37,17 @@ func (r *refreshTokenRepository) FindByToken(ctx context.Context, token string) 
 		FROM refresh_tokens
 		WHERE token = $1 AND revoked = false
 	`
-	
+
 	refreshToken := &domain.RefreshToken{}
 	err := r.db.QueryRowContext(ctx, query, token).Scan(
 		&refreshToken.ID, &refreshToken.UserID, &refreshToken.Token,
 		&refreshToken.ExpiresAt, &refreshToken.Revoked, &refreshToken.CreatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("refresh token not found")
 	}
-	
+
 	return refreshToken, err
 }
 

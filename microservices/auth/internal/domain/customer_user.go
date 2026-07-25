@@ -9,16 +9,16 @@ import (
 // CustomerUser represents a customer authentication account
 // Separate from OwnerUser - same email can be used for both
 type CustomerUser struct {
-	ID                        uuid.UUID
-	Email                     string
-	PasswordHash              string
-	EmailVerified             bool
-	EmailVerificationToken    string
+	ID                         uuid.UUID
+	Email                      string
+	PasswordHash               string
+	EmailVerified              bool
+	EmailVerificationToken     string
 	EmailVerificationExpiresAt *time.Time
-	PasswordResetToken        string
-	PasswordResetExpiresAt    *time.Time
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
+	PasswordResetToken         string
+	PasswordResetExpiresAt     *time.Time
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
 }
 
 // NewCustomerUser creates a new customer user

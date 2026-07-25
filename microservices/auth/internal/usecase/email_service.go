@@ -8,21 +8,21 @@ import (
 	"os"
 )
 
-type EmailService struct {
+type SMTPEmailService struct {
 	smtpHost string
 	smtpPort string
 	from     string
 }
 
-func NewEmailService() *EmailService {
-	return &EmailService{
+func NewEmailService() *SMTPEmailService {
+	return &SMTPEmailService{
 		smtpHost: getEnv("SMTP_HOST", "localhost"),
 		smtpPort: getEnv("SMTP_PORT", "22102"),
 		from:     getEnv("SMTP_FROM", "noreply@shopmall.local"),
 	}
 }
 
-func (s *EmailService) SendPasswordResetEmail(toEmail, resetToken string) error {
+func (s *SMTPEmailService) SendPasswordResetEmail(toEmail, resetToken string) error {
 	// パスワードリセットURL（フロントエンドのURL）
 	resetURL := fmt.Sprintf("http://localhost:22200/auth/reset-password?token=%s", resetToken)
 

@@ -50,8 +50,13 @@ defmodule ShopMallWebWeb.AuthLive do
         IO.puts("=== Login SUCCESS ===")
 
         # LiveView からはセッションに書けないため、署名付きトークンを
-        # SessionController に渡してクッキーセッションへ user_id を保存する
-        token = Phoenix.Token.sign(ShopMallWebWeb.Endpoint, "user session", response.user_id)
+        # SessionController に渡してクッキーセッションへ user_id と認証トークンを保存する
+        token =
+          Phoenix.Token.sign(ShopMallWebWeb.Endpoint, "user session", %{
+            user_id: response.user_id,
+            access_token: response.access_token,
+            refresh_token: response.refresh_token
+          })
 
         {:noreply,
          socket

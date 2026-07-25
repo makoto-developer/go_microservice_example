@@ -26,6 +26,8 @@ defmodule ShopMallWebWeb.Router do
 
     # Customer routes
     live "/dashboard", DashboardLive
+    live "/account", AccountLive
+    live "/auth/verify-email", VerifyEmailLive
     live "/products", ProductListLive
     live "/products/:id", ProductDetailLive
     live "/orders", OrderHistoryLive

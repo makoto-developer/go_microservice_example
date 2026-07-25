@@ -316,3 +316,211 @@ defmodule AuthService.V1.AuthService.Stub do
 
   use GRPC.Stub, service: AuthService.V1.AuthService.Service
 end
+
+# ---- CustomerAuthService(顧客専用の認証)最小スタブ ----
+
+defmodule CustomerAuth.V1.CustomerVerifyEmailRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "customer_auth.v1.CustomerVerifyEmailRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:token, 1, type: :string)
+end
+
+defmodule CustomerAuth.V1.CustomerVerifyEmailResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "customer_auth.v1.CustomerVerifyEmailResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+end
+
+defmodule CustomerAuth.V1.CustomerRequestPasswordResetRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "customer_auth.v1.CustomerRequestPasswordResetRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:email, 1, type: :string)
+end
+
+defmodule CustomerAuth.V1.CustomerRequestPasswordResetResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "customer_auth.v1.CustomerRequestPasswordResetResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+end
+
+defmodule CustomerAuth.V1.CustomerResetPasswordRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "customer_auth.v1.CustomerResetPasswordRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:token, 1, type: :string)
+  field(:new_password, 2, type: :string, json_name: "newPassword")
+end
+
+defmodule CustomerAuth.V1.CustomerResetPasswordResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "customer_auth.v1.CustomerResetPasswordResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+end
+
+defmodule CustomerAuth.V1.CustomerAuthService.Service do
+  @moduledoc false
+
+  use GRPC.Service,
+    name: "customer_auth.v1.CustomerAuthService",
+    protoc_gen_elixir_version: "0.16.0"
+
+  rpc(
+    :VerifyEmail,
+    CustomerAuth.V1.CustomerVerifyEmailRequest,
+    CustomerAuth.V1.CustomerVerifyEmailResponse
+  )
+
+  rpc(
+    :RequestPasswordReset,
+    CustomerAuth.V1.CustomerRequestPasswordResetRequest,
+    CustomerAuth.V1.CustomerRequestPasswordResetResponse
+  )
+
+  rpc(
+    :ResetPassword,
+    CustomerAuth.V1.CustomerResetPasswordRequest,
+    CustomerAuth.V1.CustomerResetPasswordResponse
+  )
+end
+
+defmodule CustomerAuth.V1.CustomerAuthService.Stub do
+  @moduledoc false
+
+  use GRPC.Stub, service: CustomerAuth.V1.CustomerAuthService.Service
+end
+
+# ---- OwnerAuthService(店舗オーナー専用の認証)最小スタブ ----
+
+defmodule OwnerAuth.V1.OwnerVerifyEmailRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "owner_auth.v1.OwnerVerifyEmailRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:token, 1, type: :string)
+end
+
+defmodule OwnerAuth.V1.OwnerVerifyEmailResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "owner_auth.v1.OwnerVerifyEmailResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+end
+
+defmodule OwnerAuth.V1.OwnerRequestPasswordResetRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "owner_auth.v1.OwnerRequestPasswordResetRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:email, 1, type: :string)
+end
+
+defmodule OwnerAuth.V1.OwnerRequestPasswordResetResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "owner_auth.v1.OwnerRequestPasswordResetResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+end
+
+defmodule OwnerAuth.V1.OwnerResetPasswordRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "owner_auth.v1.OwnerResetPasswordRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:token, 1, type: :string)
+  field(:new_password, 2, type: :string, json_name: "newPassword")
+end
+
+defmodule OwnerAuth.V1.OwnerResetPasswordResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "owner_auth.v1.OwnerResetPasswordResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:success, 1, type: :bool)
+  field(:message, 2, type: :string)
+end
+
+defmodule OwnerAuth.V1.OwnerAuthService.Service do
+  @moduledoc false
+
+  use GRPC.Service,
+    name: "owner_auth.v1.OwnerAuthService",
+    protoc_gen_elixir_version: "0.16.0"
+
+  rpc(
+    :VerifyEmail,
+    OwnerAuth.V1.OwnerVerifyEmailRequest,
+    OwnerAuth.V1.OwnerVerifyEmailResponse
+  )
+
+  rpc(
+    :RequestPasswordReset,
+    OwnerAuth.V1.OwnerRequestPasswordResetRequest,
+    OwnerAuth.V1.OwnerRequestPasswordResetResponse
+  )
+
+  rpc(
+    :ResetPassword,
+    OwnerAuth.V1.OwnerResetPasswordRequest,
+    OwnerAuth.V1.OwnerResetPasswordResponse
+  )
+end
+
+defmodule OwnerAuth.V1.OwnerAuthService.Stub do
+  @moduledoc false
+
+  use GRPC.Stub, service: OwnerAuth.V1.OwnerAuthService.Service
+end

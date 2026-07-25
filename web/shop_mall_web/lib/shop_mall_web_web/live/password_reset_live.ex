@@ -3,9 +3,10 @@ defmodule ShopMallWebWeb.PasswordResetLive do
   alias AuthService.V1.{AuthService.Stub, PasswordResetRequestRequest}
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     {:ok,
      socket
+     |> assign(:role, params["role"] || "user")
      |> assign(:email, "")
      |> assign(:message, nil)
      |> assign(:error, nil)
@@ -21,7 +22,7 @@ defmodule ShopMallWebWeb.PasswordResetLive do
   def handle_event("request_reset", %{"email" => email}, socket) do
     socket = assign(socket, :loading, true)
 
-    case request_password_reset(email) do
+    case request_password_reset(socket.assigns.role, email) do
       {:ok, _response} ->
         {:noreply,
          socket
@@ -39,7 +40,32 @@ defmodule ShopMallWebWeb.PasswordResetLive do
     end
   end
 
-  defp request_password_reset(email) do
+  # role に応じて顧客用/オーナー用/共通の認証サービスへ振り分ける
+  defp request_password_reset("customer", email) do
+    channel = get_auth_channel()
+
+    request = %CustomerAuth.V1.CustomerRequestPasswordResetRequest{email: email}
+
+    case CustomerAuth.V1.CustomerAuthService.Stub.request_password_reset(channel, request) do
+      {:ok, response} -> {:ok, response}
+      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  defp request_password_reset("owner", email) do
+    channel = get_auth_channel()
+
+    request = %OwnerAuth.V1.OwnerRequestPasswordResetRequest{email: email}
+
+    case OwnerAuth.V1.OwnerAuthService.Stub.request_password_reset(channel, request) do
+      {:ok, response} -> {:ok, response}
+      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  defp request_password_reset(_role, email) do
     channel = get_auth_channel()
     request = %PasswordResetRequestRequest{email: email}
 

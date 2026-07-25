@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/domain"
 )
 
 type userRepository struct {
@@ -27,7 +27,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 			created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
-	
+
 	_, err := r.db.ExecContext(
 		ctx, query,
 		user.ID, user.Email, user.PasswordHash, user.Role, user.EmailVerified,
@@ -35,7 +35,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 		user.PasswordResetToken, user.PasswordResetExpiresAt,
 		user.CreatedAt, user.UpdatedAt,
 	)
-	
+
 	return err
 }
 
@@ -49,7 +49,7 @@ func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Us
 		FROM users
 		WHERE id = $1
 	`
-	
+
 	user := &domain.User{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.EmailVerified,
@@ -57,11 +57,11 @@ func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Us
 		&user.PasswordResetToken, &user.PasswordResetExpiresAt,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
 	}
-	
+
 	return user, err
 }
 
@@ -75,7 +75,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 		FROM users
 		WHERE email = $1
 	`
-	
+
 	user := &domain.User{}
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.EmailVerified,
@@ -83,11 +83,11 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 		&user.PasswordResetToken, &user.PasswordResetExpiresAt,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
 	}
-	
+
 	return user, err
 }
 
@@ -105,9 +105,9 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 			updated_at = $10
 		WHERE id = $1
 	`
-	
+
 	user.UpdatedAt = time.Now()
-	
+
 	_, err := r.db.ExecContext(
 		ctx, query,
 		user.ID, user.Email, user.PasswordHash, user.Role, user.EmailVerified,
@@ -115,7 +115,7 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 		user.PasswordResetToken, user.PasswordResetExpiresAt,
 		user.UpdatedAt,
 	)
-	
+
 	return err
 }
 

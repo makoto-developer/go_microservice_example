@@ -29,7 +29,7 @@ func NewJWTServiceV2(accessSecret, refreshSecret string) *JWTServiceV2 {
 	return &JWTServiceV2{
 		accessTokenSecret:  accessSecret,
 		refreshTokenSecret: refreshSecret,
-		accessTokenExpiry:  1 * time.Hour,      // 1 hour for access token
+		accessTokenExpiry:  1 * time.Hour,       // 1 hour for access token
 		refreshTokenExpiry: 30 * 24 * time.Hour, // 30 days for refresh token
 	}
 }
@@ -158,7 +158,7 @@ func (s *JWTServiceV2) ValidateCustomerToken(tokenString string) (*AccessTokenCl
 	}
 
 	// Check audience
-	if !claims.VerifyAudience(string(UserTypeCustomer), true) {
+	if !audienceContains(claims.Audience, string(UserTypeCustomer)) {
 		return nil, fmt.Errorf("invalid audience")
 	}
 
@@ -177,9 +177,43 @@ func (s *JWTServiceV2) ValidateOwnerToken(tokenString string) (*AccessTokenClaim
 	}
 
 	// Check audience
-	if !claims.VerifyAudience(string(UserTypeOwner), true) {
+	if !audienceContains(claims.Audience, string(UserTypeOwner)) {
 		return nil, fmt.Errorf("invalid audience")
 	}
 
+	return claims, nil
+}
+
+// audienceContains は aud クレームに期待する値が含まれるかを返す(jwt v5 には VerifyAudience が無い)。
+func audienceContains(aud jwt.ClaimStrings, expected string) bool {
+	for _, a := range aud {
+		if a == expected {
+			return true
+		}
+	}
+	return false
+}
+
+// ValidateCustomerRefreshToken は顧客のリフレッシュトークンを検証する。
+func (s *JWTServiceV2) ValidateCustomerRefreshToken(tokenString string) (*RefreshTokenClaimsV2, error) {
+	claims, err := s.ValidateRefreshToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	if claims.UserType != UserTypeCustomer {
+		return nil, fmt.Errorf("invalid user type: expected customer, got %s", claims.UserType)
+	}
+	return claims, nil
+}
+
+// ValidateOwnerRefreshToken はオーナーのリフレッシュトークンを検証する。
+func (s *JWTServiceV2) ValidateOwnerRefreshToken(tokenString string) (*RefreshTokenClaimsV2, error) {
+	claims, err := s.ValidateRefreshToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	if claims.UserType != UserTypeOwner {
+		return nil, fmt.Errorf("invalid user type: expected owner, got %s", claims.UserType)
+	}
 	return claims, nil
 }

@@ -18,32 +18,32 @@ const (
 // OwnerUser represents a shop owner authentication account
 // Separate from CustomerUser - same email can be used for both
 type OwnerUser struct {
-	ID                        uuid.UUID
-	Email                     string
-	PasswordHash              string
-	EmailVerified             bool
-	EmailVerificationToken    string
+	ID                         uuid.UUID
+	Email                      string
+	PasswordHash               string
+	EmailVerified              bool
+	EmailVerificationToken     string
 	EmailVerificationExpiresAt *time.Time
-	PasswordResetToken        string
-	PasswordResetExpiresAt    *time.Time
-	BusinessVerified          bool
+	PasswordResetToken         string
+	PasswordResetExpiresAt     *time.Time
+	BusinessVerified           bool
 	BusinessVerificationStatus BusinessVerificationStatus
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
 }
 
 // NewOwnerUser creates a new owner user
 func NewOwnerUser(email, passwordHash string) *OwnerUser {
 	now := time.Now()
 	return &OwnerUser{
-		ID:                        uuid.New(),
-		Email:                     email,
-		PasswordHash:              passwordHash,
-		EmailVerified:             false,
-		BusinessVerified:          false,
+		ID:                         uuid.New(),
+		Email:                      email,
+		PasswordHash:               passwordHash,
+		EmailVerified:              false,
+		BusinessVerified:           false,
 		BusinessVerificationStatus: BusinessVerificationPending,
-		CreatedAt:                 now,
-		UpdatedAt:                 now,
+		CreatedAt:                  now,
+		UpdatedAt:                  now,
 	}
 }
 

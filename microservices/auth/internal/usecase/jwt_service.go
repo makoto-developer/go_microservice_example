@@ -45,7 +45,7 @@ func (s *JWTService) GenerateAccessToken(userID, role string) (string, error) {
 			ID:        uuid.New().String(),
 		},
 	}
-	
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.accessTokenSecret))
 }
@@ -59,7 +59,7 @@ func (s *JWTService) GenerateRefreshToken(userID string) (string, error) {
 			ID:        uuid.New().String(),
 		},
 	}
-	
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.refreshTokenSecret))
 }
@@ -71,15 +71,15 @@ func (s *JWTService) VerifyAccessToken(tokenString string) (*AccessTokenClaims, 
 		}
 		return []byte(s.accessTokenSecret), nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if claims, ok := token.Claims.(*AccessTokenClaims); ok && token.Valid {
 		return claims, nil
 	}
-	
+
 	return nil, fmt.Errorf("invalid token")
 }
 
@@ -90,14 +90,14 @@ func (s *JWTService) VerifyRefreshToken(tokenString string) (*RefreshTokenClaims
 		}
 		return []byte(s.refreshTokenSecret), nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if claims, ok := token.Claims.(*RefreshTokenClaims); ok && token.Valid {
 		return claims, nil
 	}
-	
+
 	return nil, fmt.Errorf("invalid token")
 }

@@ -6,10 +6,10 @@ import (
 )
 
 type Config struct {
-	ServerPort         string
-	DatabaseURL        string
-	JWTAccessSecret    string
-	JWTRefreshSecret   string
+	ServerPort       string
+	DatabaseURL      string
+	JWTAccessSecret  string
+	JWTRefreshSecret string
 }
 
 func Load() (*Config, error) {
@@ -19,19 +19,19 @@ func Load() (*Config, error) {
 		JWTAccessSecret:  getEnv("JWT_ACCESS_SECRET", ""),
 		JWTRefreshSecret: getEnv("JWT_REFRESH_SECRET", ""),
 	}
-	
+
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("AUTH_DATABASE_URL is required")
 	}
-	
+
 	if cfg.JWTAccessSecret == "" {
 		return nil, fmt.Errorf("JWT_ACCESS_SECRET is required")
 	}
-	
+
 	if cfg.JWTRefreshSecret == "" {
 		return nil, fmt.Errorf("JWT_REFRESH_SECRET is required")
 	}
-	
+
 	return cfg, nil
 }
 

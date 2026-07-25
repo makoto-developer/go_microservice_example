@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/auth/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type PasswordResetUsecase struct {
 	userRepo     repository.UserRepository
-	emailService *EmailService
+	emailService *SMTPEmailService
 }
 
-func NewPasswordResetUsecase(userRepo repository.UserRepository, emailService *EmailService) *PasswordResetUsecase {
+func NewPasswordResetUsecase(userRepo repository.UserRepository, emailService *SMTPEmailService) *PasswordResetUsecase {
 	return &PasswordResetUsecase{
 		userRepo:     userRepo,
 		emailService: emailService,

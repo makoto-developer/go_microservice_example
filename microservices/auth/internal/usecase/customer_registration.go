@@ -2,8 +2,6 @@ package usecase
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -96,13 +94,4 @@ func (u *CustomerRegistrationUsecase) Execute(
 	}()
 
 	return user.ID.String(), accessToken, refreshToken, nil
-}
-
-// generateRandomToken generates a random hex token
-func generateRandomToken(length int) (string, error) {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
 }

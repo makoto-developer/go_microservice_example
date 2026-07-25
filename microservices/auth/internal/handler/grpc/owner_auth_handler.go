@@ -5,14 +5,17 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/owner_auth/v1"
 	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/domain"
 	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/repository"
 	"github.com/makoto-developer/go_microservice_example/microservices/auth/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/auth/proto/owner_auth/v1"
 )
 
 // OwnerAuthHandler implements OwnerAuthService gRPC server
@@ -73,7 +76,7 @@ func (h *OwnerAuthHandler) Register(
 		UserId:                     userID,
 		AccessToken:                accessToken,
 		RefreshToken:               refreshToken,
-		BusinessVerificationStatus: string(domain.BusinessVerificationStatusPending),
+		BusinessVerificationStatus: string(domain.BusinessVerificationPending),
 	}, nil
 }
 
@@ -108,7 +111,11 @@ func (h *OwnerAuthHandler) Login(
 	}
 
 	// Get user to check business verification status
-	user, err := h.ownerUserRepo.FindByID(ctx, userID)
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid user id")
+	}
+	user, err := h.ownerUserRepo.FindByID(ctx, parsedUserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to find user: %v", err))
 	}
@@ -166,12 +173,7 @@ func (h *OwnerAuthHandler) VerifyEmail(
 	}
 
 	// Verify email
-	if err := user.VerifyEmail(); err != nil {
-		return &pb.OwnerVerifyEmailResponse{
-			Success: false,
-			Message: err.Error(),
-		}, nil
-	}
+	user.VerifyEmail()
 
 	// Update user
 	if err := h.ownerUserRepo.Update(ctx, user); err != nil {
@@ -215,7 +217,7 @@ func (h *OwnerAuthHandler) RequestPasswordReset(
 	}
 
 	// Set reset token
-	user.SetPasswordResetToken(token)
+	user.SetPasswordResetToken(token, time.Now().Add(1*time.Hour))
 
 	// Update user
 	if err := h.ownerUserRepo.Update(ctx, user); err != nil {
@@ -262,13 +264,12 @@ func (h *OwnerAuthHandler) ResetPassword(
 		}, nil
 	}
 
-	// Reset password
-	if err := user.ResetPassword(req.NewPassword); err != nil {
-		return &pb.OwnerResetPasswordResponse{
-			Success: false,
-			Message: err.Error(),
-		}, nil
+	// Reset password(bcrypt でハッシュ化して保存)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to hash password")
 	}
+	user.ResetPassword(string(hashed))
 
 	// Update user
 	if err := h.ownerUserRepo.Update(ctx, user); err != nil {
@@ -298,7 +299,11 @@ func (h *OwnerAuthHandler) RefreshToken(
 	}
 
 	// Find user
-	user, err := h.ownerUserRepo.FindByID(ctx, claims.UserID)
+	claimUserID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid token subject")
+	}
+	user, err := h.ownerUserRepo.FindByID(ctx, claimUserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to find user: %v", err))
 	}
@@ -334,7 +339,11 @@ func (h *OwnerAuthHandler) GetBusinessVerificationStatus(
 	}
 
 	// Find user
-	user, err := h.ownerUserRepo.FindByID(ctx, req.UserId)
+	reqUserID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
+	}
+	user, err := h.ownerUserRepo.FindByID(ctx, reqUserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to find user: %v", err))
 	}

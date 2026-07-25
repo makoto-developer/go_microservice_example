@@ -3,9 +3,10 @@ defmodule ShopMallWebWeb.PasswordResetConfirmLive do
   alias AuthService.V1.{AuthService.Stub, PasswordResetRequest}
 
   @impl true
-  def mount(%{"token" => token}, _session, socket) do
+  def mount(%{"token" => token} = params, _session, socket) do
     {:ok,
      socket
+     |> assign(:role, params["role"] || "user")
      |> assign(:token, token)
      |> assign(:new_password, "")
      |> assign(:confirm_password, "")
@@ -54,7 +55,7 @@ defmodule ShopMallWebWeb.PasswordResetConfirmLive do
       true ->
         socket = assign(socket, :loading, true)
 
-        case reset_password(socket.assigns.token, new_password) do
+        case reset_password(socket.assigns.role, socket.assigns.token, new_password) do
           {:ok, _response} ->
             {:noreply,
              socket
@@ -73,7 +74,35 @@ defmodule ShopMallWebWeb.PasswordResetConfirmLive do
     end
   end
 
-  defp reset_password(token, new_password) do
+  # role に応じて顧客用/オーナー用/共通の認証サービスへ振り分ける
+  defp reset_password("customer", token, new_password) do
+    channel = get_auth_channel()
+
+    request = %CustomerAuth.V1.CustomerResetPasswordRequest{
+      token: token,
+      new_password: new_password
+    }
+
+    case CustomerAuth.V1.CustomerAuthService.Stub.reset_password(channel, request) do
+      {:ok, response} -> {:ok, response}
+      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  defp reset_password("owner", token, new_password) do
+    channel = get_auth_channel()
+
+    request = %OwnerAuth.V1.OwnerResetPasswordRequest{token: token, new_password: new_password}
+
+    case OwnerAuth.V1.OwnerAuthService.Stub.reset_password(channel, request) do
+      {:ok, response} -> {:ok, response}
+      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  defp reset_password(_role, token, new_password) do
     channel = get_auth_channel()
     request = %PasswordResetRequest{token: token, new_password: new_password}
 
