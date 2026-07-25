@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/domain"
 )
 
 type CartRepository interface {
@@ -14,7 +14,7 @@ type CartRepository interface {
 	UpdateQuantity(ctx context.Context, cartItemID uuid.UUID, quantity int) error
 	RemoveItem(ctx context.Context, id uuid.UUID) error
 	ClearCart(ctx context.Context, customerID uuid.UUID) error
-	
+
 	AddGuestItem(ctx context.Context, item *domain.GuestCartItem) error
 	GetBySessionID(ctx context.Context, sessionID string) ([]*domain.GuestCartItem, error)
 	ClearGuestCart(ctx context.Context, sessionID string) error

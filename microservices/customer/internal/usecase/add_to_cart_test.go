@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/usecase"
 )
 
 type mockCartRepository struct {
-	addItemFunc      func(ctx context.Context, item *domain.CartItem) error
-	getByIDFunc      func(ctx context.Context, id uuid.UUID) (*domain.CartItem, error)
+	addItemFunc         func(ctx context.Context, item *domain.CartItem) error
+	getByIDFunc         func(ctx context.Context, id uuid.UUID) (*domain.CartItem, error)
 	getByCustomerIDFunc func(ctx context.Context, customerID uuid.UUID) ([]*domain.CartItem, error)
 }
 

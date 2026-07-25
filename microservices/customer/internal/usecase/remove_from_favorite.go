@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/repository"
 )
 
 type RemoveFromFavoriteInput struct {

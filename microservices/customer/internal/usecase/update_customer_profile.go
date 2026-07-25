@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/repository"
 )
 
 type UpdateCustomerProfileInput struct {

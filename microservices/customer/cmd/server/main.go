@@ -3,18 +3,20 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/client"
 	"log"
 	"net"
+	"os"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pb "github.com/makoto-developer/go_microservice_example/proto/customer_service/v1"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/config"
-	grpchandler "github.com/makoto-developer/go_microservice_example/generated/customer/internal/handler/grpc"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/repository/postgres"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/config"
+	grpchandler "github.com/makoto-developer/go_microservice_example/microservices/customer/internal/handler/grpc"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/repository/postgres"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/customer/proto"
 )
 
 func main() {
@@ -93,6 +95,17 @@ func main() {
 		updateReviewUsecase,
 	)
 
+	// 注文履歴系(order サービス委譲)とレビュー参照の配線
+	orderAddr := fmt.Sprintf("%s:%s", getEnvOr("ORDER_SERVICE_HOST", "localhost"), getEnvOr("ORDER_SERVICE_PORT", "50055"))
+	if orderClient, err := client.NewOrderClient(orderAddr); err != nil {
+		log.Printf("Warning: order client unavailable (%v). Order history disabled.", err)
+	} else {
+		defer orderClient.Close()
+		handler.WithOrderClient(orderClient)
+		log.Printf("🧾 Order Service: %s", orderAddr)
+	}
+	handler.WithReviewRepo(reviewRepo)
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
@@ -106,4 +119,11 @@ func main() {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
+}
+
+func getEnvOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }

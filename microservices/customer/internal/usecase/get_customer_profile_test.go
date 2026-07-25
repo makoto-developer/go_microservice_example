@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/usecase"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/usecase"
 )
 
 type mockCustomerRepository struct {
@@ -17,6 +17,14 @@ type mockCustomerRepository struct {
 
 func (m *mockCustomerRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Customer, error) {
 	return m.getByIDFunc(ctx, id)
+}
+
+func (m *mockCustomerRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (m *mockCustomerRepository) List(ctx context.Context, limit, offset int) ([]*domain.Customer, error) {
+	return nil, nil
 }
 
 func (m *mockCustomerRepository) Create(ctx context.Context, customer *domain.Customer) error {
@@ -37,13 +45,13 @@ func TestGetCustomerProfileUsecase_Success(t *testing.T) {
 	now := time.Now()
 
 	expectedCustomer := &domain.Customer{
-		ID:        customerID,
-		UserID:    userID,
-		FirstName: "John",
-		LastName:  "Doe",
-		Phone:     "090-1234-5678",
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:          customerID,
+		UserID:      userID,
+		FirstName:   "John",
+		LastName:    "Doe",
+		PhoneNumber: "090-1234-5678",
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	repo := &mockCustomerRepository{

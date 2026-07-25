@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/customer_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/customer/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

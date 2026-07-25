@@ -3,9 +3,12 @@ package grpc
 import (
 	"errors"
 
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/usecase"
-	pb "github.com/makoto-developer/go_microservice_example/proto/customer_service/v1"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/client"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/repository"
+
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/usecase"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/customer/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -31,13 +34,17 @@ type CustomerServiceHandler struct {
 	mergeGuestCartUsecase         usecase.MergeGuestCartUsecase
 
 	// Favorite usecases
-	addToFavoriteUsecase     usecase.AddToFavoriteUsecase
-	listFavoritesUsecase     usecase.ListFavoritesUsecase
+	addToFavoriteUsecase      usecase.AddToFavoriteUsecase
+	listFavoritesUsecase      usecase.ListFavoritesUsecase
 	removeFromFavoriteUsecase usecase.RemoveFromFavoriteUsecase
 
 	// Payment method usecases
 	addPaymentMethodUsecase    usecase.AddPaymentMethodUsecase
 	deletePaymentMethodUsecase usecase.DeletePaymentMethodUsecase
+
+	// 注文履歴系の委譲先とレビュー参照(セッターで注入)
+	orderClient client.OrderClient
+	reviewRepo  repository.ReviewRepository
 
 	// Review usecases
 	createReviewUsecase usecase.CreateReviewUsecase

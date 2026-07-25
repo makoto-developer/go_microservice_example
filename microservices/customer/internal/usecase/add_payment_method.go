@@ -4,19 +4,19 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/customer/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/customer/internal/repository"
 )
 
 type AddPaymentMethodInput struct {
-	CustomerID              uuid.UUID
-	StripePaymentMethodID   string
-	CardLast4               string
-	CardBrand               string
-	CardExpMonth            int
-	CardExpYear             int
-	CardholderName          string
-	IsDefault               bool
+	CustomerID            uuid.UUID
+	StripePaymentMethodID string
+	CardLast4             string
+	CardBrand             string
+	CardExpMonth          int
+	CardExpYear           int
+	CardholderName        string
+	IsDefault             bool
 }
 
 type AddPaymentMethodOutput struct {
