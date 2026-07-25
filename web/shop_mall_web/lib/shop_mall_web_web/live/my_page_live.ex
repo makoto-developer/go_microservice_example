@@ -6,6 +6,7 @@ defmodule ShopMallWebWeb.MyPageLive do
   use ShopMallWebWeb, :live_view
 
   alias ShopMallWeb.CustomerServiceClient, as: Customers
+  alias ShopMallWeb.ReviewServiceClient, as: Reviews
 
   @impl true
   def mount(_params, session, socket) do
@@ -226,6 +227,74 @@ defmodule ShopMallWebWeb.MyPageLive do
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "更新に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("review_action", %{"action" => action, "review-id" => review_id}, socket) do
+    customer_id = socket.assigns.customer_id
+
+    result =
+      case action do
+        "helpful" -> Reviews.mark_helpful(review_id, customer_id)
+        "unhelpful" -> Reviews.unmark_helpful(review_id, customer_id)
+        "report" -> Reviews.report_review(review_id, customer_id, "inappropriate")
+        "detail" -> Reviews.get_review_detail(review_id)
+        "delete" -> Reviews.delete_review(review_id, customer_id)
+        _ -> {:error, "unknown action"}
+      end
+
+    case result do
+      {:ok, resp} ->
+        {:noreply, socket |> put_flash(:info, resp.message || "実行しました") |> load_tab("reviews")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "操作に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("check_review_service", _params, socket) do
+    case Reviews.get_my_reviews(socket.assigns.customer_id) do
+      {:ok, resp} ->
+        {:noreply, put_flash(socket, :info, "review サービス: #{resp.message}")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "確認に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("sync_review", params, socket) do
+    # customer サービス側のレビューを review サービスにも反映する(二重管理のサンプル動線)
+    case Reviews.update_review(
+           params["review_id"],
+           socket.assigns.customer_id,
+           String.to_integer(params["rating"]),
+           params["review_text"]
+         ) do
+      {:ok, resp} ->
+        {:noreply, put_flash(socket, :info, "review サービスへ反映しました: #{resp.message}")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "反映に失敗しました: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("write_order_review", params, socket) do
+    case Customers.post_review(%{
+           customer_id: socket.assigns.customer_id,
+           product_id: params["product_id"],
+           order_id: params["order_id"],
+           rating: String.to_integer(params["rating"]),
+           review_text: params["review_text"]
+         }) do
+      {:ok, _} ->
+        {:noreply, put_flash(socket, :info, "注文のレビューを投稿しました")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "投稿に失敗しました: #{reason}")}
     end
   end
 
@@ -575,6 +644,7 @@ defmodule ShopMallWebWeb.MyPageLive do
                   <div class="text-sm text-gray-400 py-4 text-center">レビューはまだありません</div>
                 <% end %>
                 <div :for={review <- @reviews} class="border border-gray-200 rounded-lg p-4 mb-3">
+                  <form phx-submit="sync_review" id={"sync-" <> review.id} class="hidden"></form>
                   <form phx-submit="update_review" class="space-y-2">
                     <input type="hidden" name="review_id" value={review.id} />
                     <div class="flex items-center space-x-2">
@@ -604,6 +674,33 @@ defmodule ShopMallWebWeb.MyPageLive do
                       </button>
                     </div>
                   </form>
+                  <div class="flex flex-wrap gap-2 mt-2 text-xs">
+                    <button
+                      :for={
+                        {action, label} <- [
+                          {"helpful", "👍 参考になった"},
+                          {"unhelpful", "参考を取消"},
+                          {"report", "⚠ 通報"},
+                          {"detail", "詳細"},
+                          {"delete", "削除"}
+                        ]
+                      }
+                      phx-click="review_action"
+                      phx-value-action={action}
+                      phx-value-review-id={review.id}
+                      class="px-2 py-1 border border-gray-200 rounded text-gray-600 hover:bg-gray-50"
+                    >
+                      {label}
+                    </button>
+                  </div>
+                </div>
+                <div class="flex justify-end mt-2">
+                  <button
+                    phx-click="check_review_service"
+                    class="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    review サービス側の投稿状況を確認
+                  </button>
                 </div>
               </div>
             <% "orders" -> %>
@@ -644,6 +741,47 @@ defmodule ShopMallWebWeb.MyPageLive do
                     </div>
                   </li>
                 </ul>
+
+                <div class="mt-4 border-t pt-4">
+                  <h3 class="text-sm font-semibold text-gray-700 mb-2">注文した商品のレビューを書く</h3>
+                  <form phx-submit="write_order_review" class="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      name="order_id"
+                      required
+                      placeholder="注文ID"
+                      class="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                    />
+                    <input
+                      type="text"
+                      name="product_id"
+                      required
+                      placeholder="商品ID"
+                      class="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                    />
+                    <select
+                      name="rating"
+                      class="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                    >
+                      <option :for={n <- 5..1//-1} value={n}>{String.duplicate("★", n)}</option>
+                    </select>
+                    <input
+                      type="text"
+                      name="review_text"
+                      required
+                      placeholder="感想"
+                      class="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                    />
+                    <div class="col-span-2 flex justify-end">
+                      <button
+                        type="submit"
+                        class="px-3 py-1.5 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700"
+                      >
+                        投稿
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             <% _ -> %>
           <% end %>

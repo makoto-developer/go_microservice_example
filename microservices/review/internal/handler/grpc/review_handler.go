@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 
-	pb "github.com/makoto-developer/go_microservice_example/proto/review_service/v1"
+	pb "github.com/makoto-developer/go_microservice_example/microservices/review/proto"
 )
 
 type ReviewServiceHandler struct {

@@ -2,6 +2,7 @@ defmodule ShopMallWebWeb.ProductDetailLive do
   use ShopMallWebWeb, :live_view
 
   alias ShopMallWeb.CustomerServiceClient, as: Customers
+  alias ShopMallWeb.ReviewServiceClient, as: Reviews
 
   alias ShopService.V1.{
     ShopService.Stub,
@@ -21,6 +22,7 @@ defmodule ShopMallWebWeb.ProductDetailLive do
      |> assign(:error, nil)
      |> assign(:quantity, 1)
      |> assign(:payment_method, "credit_card")
+     |> assign(:review_summary, nil)
      |> load_product()}
   end
 
@@ -197,19 +199,36 @@ defmodule ShopMallWebWeb.ProductDetailLive do
         {:noreply, put_flash(socket, :error, "レビュー投稿にはログインが必要です")}
 
       user_id ->
-        case Customers.post_review(%{
+        case Reviews.post_review(%{
                customer_id: user_id,
                product_id: socket.assigns.product.id,
                rating: String.to_integer(rating),
-               review_text: text
+               content: text
              }) do
           {:ok, _} ->
-            {:noreply, put_flash(socket, :info, "レビューを投稿しました")}
+            {:noreply, put_flash(socket, :info, "レビューを投稿しました(公開には承認が必要です)")}
 
           {:error, reason} ->
             {:noreply, put_flash(socket, :error, "レビュー投稿に失敗しました: #{reason}")}
         end
     end
+  end
+
+  @impl true
+  def handle_event("load_reviews", _params, socket) do
+    rating_note =
+      case Reviews.get_product_rating(socket.assigns.product.id) do
+        {:ok, resp} -> resp.message
+        {:error, reason} -> "評価取得エラー: #{reason}"
+      end
+
+    reviews_note =
+      case Reviews.get_reviews_by_product(socket.assigns.product.id) do
+        {:ok, resp} -> resp.message
+        {:error, reason} -> "レビュー取得エラー: #{reason}"
+      end
+
+    {:noreply, assign(socket, :review_summary, "#{rating_note} / #{reviews_note}")}
   end
 
   @impl true
@@ -453,6 +472,18 @@ defmodule ShopMallWebWeb.ProductDetailLive do
                   </div>
 
                   <div class="mt-6 border-t pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <h2 class="text-sm font-semibold text-gray-900">レビュー</h2>
+                      <button
+                        phx-click="load_reviews"
+                        class="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        評価・レビューを読み込む
+                      </button>
+                    </div>
+                    <div :if={@review_summary} class="text-xs text-gray-600 mb-3">
+                      {@review_summary}
+                    </div>
                     <h2 class="text-sm font-semibold text-gray-900 mb-2">レビューを書く</h2>
                     <form phx-submit="post_review" class="space-y-2">
                       <select

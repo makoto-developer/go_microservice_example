@@ -46,6 +46,7 @@ defmodule ShopMallWebWeb.Router do
     live "/owner/sales", Owner.SalesReportLive
     live "/owner/orders", Owner.OrderManageLive
     live "/owner/inventory", Owner.InventoryLive
+    live "/owner/reviews", Owner.ReviewReplyLive
 
     # Shop listing (for customers)
     live "/shops", ShopListLive
@@ -54,6 +55,7 @@ defmodule ShopMallWebWeb.Router do
     # Admin routes
     live "/admin/payments", Admin.PaymentListLive
     live "/admin/orders", Admin.OrderAnalyticsLive
+    live "/admin/reviews", Admin.ReviewModerationLive
     # (temporarily disabled - Proto files not generated)
     # live "/admin", Admin.DashboardLive
     # live "/admin/shops/pending", Admin.ShopApprovalLive

@@ -8,20 +8,20 @@ import (
 )
 
 var (
-	ErrInvalidRating = errors.New("rating must be between 1 and 5")
+	ErrInvalidRating     = errors.New("rating must be between 1 and 5")
 	ErrReviewNotEditable = errors.New("review is no longer editable")
 )
 
 type Review struct {
-	ID             uuid.UUID `db:"id" json:"id"`
-	CustomerID     uuid.UUID `db:"customer_id" json:"customer_id"`
-	ProductID      uuid.UUID `db:"product_id" json:"product_id"`
-	OrderID        uuid.UUID `db:"order_id" json:"order_id"`
-	Rating         int       `db:"rating" json:"rating"` // 1-5
-	ReviewText     string    `db:"review_text" json:"review_text"`
-	EditableUntil  time.Time `db:"editable_until" json:"editable_until"`
-	CreatedAt      time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	CustomerID    uuid.UUID `db:"customer_id" json:"customer_id"`
+	ProductID     uuid.UUID `db:"product_id" json:"product_id"`
+	OrderID       uuid.UUID `db:"order_id" json:"order_id"`
+	Rating        int       `db:"rating" json:"rating"` // 1-5
+	ReviewText    string    `db:"review_text" json:"review_text"`
+	EditableUntil time.Time `db:"editable_until" json:"editable_until"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func NewReview(customerID, productID, orderID uuid.UUID, rating int, reviewText string) (*Review, error) {

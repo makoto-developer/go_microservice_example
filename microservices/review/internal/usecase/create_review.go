@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/makoto-developer/go_microservice_example/generated/review/internal/domain"
-	"github.com/makoto-developer/go_microservice_example/generated/review/internal/repository"
+	"github.com/makoto-developer/go_microservice_example/microservices/review/internal/domain"
+	"github.com/makoto-developer/go_microservice_example/microservices/review/internal/repository"
 )
 
 type CreateReviewInput struct {
