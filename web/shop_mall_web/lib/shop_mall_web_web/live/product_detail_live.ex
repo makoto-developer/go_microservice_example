@@ -1,6 +1,8 @@
 defmodule ShopMallWebWeb.ProductDetailLive do
   use ShopMallWebWeb, :live_view
 
+  alias ShopMallWeb.CustomerServiceClient, as: Customers
+
   alias ShopService.V1.{
     ShopService.Stub,
     GetProductRequest,
@@ -153,6 +155,62 @@ defmodule ShopMallWebWeb.ProductDetailLive do
   end
 
   defp price_to_int(_), do: 0
+
+  @impl true
+  def handle_event("add_to_cart", _params, socket) do
+    case socket.assigns.current_user_id do
+      nil ->
+        {:noreply, put_flash(socket, :error, "カートを使うにはログインが必要です")}
+
+      user_id ->
+        case Customers.add_to_cart(user_id, socket.assigns.product.id, socket.assigns.quantity) do
+          {:ok, _} ->
+            {:noreply, put_flash(socket, :info, "カートに追加しました")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "カートへの追加に失敗しました: #{reason}")}
+        end
+    end
+  end
+
+  @impl true
+  def handle_event("add_to_favorite", _params, socket) do
+    case socket.assigns.current_user_id do
+      nil ->
+        {:noreply, put_flash(socket, :error, "お気に入りにはログインが必要です")}
+
+      user_id ->
+        case Customers.add_to_favorite(user_id, socket.assigns.product.id) do
+          {:ok, _} ->
+            {:noreply, put_flash(socket, :info, "お気に入りに追加しました")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "お気に入りへの追加に失敗しました: #{reason}")}
+        end
+    end
+  end
+
+  @impl true
+  def handle_event("post_review", %{"rating" => rating, "review_text" => text}, socket) do
+    case socket.assigns.current_user_id do
+      nil ->
+        {:noreply, put_flash(socket, :error, "レビュー投稿にはログインが必要です")}
+
+      user_id ->
+        case Customers.post_review(%{
+               customer_id: user_id,
+               product_id: socket.assigns.product.id,
+               rating: String.to_integer(rating),
+               review_text: text
+             }) do
+          {:ok, _} ->
+            {:noreply, put_flash(socket, :info, "レビューを投稿しました")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "レビュー投稿に失敗しました: #{reason}")}
+        end
+    end
+  end
 
   @impl true
   def handle_event("buy_now", _params, socket) do
@@ -377,6 +435,49 @@ defmodule ShopMallWebWeb.ProductDetailLive do
                       在庫切れ
                     <% end %>
                   </button>
+
+                  <div class="grid grid-cols-2 gap-3 mt-3">
+                    <button
+                      phx-click="add_to_cart"
+                      disabled={@product.stock_quantity == 0}
+                      class="py-2.5 px-4 rounded-lg font-medium text-blue-700 border border-blue-300 hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      🛒 カートに入れる
+                    </button>
+                    <button
+                      phx-click="add_to_favorite"
+                      class="py-2.5 px-4 rounded-lg font-medium text-pink-600 border border-pink-300 hover:bg-pink-50"
+                    >
+                      ♡ お気に入り
+                    </button>
+                  </div>
+
+                  <div class="mt-6 border-t pt-4">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-2">レビューを書く</h2>
+                    <form phx-submit="post_review" class="space-y-2">
+                      <select
+                        name="rating"
+                        class="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                      >
+                        <option :for={n <- 5..1//-1} value={n}>{String.duplicate("★", n)}</option>
+                      </select>
+                      <textarea
+                        name="review_text"
+                        rows="2"
+                        required
+                        placeholder="商品の感想を書いてください"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      ></textarea>
+                      <div class="flex justify-end">
+                        <button
+                          type="submit"
+                          class="px-4 py-1.5 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700"
+                        >
+                          投稿する
+                        </button>
+                      </div>
+                    </form>
+                  </div>
 
                   <.link
                     navigate="/products"
