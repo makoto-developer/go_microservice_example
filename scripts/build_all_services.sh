@@ -5,7 +5,7 @@ echo "=============================="
 echo ""
 
 # Resolve the repository root from this script so any checkout location works
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BASE_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Build Auth Service
 echo "1. Building Auth Service..."
