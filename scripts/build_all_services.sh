@@ -4,7 +4,8 @@ echo "🔨 Building All Microservices"
 echo "=============================="
 echo ""
 
-BASE_DIR="/Users/user/work/repositories/github.com/makoto-developer/go_microservice_example"
+# Resolve the repository root from this script so any checkout location works
+BASE_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Build Auth Service
 echo "1. Building Auth Service..."
