@@ -1,7 +1,5 @@
 module github.com/makoto-developer/go_microservice_example/manual/payment
 
-go 1.25
+go 1.27
 
-require (
-	github.com/google/uuid v1.6.0
-)
+require github.com/google/uuid v1.6.0

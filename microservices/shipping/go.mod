@@ -1,6 +1,6 @@
 module github.com/makoto-developer/go_microservice_example/microservices/shipping
 
-go 1.25.0
+go 1.27
 
 require (
 	github.com/google/uuid v1.6.0
@@ -8,15 +8,15 @@ require (
 	github.com/makoto-developer/go_microservice_example/microservices/notification v0.0.0
 	github.com/makoto-developer/go_microservice_example/microservices/order v0.0.0
 	github.com/makoto-developer/go_microservice_example/microservices/payment v0.0.0
-	google.golang.org/grpc v1.78.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/grpc v1.84.0
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
 )
 
 replace github.com/makoto-developer/go_microservice_example/microservices/payment => ../payment
